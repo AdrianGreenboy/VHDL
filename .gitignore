@@ -1,0 +1,45 @@
+# Vivado
+vivado_proj/
+*.jou
+*.log
+*.str
+.Xil/
+*.xsa
+*.pdi
+*.bit
+*.ltx
+*.dcp
+*_wrapper*.v
+.gen/
+.hw/
+.ip_user_files/
+.runs/
+.sim/
+.cache/
+
+# xsim
+xsim.dir/
+*.wdb
+*.pb
+webtalk*.jou
+webtalk*.log
+xelab.*
+xvhdl.*
+xvlog.*
+xsim*.jou
+xsim*.log
+xsimk.*
+
+# PetaLinux (build outputs — keep only recipes/config in a separate tree)
+build/
+images/
+*.cpio
+*.cpio.gz
+*.ub
+BOOT.BIN
+boot.scr
+
+# editor / OS
+*.swp
+*~
+.DS_Store
