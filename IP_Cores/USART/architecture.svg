@@ -1,0 +1,87 @@
+<svg width="760" height="560" viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.6" stroke-linecap="round"/>
+    </marker>
+  </defs>
+  <rect width="760" height="560" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#222">USART IP core — AXI master + slave, driven by the rv32i SoC (Versal VE2302)</text>
+
+  <!-- PS side -->
+  <rect x="20" y="50" width="200" height="120" rx="10" fill="#eef3fb" stroke="#4a6fa5" stroke-width="1.5"/>
+  <text x="120" y="74" text-anchor="middle" font-size="14" font-weight="bold" fill="#2b4a73">PS — Cortex-A72</text>
+  <text x="120" y="94" text-anchor="middle" font-size="12" fill="#333">Linux + usart_bringup</text>
+  <text x="120" y="112" text-anchor="middle" font-size="12" fill="#333">loads program, sets DDR_BASE,</text>
+  <text x="120" y="128" text-anchor="middle" font-size="12" fill="#333">releases core, checks results</text>
+  <text x="120" y="152" text-anchor="middle" font-size="11" fill="#666">M_AXI_LPD (AXI4-Lite)</text>
+
+  <!-- NoC / DDR -->
+  <rect x="540" y="50" width="200" height="120" rx="10" fill="#f4eefb" stroke="#7a4aa5" stroke-width="1.5"/>
+  <text x="640" y="74" text-anchor="middle" font-size="14" font-weight="bold" fill="#54307a">Versal NoC → LPDDR4</text>
+  <text x="640" y="94" text-anchor="middle" font-size="12" fill="#333">S06_AXI ← SoC burst DMA</text>
+  <text x="640" y="112" text-anchor="middle" font-size="12" fill="#333">S07_AXI ← USART DMA</text>
+  <text x="640" y="130" text-anchor="middle" font-size="12" fill="#333">shared aclk6, DDR_LOW0 @ 0x0</text>
+
+  <!-- SoC container -->
+  <rect x="20" y="200" width="720" height="330" rx="12" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="7 5"/>
+  <text x="36" y="222" font-size="13" font-weight="bold" fill="#555">soc_top_usart (PL, 100 MHz)</text>
+
+  <!-- CPU -->
+  <rect x="45" y="245" width="170" height="70" rx="8" fill="#e8f5ee" stroke="#3c8a5f" stroke-width="1.5"/>
+  <text x="130" y="272" text-anchor="middle" font-size="13" font-weight="bold" fill="#2a6144">RV32IM core</text>
+  <text x="130" y="292" text-anchor="middle" font-size="11" fill="#333">5-stage pipeline, irq_ext</text>
+
+  <!-- mem subsys -->
+  <rect x="45" y="360" width="170" height="130" rx="8" fill="#fdf3e7" stroke="#c58940" stroke-width="1.5"/>
+  <text x="130" y="384" text-anchor="middle" font-size="13" font-weight="bold" fill="#8a5a20">mem_subsys_usart</text>
+  <text x="130" y="404" text-anchor="middle" font-size="11" fill="#333">local RAM (0x0000_0000)</text>
+  <text x="130" y="421" text-anchor="middle" font-size="11" fill="#333">dma_burst regs (0x4000_0000)</text>
+  <text x="130" y="438" text-anchor="middle" font-size="11" fill="#333">USART region (0x6000_0000)</text>
+  <text x="130" y="462" text-anchor="middle" font-size="11" font-weight="bold" fill="#8a5a20">burst DMA → AXI4 master</text>
+
+  <!-- USART IP container -->
+  <rect x="280" y="245" width="440" height="245" rx="10" fill="#fbeeee" stroke="#a54a4a" stroke-width="1.8"/>
+  <text x="500" y="268" text-anchor="middle" font-size="14" font-weight="bold" fill="#7a3030">usart_axi_top — the USART IP core</text>
+
+  <rect x="300" y="285" width="180" height="60" rx="6" fill="#ffffff" stroke="#a54a4a"/>
+  <text x="390" y="308" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">MMIO + DMA register file</text>
+  <text x="390" y="326" text-anchor="middle" font-size="10.5" fill="#555">CTRL/STAT/BAUD/WM/IRQ/DMA_*</text>
+
+  <rect x="520" y="285" width="180" height="60" rx="6" fill="#ffffff" stroke="#a54a4a"/>
+  <text x="610" y="308" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">usart_dma (AXI4 master)</text>
+  <text x="610" y="326" text-anchor="middle" font-size="10.5" fill="#555">2 channels, no arbiter, 4 KB split</text>
+
+  <rect x="300" y="370" width="180" height="60" rx="6" fill="#ffffff" stroke="#a54a4a"/>
+  <text x="390" y="393" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">byte_fifo TX / RX</text>
+  <text x="390" y="411" text-anchor="middle" font-size="10.5" fill="#555">256 B each, FWFT</text>
+
+  <rect x="520" y="370" width="180" height="60" rx="6" fill="#ffffff" stroke="#a54a4a"/>
+  <text x="610" y="393" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">usart_engine</text>
+  <text x="610" y="411" text-anchor="middle" font-size="10.5" fill="#555">NCO, FD/HD/RS-485, 6 Mbaud max</text>
+
+  <rect x="425" y="448" width="150" height="30" rx="6" fill="#ffffff" stroke="#a54a4a" stroke-dasharray="4 3"/>
+  <text x="500" y="468" text-anchor="middle" font-size="11" fill="#7a3030">loop_int mux (CTRL[7])</text>
+
+  <!-- arrows -->
+  <line x1="120" y1="170" x2="120" y2="243" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="128" y="195" font-size="10.5" fill="#666">AXI-Lite: control + IMEM</text>
+  <line x1="130" y1="315" x2="130" y2="358" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="140" y="340" font-size="10.5" fill="#666">dmem (1-cycle)</text>
+  <line x1="215" y1="315" x2="298" y2="315" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="222" y="308" font-size="10.5" fill="#666">sel/addr/rdata</text>
+  <line x1="480" y1="315" x2="518" y2="315" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="390" y1="345" x2="390" y2="368" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="610" y1="345" x2="610" y2="368" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="480" y1="400" x2="518" y2="400" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="518" y1="412" x2="480" y2="412" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="610" y1="283" x2="610" y2="230" stroke="#7a4aa5" stroke-width="1.8"/>
+  <line x1="610" y1="230" x2="640" y2="172" stroke="#7a4aa5" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="618" y="222" font-size="10.5" fill="#7a4aa5">m_axi_usart → S07</text>
+  <line x1="215" y1="465" x2="560" y2="510" stroke="#7a4aa5" stroke-width="1.8"/>
+  <line x1="560" y1="510" x2="700" y2="510" stroke="#7a4aa5" stroke-width="1.8"/>
+  <text x="330" y="505" font-size="10.5" fill="#7a4aa5">m_axi (SoC DMA) → S06 via NoC</text>
+  <line x1="610" y1="430" x2="610" y2="446" stroke="#555" stroke-width="1.2"/>
+  <line x1="720" y1="410" x2="748" y2="410" stroke="#a54a4a" stroke-width="1.8" marker-end="url(#a)"/>
+  <text x="708" y="398" font-size="10.5" fill="#7a3030" text-anchor="end">TXD RXD RTS_n CTS_n</text>
+  <text x="738" y="428" font-size="10" fill="#666" text-anchor="end">CRUVI LS1, bank 302 (HDIO)</text>
+</svg>
