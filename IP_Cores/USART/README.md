@@ -142,6 +142,8 @@ with a self-test that needs no external hardware.
 
 ## 6. Architecture
 
+![MMUSART architecture](architecture.svg)
+
 ```
                           usart_axi_top
    ┌───────────────────────────────────────────────────────────┐
