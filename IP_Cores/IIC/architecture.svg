@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="760" height="560" fill="#ffffff"/>
+  <text x="380" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#333">RV32I SoC v3 + IP IIC (TE0950 / xcve2302) — región 0x7000_0000</text>
+
+  <!-- ======== PS ======== -->
+  <rect x="20" y="45" width="170" height="120" rx="8" fill="#eef3fb" stroke="#4a6fa5" stroke-width="2"/>
+  <text x="105" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a6fa5">PS (Versal CIPS)</text>
+  <rect x="35" y="78" width="140" height="30" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="105" y="97" text-anchor="middle" font-size="11" fill="#333">A72 · i2c_bringup</text>
+  <rect x="35" y="118" width="140" height="30" rx="4" fill="#ffffff" stroke="#4a6fa5"/>
+  <text x="105" y="137" text-anchor="middle" font-size="11" fill="#333">M_AXI_LPD → smartconnect</text>
+
+  <!-- ======== NoC / DDR ======== -->
+  <rect x="20" y="195" width="170" height="100" rx="8" fill="#f4eefb" stroke="#7a4aa5" stroke-width="2"/>
+  <text x="105" y="216" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a4aa5">NoC + LPDDR4</text>
+  <rect x="35" y="228" width="140" height="26" rx="4" fill="#ffffff" stroke="#7a4aa5"/>
+  <text x="105" y="245" text-anchor="middle" font-size="11" fill="#333">S06_AXI · aclk6 · DDR_LOW0</text>
+  <rect x="35" y="262" width="140" height="26" rx="4" fill="#ffffff" stroke="#7a4aa5"/>
+  <text x="105" y="279" text-anchor="middle" font-size="11" fill="#333">buffer@70000000 (16 MB)</text>
+
+  <!-- ======== axil_soc ======== -->
+  <rect x="240" y="45" width="150" height="120" rx="8" fill="#eef3fb" stroke="#4a6fa5" stroke-width="2"/>
+  <text x="315" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a6fa5">axil_soc</text>
+  <text x="315" y="88" text-anchor="middle" font-size="11" fill="#333">CONTROL / DBG_PC</text>
+  <text x="315" y="106" text-anchor="middle" font-size="11" fill="#333">ventana IMEM 0x1000</text>
+  <text x="315" y="124" text-anchor="middle" font-size="11" fill="#333">DDR_BASE 0x10/0x14</text>
+  <text x="315" y="142" text-anchor="middle" font-size="11" fill="#333">doorbell → pl_ps_irq0</text>
+
+  <!-- ======== CPU ======== -->
+  <rect x="440" y="45" width="150" height="120" rx="8" fill="#e8f5ee" stroke="#3c8a5f" stroke-width="2"/>
+  <text x="515" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#3c8a5f">cpu_pipeline</text>
+  <text x="515" y="88" text-anchor="middle" font-size="11" fill="#333">RV32IM · 5 etapas</text>
+  <rect x="455" y="100" width="120" height="26" rx="4" fill="#ffffff" stroke="#3c8a5f"/>
+  <text x="515" y="117" text-anchor="middle" font-size="11" fill="#333">imem (dp_ram)</text>
+  <text x="515" y="150" text-anchor="middle" font-size="11" fill="#333">irq_ext ← IIC</text>
+
+  <!-- ======== mem_subsys_i2c ======== -->
+  <rect x="240" y="200" width="350" height="110" rx="8" fill="#fdf3e7" stroke="#c58940" stroke-width="2"/>
+  <text x="415" y="221" text-anchor="middle" font-size="13" font-weight="bold" fill="#c58940">mem_subsys_i2c</text>
+  <rect x="255" y="232" width="100" height="60" rx="4" fill="#ffffff" stroke="#c58940"/>
+  <text x="305" y="255" text-anchor="middle" font-size="11" fill="#333">RAM local</text>
+  <text x="305" y="271" text-anchor="middle" font-size="11" fill="#333">dp_ram "00"</text>
+  <rect x="370" y="232" width="100" height="60" rx="4" fill="#ffffff" stroke="#c58940"/>
+  <text x="420" y="255" text-anchor="middle" font-size="11" fill="#333">dma_burst</text>
+  <text x="420" y="271" text-anchor="middle" font-size="11" fill="#333">regs "0100"</text>
+  <rect x="485" y="232" width="90" height="60" rx="4" fill="#ffffff" stroke="#c58940"/>
+  <text x="530" y="255" text-anchor="middle" font-size="11" fill="#333">decode IIC</text>
+  <text x="530" y="271" text-anchor="middle" font-size="11" fill="#333">"0111"</text>
+
+  <!-- ======== IP IIC (paleta nueva teal) ======== -->
+  <rect x="120" y="340" width="520" height="200" rx="10" fill="#eefbf9" stroke="#2f8f83" stroke-width="2.5"/>
+  <text x="380" y="362" text-anchor="middle" font-size="14" font-weight="bold" fill="#2f8f83">IP IIC — i2c_mmio (0x7000_0000)</text>
+
+  <rect x="135" y="375" width="130" height="70" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="200" y="395" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">regfile dmem</text>
+  <text x="200" y="411" text-anchor="middle" font-size="10" fill="#333">CTRL/STAT/CMD/MRD</text>
+  <text x="200" y="425" text-anchor="middle" font-size="10" fill="#333">rdata combinacional</text>
+  <text x="200" y="439" text-anchor="middle" font-size="10" fill="#333">IRQ por nivel</text>
+
+  <rect x="135" y="458" width="130" height="66" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="200" y="477" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">byte_fifo ×2</text>
+  <text x="200" y="493" text-anchor="middle" font-size="10" fill="#333">SRX / STX · FWFT 256B</text>
+  <text x="200" y="507" text-anchor="middle" font-size="10" fill="#333">ganchos DMA v1.1</text>
+
+  <rect x="295" y="375" width="130" height="70" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="360" y="395" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">i2c_master</text>
+  <text x="360" y="411" text-anchor="middle" font-size="10" fill="#333">CMD por byte</text>
+  <text x="360" y="425" text-anchor="middle" font-size="10" fill="#333">stretch pasivo · arb</text>
+  <text x="360" y="439" text-anchor="middle" font-size="10" fill="#333">100k/400k/1M</text>
+
+  <rect x="295" y="458" width="130" height="66" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="360" y="477" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">i2c_slave</text>
+  <text x="360" y="493" text-anchor="middle" font-size="10" fill="#333">SADDR 7b · stretch activo</text>
+  <text x="360" y="507" text-anchor="middle" font-size="10" fill="#333">NACK+OVF drop-newest</text>
+
+  <rect x="455" y="405" width="80" height="90" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="495" y="428" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">wired</text>
+  <text x="495" y="443" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">AND</text>
+  <text x="495" y="463" text-anchor="middle" font-size="10" fill="#333">LOOP_INT</text>
+  <text x="495" y="477" text-anchor="middle" font-size="10" fill="#333">CTRL[7]</text>
+
+  <rect x="555" y="405" width="70" height="90" rx="4" fill="#ffffff" stroke="#2f8f83"/>
+  <text x="590" y="432" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">IOBUF</text>
+  <text x="590" y="450" text-anchor="middle" font-size="10" fill="#333">(wrapper)</text>
+  <text x="590" y="470" text-anchor="middle" font-size="10" fill="#333">SCL D10</text>
+  <text x="590" y="484" text-anchor="middle" font-size="10" fill="#333">SDA C10</text>
+
+  <!-- ======== flechas ======== -->
+  <!-- PS -> axil -->
+  <line x1="190" y1="105" x2="240" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="215" y="98" text-anchor="middle" font-size="9" fill="#555">s_axi</text>
+  <!-- axil -> cpu -->
+  <line x1="390" y1="105" x2="440" y2="105" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="415" y="98" text-anchor="middle" font-size="9" fill="#555">ctrl/imem</text>
+  <!-- cpu -> mem_subsys -->
+  <line x1="515" y1="165" x2="515" y2="232" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="540" y="185" text-anchor="middle" font-size="9" fill="#555">dmem</text>
+  <!-- mem_subsys -> NoC -->
+  <line x1="240" y1="262" x2="175" y2="262" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="208" y="255" text-anchor="middle" font-size="9" fill="#555">m_axi</text>
+  <!-- decode -> mmio -->
+  <line x1="530" y1="292" x2="380" y2="340" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="480" y="322" text-anchor="middle" font-size="9" fill="#555">sel/addr/rdata</text>
+  <!-- irq -->
+  <path d="M 135 410 C 60 410 60 165 90 165" fill="none" stroke="#a54a4a" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="52" y="300" text-anchor="middle" font-size="9" fill="#a54a4a">irq → irq_ext</text>
+  <text x="52" y="313" text-anchor="middle" font-size="9" fill="#a54a4a">+ pl_ps_irq1</text>
+  <!-- master/slave -> AND -->
+  <line x1="425" y1="410" x2="455" y2="428" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="425" y1="490" x2="455" y2="472" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- AND -> IOBUF -->
+  <line x1="535" y1="450" x2="555" y2="450" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- IOBUF -> pads -->
+  <line x1="625" y1="450" x2="680" y2="450" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="690" y="443" font-size="10" fill="#333">CRUVI</text>
+  <text x="690" y="457" font-size="10" fill="#333">LS1</text>
+  <!-- fifos <-> slave -->
+  <line x1="265" y1="491" x2="295" y2="491" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- regfile <-> master -->
+  <line x1="265" y1="410" x2="295" y2="410" stroke="#555" stroke-width="1.5" marker-end="url(#ar)"/>
+</svg>
