@@ -15,6 +15,8 @@ the SoC DMA to reserved DDR.
 
 ---
 
+![IIC IP core architecture](architecture.svg)
+
 ## 1. Overview
 
 Two independent engines share a single open-drain SCL/SDA pair:

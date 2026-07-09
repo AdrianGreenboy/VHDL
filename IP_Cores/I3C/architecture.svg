@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="560" fill="#ffffff"/>
+  <text x="380" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#333">I3C IP Core (controller + target) - RV32 SoC - TE0950 (xcve2302)</text>
+
+  <!-- PS -->
+  <rect x="20" y="50" width="180" height="130" rx="8" fill="#eef3fb" stroke="#4a6fa5" stroke-width="2"/>
+  <text x="110" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#4a6fa5">Versal PS (CIPS)</text>
+  <text x="110" y="92" text-anchor="middle" font-size="11" fill="#333">Cortex-A72 / PetaLinux</text>
+  <text x="110" y="110" text-anchor="middle" font-size="11" fill="#333">i3c_bringup (/dev/mem)</text>
+  <text x="110" y="132" text-anchor="middle" font-size="10" fill="#555">M_AXI_LPD -&gt; 0x8000_0000</text>
+  <text x="110" y="148" text-anchor="middle" font-size="10" fill="#555">pl_ps_irq0 (doorbell)</text>
+  <text x="110" y="162" text-anchor="middle" font-size="10" fill="#555">pl_ps_irq1 (I3C irq)</text>
+
+  <!-- NoC -->
+  <rect x="20" y="210" width="180" height="100" rx="8" fill="#f4eefb" stroke="#7a4aa5" stroke-width="2"/>
+  <text x="110" y="232" text-anchor="middle" font-size="13" font-weight="bold" fill="#7a4aa5">AXI NoC</text>
+  <text x="110" y="252" text-anchor="middle" font-size="11" fill="#333">S06_AXI + aclk6 (dedicada)</text>
+  <text x="110" y="270" text-anchor="middle" font-size="11" fill="#333">C0_DDR_LOW0</text>
+  <text x="110" y="292" text-anchor="middle" font-size="10" fill="#555">LPDDR4 (reserva 0x7000_0000)</text>
+
+  <!-- CPU -->
+  <rect x="250" y="50" width="180" height="120" rx="8" fill="#e8f5ee" stroke="#3c8a5f" stroke-width="2"/>
+  <text x="340" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#3c8a5f">RV32I core</text>
+  <text x="340" y="92" text-anchor="middle" font-size="11" fill="#333">cpu_pipeline + IMEM</text>
+  <text x="340" y="110" text-anchor="middle" font-size="11" fill="#333">i3c_test.s (asm.py)</text>
+  <text x="340" y="132" text-anchor="middle" font-size="10" fill="#555">dmem: req 1 ciclo,</text>
+  <text x="340" y="146" text-anchor="middle" font-size="10" fill="#555">rdata combinacional</text>
+
+  <!-- mem_subsys -->
+  <rect x="250" y="200" width="180" height="130" rx="8" fill="#fdf3e7" stroke="#c58940" stroke-width="2"/>
+  <text x="340" y="222" text-anchor="middle" font-size="13" font-weight="bold" fill="#c58940">mem_subsys_i3c</text>
+  <text x="340" y="242" text-anchor="middle" font-size="11" fill="#333">"00"   RAM local</text>
+  <text x="340" y="260" text-anchor="middle" font-size="11" fill="#333">"0100" DMA regs + dma_burst</text>
+  <text x="340" y="278" text-anchor="middle" font-size="11" fill="#333">"1001" IP I3C (0x9000_0000)</text>
+  <text x="340" y="300" text-anchor="middle" font-size="10" fill="#555">axil_soc: control + IMEM</text>
+  <text x="340" y="314" text-anchor="middle" font-size="10" fill="#555">doorbell DDR[3]=1337</text>
+
+  <!-- I3C IP container (paleta nueva: berry) -->
+  <rect x="470" y="50" width="270" height="420" rx="10" fill="#fdeef4" stroke="#b03a6e" stroke-width="2.5"/>
+  <text x="605" y="74" text-anchor="middle" font-size="14" font-weight="bold" fill="#b03a6e">i3c_mmio (0x9000_0000)</text>
+
+  <rect x="490" y="90" width="230" height="86" rx="6" fill="#ffffff" stroke="#b03a6e" stroke-width="1.5"/>
+  <text x="605" y="108" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a6e">Banco de registros</text>
+  <text x="605" y="126" text-anchor="middle" font-size="10" fill="#333">CTRL STAT SCLDIV CMD RX IBIADDR</text>
+  <text x="605" y="140" text-anchor="middle" font-size="10" fill="#333">TCFG TPID TBDCR TDA TREQ TTX TRX</text>
+  <text x="605" y="154" text-anchor="middle" font-size="10" fill="#333">LVL IRQ_EN IRQ_STAT WM</text>
+  <text x="605" y="168" text-anchor="middle" font-size="9" fill="#777">stickies W1C (sets ganan) - IRQ nivel</text>
+
+  <rect x="490" y="188" width="106" height="112" rx="6" fill="#ffffff" stroke="#b03a6e" stroke-width="1.5"/>
+  <text x="543" y="206" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a6e">controller</text>
+  <text x="543" y="224" text-anchor="middle" font-size="9" fill="#333">START/Sr/STOP</text>
+  <text x="543" y="238" text-anchor="middle" font-size="9" fill="#333">arbitraje OD</text>
+  <text x="543" y="252" text-anchor="middle" font-size="9" fill="#333">ENTDAA + DAADR</text>
+  <text x="543" y="266" text-anchor="middle" font-size="9" fill="#333">IBI ack/nak</text>
+  <text x="543" y="280" text-anchor="middle" font-size="9" fill="#333">seize del T</text>
+  <text x="543" y="294" text-anchor="middle" font-size="9" fill="#555">div_pp / div_od</text>
+
+  <rect x="614" y="188" width="106" height="112" rx="6" fill="#ffffff" stroke="#b03a6e" stroke-width="1.5"/>
+  <text x="667" y="206" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a6e">target</text>
+  <text x="667" y="224" text-anchor="middle" font-size="9" fill="#333">DA/SA match</text>
+  <text x="667" y="238" text-anchor="middle" font-size="9" fill="#333">ENTDAA (retira</text>
+  <text x="667" y="250" text-anchor="middle" font-size="9" fill="#333">y reintenta)</text>
+  <text x="667" y="264" text-anchor="middle" font-size="9" fill="#333">CCCs + GETs HW</text>
+  <text x="667" y="278" text-anchor="middle" font-size="9" fill="#333">IBI + hot-join</text>
+  <text x="667" y="292" text-anchor="middle" font-size="9" fill="#555">paridad T</text>
+
+  <rect x="490" y="312" width="230" height="60" rx="6" fill="#ffffff" stroke="#b03a6e" stroke-width="1.5"/>
+  <text x="605" y="330" text-anchor="middle" font-size="12" font-weight="bold" fill="#b03a6e">FIFOs FWFT 32B</text>
+  <text x="605" y="348" text-anchor="middle" font-size="10" fill="#333">RX (lecturas)  TTX (tx target)  TRX (rx target)</text>
+  <text x="605" y="362" text-anchor="middle" font-size="9" fill="#777">overflow drop-newest + sticky - watermarks</text>
+
+  <rect x="490" y="384" width="230" height="40" rx="6" fill="#ffffff" stroke="#b03a6e" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="605" y="401" text-anchor="middle" font-size="11" font-weight="bold" fill="#b03a6e">LOOP_INT</text>
+  <text x="605" y="416" text-anchor="middle" font-size="9" fill="#555">bus interno wired-AND (self-test de silicio)</text>
+
+  <text x="605" y="446" text-anchor="middle" font-size="10" fill="#333">pads: IOBUF I/T dinamicos - D10 (SCL) / C10 (SDA)</text>
+  <text x="605" y="460" text-anchor="middle" font-size="9" fill="#777">CRUVI LS1 - LVCMOS33 - PULLUP (keeper) - SLEW FAST</text>
+
+  <!-- conexiones -->
+  <line x1="110" y1="180" x2="110" y2="210" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="200" y1="115" x2="250" y2="115" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="225" y="108" text-anchor="middle" font-size="9" fill="#555">AXI-Lite</text>
+  <line x1="340" y1="170" x2="340" y2="200" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="356" y="188" font-size="9" fill="#555">dmem</text>
+  <line x1="250" y1="265" x2="200" y2="265" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="225" y="258" text-anchor="middle" font-size="9" fill="#555">m_axi</text>
+  <line x1="430" y1="265" x2="470" y2="265" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="450" y="258" text-anchor="middle" font-size="9" fill="#555">sel/we</text>
+  <line x1="470" y1="130" x2="430" y2="130" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="450" y="123" text-anchor="middle" font-size="9" fill="#555">irq</text>
+
+  <!-- validacion -->
+  <rect x="20" y="340" width="410" height="130" rx="8" fill="#f7f7f7" stroke="#999" stroke-width="1.5"/>
+  <text x="225" y="362" text-anchor="middle" font-size="12" font-weight="bold" fill="#333">Validacion por capas (GHDL 4.1, tiempos bit-identicos)</text>
+  <text x="225" y="382" text-anchor="middle" font-size="10" fill="#333">1a ctrl vs modelo 162935 ns - 1b target vs modelo 345685 ns</text>
+  <text x="225" y="398" text-anchor="middle" font-size="10" fill="#333">1c RTL vs RTL 202445 ns - 2 mmio+BFM 82225 ns - 4 SoC 154058 ns</text>
+  <text x="225" y="420" text-anchor="middle" font-size="10" font-weight="bold" fill="#3c8a5f">Silicio: WNS +2.844 ns @ 100 MHz - TRIPLE PASS loop_int</text>
+  <text x="225" y="438" text-anchor="middle" font-size="10" fill="#3c8a5f">3.125 / 6.25 / 12.5 MHz push-pull - 13 checks x 3</text>
+  <text x="225" y="458" text-anchor="middle" font-size="9" fill="#777">ENTDAA - escritura/lectura privada con seize - IBI con mandatory byte - hot-join</text>
+
+  <text x="380" y="540" text-anchor="middle" font-size="9" fill="#999">MIPI I3C Basic SDR - VHDL-2008 - MIT License - IP_Cores/I3C</text>
+</svg>
