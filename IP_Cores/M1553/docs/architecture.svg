@@ -1,0 +1,161 @@
+<svg viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <!-- ============================================================= -->
+  <!--  MIL-STD-1553B IP core - architecture (olive/military theme)  -->
+  <!--  palette:  bg #eef4ee   mid #7a9a5a   dark #4a7a4a  ink #24331d -->
+  <!-- ============================================================= -->
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#4a7a4a"/>
+    </marker>
+    <marker id="arrowlite" markerWidth="9" markerHeight="9" refX="7" refY="3"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#7a9a5a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="560" fill="#ffffff"/>
+  <rect x="0" y="0" width="760" height="46" fill="#4a7a4a"/>
+  <text x="20" y="29" font-size="20" font-weight="700" fill="#ffffff">
+    MIL-STD-1553B IP Core — RV32IM SoC v3 (TE0950 / Versal)
+  </text>
+  <text x="720" y="29" font-size="12" fill="#d7e6cf" text-anchor="end">v1.0</text>
+
+  <!-- ===================== SoC bus context ===================== -->
+  <rect x="16" y="60" width="220" height="150" rx="8" fill="#eef4ee" stroke="#7a9a5a" stroke-width="1.5"/>
+  <text x="26" y="80" font-size="13" font-weight="700" fill="#24331d">RV32IM core (5-stage)</text>
+  <text x="26" y="98" font-size="11" fill="#3d5a30">dmem bus: sel / we / addr</text>
+  <text x="26" y="113" font-size="11" fill="#3d5a30">rdata (combinational)</text>
+  <rect x="26" y="124" width="200" height="74" rx="6" fill="#ffffff" stroke="#a9c48f" stroke-width="1"/>
+  <text x="36" y="142" font-size="11" font-weight="700" fill="#24331d">mem_subsys_m1553</text>
+  <text x="36" y="158" font-size="10" fill="#3d5a30">decode addr[31:28]:</text>
+  <text x="36" y="172" font-size="10" fill="#3d5a30">00 → RAM · 0100 → DMA</text>
+  <text x="36" y="186" font-size="10" font-weight="700" fill="#4a7a4a">1100 → 1553 (0xC000_0000)</text>
+
+  <!-- arrow into MMIO -->
+  <line x1="236" y1="150" x2="286" y2="150" stroke="#4a7a4a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===================== MMIO register bank ===================== -->
+  <rect x="288" y="60" width="456" height="150" rx="8" fill="#eef4ee" stroke="#7a9a5a" stroke-width="1.5"/>
+  <text x="300" y="80" font-size="13" font-weight="700" fill="#24331d">m1553_mmio — register bank (0xC000_0000)</text>
+
+  <!-- register chips -->
+  <g font-size="9.5" fill="#24331d">
+    <rect x="300" y="90"  width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="335" y="103" text-anchor="middle" font-weight="700">CTRL</text>
+    <text x="335" y="113" text-anchor="middle" fill="#3d5a30">0x00</text>
+
+    <rect x="376" y="90"  width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="411" y="103" text-anchor="middle" font-weight="700">RTADDR</text>
+    <text x="411" y="113" text-anchor="middle" fill="#3d5a30">0x04</text>
+
+    <rect x="452" y="90"  width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="487" y="103" text-anchor="middle" font-weight="700">CMD</text>
+    <text x="487" y="113" text-anchor="middle" fill="#3d5a30">0x08</text>
+
+    <rect x="528" y="90"  width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="563" y="103" text-anchor="middle" font-weight="700">MSG</text>
+    <text x="563" y="113" text-anchor="middle" fill="#3d5a30">0x0C</text>
+
+    <rect x="604" y="90"  width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="639" y="103" text-anchor="middle" font-weight="700">STAT</text>
+    <text x="639" y="113" text-anchor="middle" fill="#3d5a30">0x10</text>
+
+    <rect x="300" y="122" width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="335" y="135" text-anchor="middle" font-weight="700">TXD</text>
+    <text x="335" y="145" text-anchor="middle" fill="#3d5a30">0x14</text>
+
+    <rect x="376" y="122" width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="411" y="135" text-anchor="middle" font-weight="700">RXD</text>
+    <text x="411" y="145" text-anchor="middle" fill="#3d5a30">0x18</text>
+
+    <rect x="452" y="122" width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="487" y="135" text-anchor="middle" font-weight="700">IRQEN</text>
+    <text x="487" y="145" text-anchor="middle" fill="#3d5a30">0x1C</text>
+
+    <rect x="528" y="122" width="70" height="26" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+    <text x="563" y="135" text-anchor="middle" font-weight="700">RESULT</text>
+    <text x="563" y="145" text-anchor="middle" fill="#3d5a30">0x20</text>
+
+    <rect x="604" y="122" width="70" height="26" rx="4" fill="#f3f8ef" stroke="#a9c48f" stroke-dasharray="3 2"/>
+    <text x="639" y="132" text-anchor="middle" font-weight="700" fill="#4a7a4a">IRQ</text>
+    <text x="639" y="143" text-anchor="middle" fill="#3d5a30">level</text>
+  </g>
+
+  <!-- FIFOs -->
+  <rect x="300" y="156" width="180" height="44" rx="5" fill="#ffffff" stroke="#a9c48f"/>
+  <text x="310" y="172" font-size="10.5" font-weight="700" fill="#24331d">TX FIFO (spw_fifo, 16b)</text>
+  <text x="310" y="190" font-size="9.5" fill="#3d5a30">data words · drained by transmitter</text>
+
+  <rect x="488" y="156" width="186" height="44" rx="5" fill="#ffffff" stroke="#a9c48f"/>
+  <text x="498" y="172" font-size="10.5" font-weight="700" fill="#24331d">RX FIFO (spw_fifo, 24b)</text>
+  <text x="498" y="190" font-size="9.5" fill="#3d5a30">data + src(2) + subaddr(5) + bcast</text>
+
+  <!-- ===================== cores row ===================== -->
+  <rect x="16" y="228" width="728" height="196" rx="8" fill="#f5f9f2" stroke="#7a9a5a" stroke-width="1.5"/>
+  <text x="28" y="248" font-size="13" font-weight="700" fill="#24331d">Protocol cores over shared internal bus (LOOP_INT self-test)</text>
+
+  <!-- BC -->
+  <rect x="40" y="262" width="200" height="146" rx="7" fill="#eef4ee" stroke="#4a7a4a" stroke-width="1.5"/>
+  <text x="52" y="282" font-size="12" font-weight="700" fill="#24331d">m1553_bc_core</text>
+  <text x="52" y="299" font-size="10" fill="#3d5a30">Bus Controller</text>
+  <text x="52" y="315" font-size="9.5" fill="#3d5a30">BC→RT · RT→BC · RT→RT</text>
+  <text x="52" y="329" font-size="9.5" fill="#3d5a30">mode codes · broadcast</text>
+  <text x="52" y="343" font-size="9.5" fill="#3d5a30">resp. window 4–12 µs</text>
+  <text x="52" y="357" font-size="9.5" fill="#3d5a30">timeout ~14 µs · gap ≥4 µs</text>
+  <rect x="52" y="366" width="176" height="32" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+  <text x="60" y="379" font-size="9" fill="#24331d">word TX engine + word RX engine</text>
+  <text x="60" y="391" font-size="9" fill="#3d5a30">(Manchester II, 1 Mbit/s)</text>
+
+  <!-- RT0 -->
+  <rect x="256" y="262" width="200" height="146" rx="7" fill="#eef4ee" stroke="#4a7a4a" stroke-width="1.5"/>
+  <text x="268" y="282" font-size="12" font-weight="700" fill="#24331d">m1553_rt_core (RT0)</text>
+  <text x="268" y="299" font-size="10" fill="#3d5a30">Remote Terminal · addr 5</text>
+  <text x="268" y="315" font-size="9.5" fill="#3d5a30">command decode + status</text>
+  <text x="268" y="329" font-size="9.5" fill="#3d5a30">ME / Broadcast-Received</text>
+  <text x="268" y="343" font-size="9.5" fill="#3d5a30">resp @ mid-parity+RESP_DELAY</text>
+  <text x="268" y="357" font-size="9.5" fill="#3d5a30">never speaks unsolicited</text>
+  <rect x="268" y="366" width="176" height="32" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+  <text x="276" y="379" font-size="9" fill="#24331d">word TX engine + word RX engine</text>
+  <text x="276" y="391" font-size="9" fill="#3d5a30">RX gated while transmitting</text>
+
+  <!-- RT1 -->
+  <rect x="472" y="262" width="200" height="146" rx="7" fill="#eef4ee" stroke="#4a7a4a" stroke-width="1.5"/>
+  <text x="484" y="282" font-size="12" font-weight="700" fill="#24331d">m1553_rt_core (RT1)</text>
+  <text x="484" y="299" font-size="10" fill="#3d5a30">Remote Terminal · addr 9</text>
+  <text x="484" y="315" font-size="9.5" fill="#3d5a30">enables RT→RT happy path</text>
+  <text x="484" y="329" font-size="9.5" fill="#3d5a30">(needs 2 RTs on the bus)</text>
+  <text x="484" y="343" font-size="9.5" fill="#3d5a30">same core as RT0</text>
+  <text x="484" y="357" font-size="9.5" fill="#3d5a30">broadcast → BCR set</text>
+  <rect x="484" y="366" width="176" height="32" rx="4" fill="#ffffff" stroke="#a9c48f"/>
+  <text x="492" y="379" font-size="9" fill="#24331d">word TX engine + word RX engine</text>
+  <text x="492" y="391" font-size="9" fill="#3d5a30">skid serializes bcast RX write</text>
+
+  <!-- internal bus line -->
+  <line x1="140" y1="408" x2="140" y2="430" stroke="#7a9a5a" stroke-width="2"/>
+  <line x1="356" y1="408" x2="356" y2="430" stroke="#7a9a5a" stroke-width="2"/>
+  <line x1="572" y1="408" x2="572" y2="430" stroke="#7a9a5a" stroke-width="2"/>
+  <line x1="80" y1="430" x2="680" y2="430" stroke="#7a9a5a" stroke-width="2.5"/>
+  <text x="384" y="446" font-size="10" font-weight="700" fill="#4a7a4a" text-anchor="middle">
+    internal 1553 bus — resolved by tx_en (one transmitter at a time; tx_en collision = watchdog FAIL)
+  </text>
+
+  <!-- ===================== pads ===================== -->
+  <rect x="16" y="462" width="360" height="82" rx="8" fill="#eef4ee" stroke="#7a9a5a" stroke-width="1.5"/>
+  <text x="28" y="482" font-size="12" font-weight="700" fill="#24331d">Pads (single-ended, LVCMOS33, bank 302)</text>
+  <text x="28" y="500" font-size="10" fill="#3d5a30">m1553_rx ← C10 · m1553_tx → D10 · m1553_txen → A10</text>
+  <text x="28" y="516" font-size="9.5" fill="#3d5a30">In LOOP_INT the IP gates bus_txen_o = 0 externally:</text>
+  <text x="28" y="530" font-size="9.5" fill="#3d5a30">pads are inert during bring-up (no transceiver needed).</text>
+
+  <!-- ===================== DMA doorbell ===================== -->
+  <rect x="392" y="462" width="352" height="82" rx="8" fill="#eef4ee" stroke="#7a9a5a" stroke-width="1.5"/>
+  <text x="404" y="482" font-size="12" font-weight="700" fill="#24331d">SoC DMA burst master → LPDDR4 (doorbell)</text>
+  <text x="404" y="500" font-size="10" fill="#3d5a30">firmware writes 8-word signature to local RAM,</text>
+  <text x="404" y="516" font-size="10" fill="#3d5a30">DMA copies to DDR (dir=1). PS reads &amp; verifies.</text>
+  <text x="404" y="530" font-size="9.5" fill="#4a7a4a" font-weight="700">SILICON PASS = DDR signature == ISS signature</text>
+
+  <!-- connective arrows cores<->mmio -->
+  <line x1="140" y1="228" x2="140" y2="204" stroke="#7a9a5a" stroke-width="1.5" marker-end="url(#arrowlite)"/>
+  <line x1="356" y1="228" x2="388" y2="204" stroke="#7a9a5a" stroke-width="1.5" marker-end="url(#arrowlite)"/>
+  <line x1="572" y1="228" x2="580" y2="204" stroke="#7a9a5a" stroke-width="1.5" marker-end="url(#arrowlite)"/>
+</svg>
