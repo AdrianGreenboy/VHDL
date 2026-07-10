@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -u
+(
+  cd "$(dirname "$0")" || exit 1
+  rm -f work-obj08.cf
+  ghdl -a --std=08 can_engine.vhd tb_can_engine_rx.vhd || exit 1
+  ghdl -e --std=08 tb_can_engine_rx || exit 1
+  ghdl -r --std=08 tb_can_engine_rx
+)

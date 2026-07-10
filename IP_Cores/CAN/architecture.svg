@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .lbl   { font-size: 13px; fill: #1a2733; }
+      .sub   { font-size: 11px; fill: #4a5b6b; }
+      .tiny  { font-size: 10px; fill: #5a6b7b; }
+      .title { font-size: 15px; font-weight: 600; fill: #1a2733; }
+      .wire  { stroke: #6b7d8d; stroke-width: 1.6; fill: none; }
+      .wireb { stroke: #3d7ea6; stroke-width: 2.2; fill: none; }
+      .pin   { font-size: 10px; fill: #3d7ea6; font-weight: 600; }
+    </style>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#6b7d8d"/>
+    </marker>
+    <marker id="arrb" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#3d7ea6"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="560" fill="#ffffff"/>
+  <text x="24" y="30" class="title">RV32I SoC v3 + IP CAN 2.0B  —  TE0950 (Versal xcve2302)</text>
+
+  <!-- ================= PS / CIPS ================= -->
+  <rect x="24" y="52" width="200" height="150" rx="8" fill="#eef0f2" stroke="#b7c0c8"/>
+  <text x="34" y="72" class="lbl" font-weight="600">Versal CIPS (PS)</text>
+  <rect x="40" y="84" width="168" height="30" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="50" y="103" class="sub">APU  Cortex-A72 x2</text>
+  <rect x="40" y="120" width="168" height="28" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="50" y="138" class="sub">M_AXI_LPD  (control)</text>
+  <rect x="40" y="154" width="168" height="28" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="50" y="172" class="sub">pl_ps_irq0 / irq1</text>
+
+  <!-- ================= NoC + DDR ================= -->
+  <rect x="536" y="52" width="200" height="150" rx="8" fill="#eef0f2" stroke="#b7c0c8"/>
+  <text x="546" y="72" class="lbl" font-weight="600">AXI NoC</text>
+  <rect x="552" y="84" width="168" height="30" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="562" y="103" class="sub">S06_AXI  (aclk6)</text>
+  <rect x="552" y="120" width="168" height="30" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="562" y="139" class="sub">MC0  DDR4 controller</text>
+  <rect x="552" y="156" width="168" height="26" rx="4" fill="#ffffff" stroke="#c4ccd3"/>
+  <text x="562" y="173" class="tiny">LPDDR4 · buffer 0x7000_0000 (16 MB)</text>
+
+  <!-- ================= smartconnect ================= -->
+  <rect x="264" y="80" width="120" height="46" rx="6" fill="#e7ebee" stroke="#b7c0c8"/>
+  <text x="274" y="100" class="sub" font-weight="600">axi_smc</text>
+  <text x="274" y="116" class="tiny">SmartConnect</text>
+
+  <!-- ================= mem_subsys_can ================= -->
+  <rect x="24" y="228" width="712" height="300" rx="10" fill="#eef4f8" stroke="#3d7ea6" stroke-width="1.6"/>
+  <text x="38" y="250" class="title" fill="#2b5f7e">soc_top_can  (module_ref)</text>
+  <text x="38" y="268" class="tiny">bus dmem interno del RV32 · decode de region por addr[31:28]</text>
+
+  <!-- CPU -->
+  <rect x="44" y="286" width="150" height="120" rx="8" fill="#ffffff" stroke="#9fb3c2"/>
+  <text x="54" y="306" class="lbl" font-weight="600">cpu_pipeline</text>
+  <text x="54" y="324" class="sub">RV32IM · 5 etapas</text>
+  <text x="54" y="342" class="tiny">imem_* / dmem_*</text>
+  <text x="54" y="360" class="tiny">irq_ext &lt;- can_irq</text>
+  <rect x="54" y="372" width="130" height="24" rx="4" fill="#f4f8fb" stroke="#c4ccd3"/>
+  <text x="64" y="388" class="tiny">dp_ram IMEM (can_test)</text>
+
+  <!-- mem_subsys -->
+  <rect x="214" y="286" width="160" height="120" rx="8" fill="#ffffff" stroke="#9fb3c2"/>
+  <text x="224" y="306" class="lbl" font-weight="600">mem_subsys_can</text>
+  <text x="224" y="324" class="sub">local "00"</text>
+  <text x="224" y="340" class="sub">DMA  "0100"</text>
+  <text x="224" y="356" class="sub" fill="#2b5f7e">CAN  "1010" = 0xA000_0000</text>
+  <rect x="224" y="366" width="140" height="30" rx="4" fill="#f4f8fb" stroke="#c4ccd3"/>
+  <text x="234" y="385" class="tiny">dma_burst -&gt; m_axi -&gt; DDR</text>
+
+  <!-- ============ IP CAN core (azul acero) ============ -->
+  <rect x="398" y="286" width="322" height="220" rx="10" fill="#dce9f2" stroke="#3d7ea6" stroke-width="1.8"/>
+  <text x="412" y="308" class="title" fill="#2b5f7e">can_mmio  (0xA000_0000)</text>
+  <text x="412" y="325" class="tiny">registros · FIFO RX FWFT 128 B/nodo · IRQ nivel</text>
+
+  <!-- nodo A -->
+  <rect x="412" y="338" width="140" height="86" rx="8" fill="#ffffff" stroke="#3d7ea6"/>
+  <text x="422" y="357" class="lbl" font-weight="600" fill="#2b5f7e">can_engine A</text>
+  <text x="422" y="374" class="tiny">CAN 2.0B base+ext</text>
+  <text x="422" y="389" class="tiny">TEC/REC · stuffing</text>
+  <text x="422" y="404" class="tiny">CRC-15 · arbitraje</text>
+  <text x="422" y="418" class="tiny">a_tx / a_rx</text>
+
+  <!-- nodo B -->
+  <rect x="566" y="338" width="140" height="86" rx="8" fill="#ffffff" stroke="#3d7ea6"/>
+  <text x="576" y="357" class="lbl" font-weight="600" fill="#2b5f7e">can_engine B</text>
+  <text x="576" y="374" class="tiny">CAN 2.0B base+ext</text>
+  <text x="576" y="389" class="tiny">TEC/REC · stuffing</text>
+  <text x="576" y="404" class="tiny">CRC-15 · arbitraje</text>
+  <text x="576" y="418" class="tiny">b_tx / b_rx</text>
+
+  <!-- wired-AND bus -->
+  <rect x="470" y="440" width="180" height="34" rx="6" fill="#f4f8fb" stroke="#3d7ea6"/>
+  <text x="480" y="461" class="sub" fill="#2b5f7e">bus_int = a_tx AND b_tx</text>
+
+  <!-- IOBUF / pad -->
+  <rect x="398" y="486" width="322" height="30" rx="6" fill="#ffffff" stroke="#3d7ea6"/>
+  <text x="412" y="505" class="tiny" fill="#2b5f7e">IOBUF  can_bus (D10, LVCMOS33, PULLUP) · LOOP_INT: T='1' pad liberado</text>
+
+  <!-- ============ conexiones ============ -->
+  <!-- CIPS M_AXI_LPD -> smc -->
+  <path class="wire" d="M224,134 L264,103" marker-end="url(#arr)"/>
+  <!-- smc -> soc_top s_axi -->
+  <path class="wire" d="M324,126 L324,228" marker-end="url(#arr)"/>
+  <text x="330" y="180" class="pin">s_axi 0x8000_0000</text>
+  <!-- m_axi -> NoC S06 -->
+  <path class="wireb" d="M636,286 L636,202" marker-end="url(#arrb)"/>
+  <text x="642" y="250" class="pin">m_axi</text>
+  <!-- irq -> CIPS -->
+  <path class="wire" d="M44,360 L34,360 L34,190 L224,190" marker-end="url(#arr)"/>
+  <text x="70" y="470" class="tiny" fill="#4a5b6b">irq_out -&gt; pl_ps_irq0   ·   can_irq_out -&gt; pl_ps_irq1</text>
+
+  <!-- engines <-> bus -->
+  <path class="wireb" d="M482,424 L520,440" marker-end="url(#arrb)"/>
+  <path class="wireb" d="M636,424 L600,440" marker-end="url(#arrb)"/>
+  <path class="wireb" d="M560,474 L560,486" marker-end="url(#arrb)"/>
+
+  <text x="24" y="548" class="tiny">Validado en simulacion (capas 1a/1b/1c/2/4, GHDL --std=08) y en silicio (LOOP_INT, escalon 125k/250k/500k/1M bit/s).  MIT.</text>
+</svg>
