@@ -2,10 +2,10 @@
 // Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 // --------------------------------------------------------------------------------
 // Tool Version: Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
-// Date        : Sat Jul 11 17:50:13 2026
+// Date        : Sat Jul 11 17:50:12 2026
 // Host        : adrian running 64-bit Ubuntu 24.04.4 LTS
-// Command     : write_verilog -force -mode synth_stub
-//               /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0_stub.v
+// Command     : write_verilog -force -mode synth_stub -rename_top bd_soc_usart_axi_smc_0 -prefix
+//               bd_soc_usart_axi_smc_0_ bd_soc_usart_axi_smc_0_stub.v
 // Design      : bd_soc_usart_axi_smc_0
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xcve2302-sfva784-1LP-e-S

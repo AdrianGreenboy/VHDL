@@ -98,8 +98,6 @@ OPTRACE "impl_1" END { }
 }
 
 set_msg_config -id {HDL-1065} -limit 10000
-set_msg_config -id {Synth 8-256} -limit 10000
-set_msg_config -id {Synth 8-638} -limit 10000
 
 OPTRACE "impl_1" START { ROLLUP_1 }
 OPTRACE "Phase: Init Design" START { ROLLUP_AUTO }
@@ -108,25 +106,44 @@ set ACTIVE_STEP init_design
 set rc [catch {
   create_msg_db init_design.pb
   set_param ced.repoPaths /home/adrian/Downloads/TE0950_Designs/04_AMD_Vivado_Custom_Configurable_Example
-  set_param power.enableLutRouteBelPower 1
-  set_param power.enableCarry8RouteBelPower 1
-  set_param power.enableUnconnectedCarry8PinPower 1
-  set_param power.disableGlitchAnalysis 1
-  set_param synth.incrementalSynthesisCache ./.Xil/Vivado-38242-adrian/incrSyn
-  set_param checkpoint.writeSynthRtdsInDcp 1
   set_param bd.open.in_stealth_mode 3
-  set_param netlist.writeMacroLevel 0
-  set_param chipscope.maxJobs 8
-  set_param power.xpeLogicHierarchyThreshold 50
+  set_param chipscope.maxJobs 7
   set_param general.usePosixSpawnForFork 1
-  set_param runs.launchOptions { -jobs 30  }
-  reset_param project.defaultXPMLibraries 
-  open_checkpoint /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper.dcp
+  set_param runs.launchOptions { -jobs 8  }
+OPTRACE "create in-memory project" START { }
+  create_project -in_memory -part xcve2302-sfva784-1LP-e-S
+  set_property board_part_repo_paths {/home/adrian/te0950_work/board_files} [current_project]
+  set_property board_part trenz.biz:te0950_23_1lse:part0:1.2 [current_project]
+  set_property design_mode GateLvl [current_fileset]
+  set_param project.singleFileAddWarning.threshold 0
+OPTRACE "create in-memory project" END { }
+OPTRACE "set parameters" START { }
   set_property webtalk.parent_dir /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.cache/wt [current_project]
   set_property parent.project_path /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.xpr [current_project]
   set_property ip_output_repo /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.cache/ip [current_project]
   set_property ip_cache_permissions {read write} [current_project]
   set_property XPM_LIBRARIES {XPM_CDC XPM_FIFO XPM_MEMORY} [current_project]
+OPTRACE "set parameters" END { }
+OPTRACE "add files" START { }
+  add_files -quiet /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/bd_soc_usart_wrapper.dcp
+  set_msg_config -source 4 -id {BD 41-1661} -limit 0
+  set_param project.isImplRun true
+  add_files /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.srcs/sources_1/bd/bd_soc_usart/bd_soc_usart.bd
+  set_param project.isImplRun false
+OPTRACE "read constraints: implementation" START { }
+  read_xdc /home/adrian/m1553_ip/m1553_pins.xdc
+  read_xdc /home/adrian/eth_ip/eth_pins.xdc
+OPTRACE "read constraints: implementation" END { }
+OPTRACE "read constraints: implementation_pre" START { }
+OPTRACE "read constraints: implementation_pre" END { }
+OPTRACE "add files" END { }
+OPTRACE "link_design" START { }
+  set_param project.isImplRun true
+  link_design -top bd_soc_usart_wrapper -part xcve2302-sfva784-1LP-e-S 
+OPTRACE "link_design" END { }
+  set_param project.isImplRun false
+OPTRACE "gray box cells" START { }
+OPTRACE "gray box cells" END { }
 OPTRACE "init_design_reports" START { REPORT }
 OPTRACE "init_design_reports" END { }
 OPTRACE "init_design_write_hwdef" START { }

@@ -57,15 +57,10 @@ if {$::dispatch::connected} {
 
 OPTRACE "bd_soc_usart_u_soc_ptp_0_synth_1" START { ROLLUP_AUTO }
 set_param ced.repoPaths /home/adrian/Downloads/TE0950_Designs/04_AMD_Vivado_Custom_Configurable_Example
-set_param synth.incrementalSynthesisCache ./.Xil/Vivado-38242-adrian/incrSyn
-set_param checkpoint.writeSynthRtdsInDcp 1
 set_param bd.open.in_stealth_mode 3
-set_param netlist.writeMacroLevel 0
 set_param general.usePosixSpawnForFork 1
 set_param chipscope.flow 0
 set_msg_config -id {HDL-1065} -limit 10000
-set_msg_config -id {Synth 8-256} -limit 10000
-set_msg_config -id {Synth 8-638} -limit 10000
 set_param project.vivado.isBlockSynthRun true
 OPTRACE "Creating in-memory project" START { }
 set_param ips.modRefOverrideMrefDirPath /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/mref

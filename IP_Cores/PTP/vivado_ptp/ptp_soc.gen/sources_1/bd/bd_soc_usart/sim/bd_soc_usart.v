@@ -2,7 +2,7 @@
 //Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
-//Date        : Sat Jul 11 17:49:26 2026
+//Date        : Sun Jul 12 00:14:30 2026
 //Host        : adrian running 64-bit Ubuntu 24.04.4 LTS
 //Command     : generate_target bd_soc_usart.bd
 //Design      : bd_soc_usart

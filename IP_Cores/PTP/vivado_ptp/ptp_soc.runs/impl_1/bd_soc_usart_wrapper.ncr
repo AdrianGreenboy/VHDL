@@ -1023,19 +1023,15 @@
       "InitialBoot": false,
       "Nets": [
         {
-          "PhyInstanceStart": "NOC_NMU512_X0Y2",
+          "PhyInstanceStart": "NOC_NMU512_X0Y1",
           "PhyInstanceEnd": "DDRMC_X0Y0",
           "VC": 5,
           "CommType": "WRITE",
           "Connections": [
-            "NOC_NMU512_X0Y2",
+            "NOC_NMU512_X0Y1",
             "req_out",
-            "NOC_NPS_VNOC_X0Y5",
-            "port3_in",
-            "NOC_NPS_VNOC_X0Y5",
-            "port2_out",
             "NOC_NPS_VNOC_X0Y3",
-            "port0_in",
+            "port3_in",
             "NOC_NPS_VNOC_X0Y3",
             "port2_out",
             "NOC_NPS_VNOC_X0Y1",
@@ -1064,11 +1060,11 @@
           "RequiredBW": 1000,
           "AchievedBW": 1000,
           "RequiredLatency": 300,
-          "AchievedLatency": 24
+          "AchievedLatency": 22
         },
         {
           "PhyInstanceStart": "DDRMC_X0Y0",
-          "PhyInstanceEnd": "NOC_NMU512_X0Y2",
+          "PhyInstanceEnd": "NOC_NMU512_X0Y1",
           "VC": 7,
           "CommType": "WRITE_RESP",
           "Connections": [
@@ -1097,22 +1093,18 @@
             "NOC_NPS_VNOC_X0Y3",
             "port2_in",
             "NOC_NPS_VNOC_X0Y3",
-            "port0_out",
-            "NOC_NPS_VNOC_X0Y5",
-            "port2_in",
-            "NOC_NPS_VNOC_X0Y5",
             "port3_out",
-            "NOC_NMU512_X0Y2",
+            "NOC_NMU512_X0Y1",
             "resp_in"
           ],
           "RequiredBW": 500,
           "AchievedBW": 500,
           "RequiredLatency": 300,
-          "AchievedLatency": 24
+          "AchievedLatency": 22
         },
         {
           "PhyInstanceStart": "DDRMC_X0Y0",
-          "PhyInstanceEnd": "NOC_NMU512_X0Y2",
+          "PhyInstanceEnd": "NOC_NMU512_X0Y1",
           "VC": 6,
           "CommType": "READ",
           "Connections": [
@@ -1141,33 +1133,25 @@
             "NOC_NPS_VNOC_X0Y3",
             "port2_in",
             "NOC_NPS_VNOC_X0Y3",
-            "port0_out",
-            "NOC_NPS_VNOC_X0Y5",
-            "port2_in",
-            "NOC_NPS_VNOC_X0Y5",
             "port3_out",
-            "NOC_NMU512_X0Y2",
+            "NOC_NMU512_X0Y1",
             "resp_in"
           ],
           "RequiredBW": 500,
           "AchievedBW": 500,
           "RequiredLatency": 300,
-          "AchievedLatency": 24
+          "AchievedLatency": 22
         },
         {
-          "PhyInstanceStart": "NOC_NMU512_X0Y2",
+          "PhyInstanceStart": "NOC_NMU512_X0Y1",
           "PhyInstanceEnd": "DDRMC_X0Y0",
           "VC": 4,
           "CommType": "READ_REQ",
           "Connections": [
-            "NOC_NMU512_X0Y2",
+            "NOC_NMU512_X0Y1",
             "req_out",
-            "NOC_NPS_VNOC_X0Y5",
-            "port3_in",
-            "NOC_NPS_VNOC_X0Y5",
-            "port2_out",
             "NOC_NPS_VNOC_X0Y3",
-            "port0_in",
+            "port3_in",
             "NOC_NPS_VNOC_X0Y3",
             "port2_out",
             "NOC_NPS_VNOC_X0Y1",
@@ -1196,7 +1180,7 @@
           "RequiredBW": 500,
           "AchievedBW": 500,
           "RequiredLatency": 300,
-          "AchievedLatency": 24
+          "AchievedLatency": 22
         }
       ]
     }
@@ -1220,7 +1204,6 @@
     },
     {
       "Name": "NOC_NMU512_X0Y2",
-      "TrafficLInst": "bd_soc_usart_i/axi_noc_0/inst/S06_AXI_nmu/bd_b77b_S06_AXI_nmu_0_top_INST/NOC_NMU512_INST",
       "DestId": 0
     },
     {
@@ -1229,6 +1212,7 @@
     },
     {
       "Name": "NOC_NMU512_X0Y1",
+      "TrafficLInst": "bd_soc_usart_i/axi_noc_0/inst/S06_AXI_nmu/bd_b77b_S06_AXI_nmu_0_top_INST/NOC_NMU512_INST",
       "DestId": 0
     },
     {

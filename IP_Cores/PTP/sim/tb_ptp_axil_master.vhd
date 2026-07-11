@@ -158,6 +158,28 @@ begin
     end loop;
     report "A5 OK: Sync completo por core->master->axil->top (STATUS=" & to_hstring(v) & ")";
 
+    -- ============ A6: dbg_state tras el Sync (timing EXACTO del firmware:
+    -- poll sale -> lw STATUS -> sw local -> lw DBG_STATE, sin margen) =======
+    mrd(16#24#, v);                      -- re-lectura de STATUS (como el fw)
+    mrd_b2b(16#44#, v);                  -- DBG_STATE inmediato
+    report "A6 dbg_state tras Sync = 0x" & to_hstring(v)
+           & " (tx_inflight=" & std_logic'image(v(8)) & ")";
+    -- (informativo: tx_inflight=1 aqui es el transitorio de purga, no un atasco)
+
+    -- ============ A7: segundo Sync (lo que un tx_inflight pegado bloquea) ==
+    mwr(16#24#, x"0000000F");            -- limpiar STATUS
+    mwr(16#0C#, x"00000001");            -- CMD.send_sync otra vez
+    tout := 0;
+    loop
+      mrd(16#24#, v);
+      exit when v(0) = '1';
+      tout := tout + 1;
+      if tout >= 20000 then
+        report "A7 FALLA: SEGUNDO Sync nunca salio - tx_inflight bloquea el motor" severity failure;
+      end if;
+    end loop;
+    report "A7 OK: segundo Sync completo (tx_inflight se libero)";
+
     report "=== TB_PTP_AXIL_MASTER: cadena lado-core PASS ===";
     done <= true;
     wait;

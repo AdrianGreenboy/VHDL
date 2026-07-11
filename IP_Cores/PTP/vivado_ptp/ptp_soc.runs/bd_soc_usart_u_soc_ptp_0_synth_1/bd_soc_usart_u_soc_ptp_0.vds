@@ -3,8 +3,8 @@
 # SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
 # IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
 # SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
-# Start of session at: Sat Jul 11 17:49:35 2026
-# Process ID         : 49199
+# Start of session at: Sun Jul 12 00:14:40 2026
+# Process ID         : 333369
 # Current directory  : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/bd_soc_usart_u_soc_ptp_0_synth_1
 # Command line       : vivado -log bd_soc_usart_u_soc_ptp_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source bd_soc_usart_u_soc_ptp_0.tcl
 # Log file           : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/bd_soc_usart_u_soc_ptp_0_synth_1/bd_soc_usart_u_soc_ptp_0.vds
@@ -13,13 +13,13 @@
 # Platform           : Ubuntu
 # Operating System   : Ubuntu 24.04.4 LTS
 # Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
-# CPU Frequency      : 5500.000 MHz
+# CPU Frequency      : 800.000 MHz
 # CPU Physical cores : 24
 # CPU Logical cores  : 32
 # Host memory        : 67107 MB
 # Swap memory        : 8589 MB
 # Total Virtual      : 75697 MB
-# Available Virtual  : 61138 MB
+# Available Virtual  : 56441 MB
 #-----------------------------------------------------------
 Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
 source bd_soc_usart_u_soc_ptp_0.tcl -notrace
@@ -33,9 +33,9 @@ INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcve230
 INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 7 processes.
 INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
-INFO: [Synth 8-7075] Helper process launched with PID 49463
+INFO: [Synth 8-7075] Helper process launched with PID 333399
 ---------------------------------------------------------------------------------
-Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2665.867 ; gain = 405.688 ; free physical = 31097 ; free virtual = 52649
+Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2665.676 ; gain = 405.688 ; free physical = 2236 ; free virtual = 52189
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_u_soc_ptp_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_u_soc_ptp_0/synth/bd_soc_usart_u_soc_ptp_0.v:53]
 INFO: [Synth 8-6157] synthesizing module 'soc_top_master_wrap' [/home/adrian/rv32i/soc_top_master_wrap.v:15]
@@ -71,11 +71,11 @@ INFO: [Synth 8-638] synthesizing module 'dp_ram__parameterized0' [/home/adrian/r
 	Parameter DEPTH bound to: 256 - type: integer 
 	Parameter INIT_FILE bound to: (null) - type: string 
 INFO: [Synth 8-256] done synthesizing module 'dp_ram__parameterized0' (0#1) [/home/adrian/rv32i/dp_ram.vhd:43]
-INFO: [Synth 8-638] synthesizing module 'ptp_axil_master' [/home/adrian/rv32i/ptp_axil_master.vhd:53]
-INFO: [Synth 8-256] done synthesizing module 'ptp_axil_master' (0#1) [/home/adrian/rv32i/ptp_axil_master.vhd:53]
 INFO: [Synth 8-638] synthesizing module 'dma_burst' [/home/adrian/rv32i/dma_burst.vhd:72]
 	Parameter ADDR_W bound to: 40 - type: integer 
 INFO: [Synth 8-256] done synthesizing module 'dma_burst' (0#1) [/home/adrian/rv32i/dma_burst.vhd:72]
+INFO: [Synth 8-638] synthesizing module 'ptp_axil_master' [/home/adrian/rv32i/ptp_axil_master.vhd:54]
+INFO: [Synth 8-256] done synthesizing module 'ptp_axil_master' (0#1) [/home/adrian/rv32i/ptp_axil_master.vhd:54]
 INFO: [Synth 8-256] done synthesizing module 'mem_subsys_dma' (0#1) [/home/adrian/rv32i/mem_subsys_dma.vhd:88]
 INFO: [Synth 8-638] synthesizing module 'axil_soc' [/home/adrian/rv32i/axil_soc.vhd:71]
 	Parameter ADDR_W bound to: 16 - type: integer 
@@ -86,9 +86,9 @@ INFO: [Synth 8-638] synthesizing module 'ptp_axil' [/home/adrian/vhdl_repo/IP_Co
 INFO: [Synth 8-638] synthesizing module 'ptp_top' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_top.vhd:35]
 	Parameter SHIFT_P bound to: 8 - type: integer 
 	Parameter SHIFT_I bound to: 12 - type: integer 
-INFO: [Synth 8-638] synthesizing module 'ptp_regs' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_regs.vhd:73]
-INFO: [Synth 8-256] done synthesizing module 'ptp_regs' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_regs.vhd:73]
-INFO: [Synth 8-638] synthesizing module 'ptp_mac' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:72]
+INFO: [Synth 8-638] synthesizing module 'ptp_regs' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_regs.vhd:74]
+INFO: [Synth 8-256] done synthesizing module 'ptp_regs' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_regs.vhd:74]
+INFO: [Synth 8-638] synthesizing module 'ptp_mac' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:73]
 	Parameter SHIFT_P bound to: 8 - type: integer 
 	Parameter SHIFT_I bound to: 12 - type: integer 
 INFO: [Synth 8-638] synthesizing module 'ptp_clock' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_clock.vhd:50]
@@ -97,9 +97,9 @@ INFO: [Synth 8-638] synthesizing module 'ptp_clock' [/home/adrian/vhdl_repo/IP_C
 INFO: [Synth 8-256] done synthesizing module 'ptp_clock' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_clock.vhd:50]
 INFO: [Synth 8-638] synthesizing module 'ptp_tstamp' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tstamp.vhd:44]
 INFO: [Synth 8-256] done synthesizing module 'ptp_tstamp' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tstamp.vhd:44]
-INFO: [Synth 8-638] synthesizing module 'ptp_tx' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:39]
-INFO: [Synth 8-226] default block is never used [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:179]
-INFO: [Synth 8-256] done synthesizing module 'ptp_tx' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:39]
+INFO: [Synth 8-638] synthesizing module 'ptp_tx' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:40]
+INFO: [Synth 8-226] default block is never used [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:181]
+INFO: [Synth 8-256] done synthesizing module 'ptp_tx' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd:40]
 INFO: [Synth 8-638] synthesizing module 'spw_fifo' [/home/adrian/spw_ip/spw_fifo.vhd:31]
 	Parameter LOG2_DEPTH bound to: 11 - type: integer 
 	Parameter WIDTH bound to: 9 - type: integer 
@@ -113,11 +113,11 @@ INFO: [Synth 8-256] done synthesizing module 'eth_rx_mii' (0#1) [/home/adrian/vh
 INFO: [Synth 8-256] done synthesizing module 'eth_mac' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/eth_mac.vhd:56]
 INFO: [Synth 8-638] synthesizing module 'ptp_rx' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_rx.vhd:54]
 INFO: [Synth 8-256] done synthesizing module 'ptp_rx' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_rx.vhd:54]
-INFO: [Synth 8-638] synthesizing module 'ptp_pdelay_fsm' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay_fsm.vhd:67]
-INFO: [Synth 8-256] done synthesizing module 'ptp_pdelay_fsm' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay_fsm.vhd:67]
+INFO: [Synth 8-638] synthesizing module 'ptp_pdelay_fsm' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay_fsm.vhd:69]
+INFO: [Synth 8-256] done synthesizing module 'ptp_pdelay_fsm' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay_fsm.vhd:69]
 INFO: [Synth 8-638] synthesizing module 'ptp_pdelay' [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay.vhd:41]
 INFO: [Synth 8-256] done synthesizing module 'ptp_pdelay' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay.vhd:41]
-INFO: [Synth 8-256] done synthesizing module 'ptp_mac' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:72]
+INFO: [Synth 8-256] done synthesizing module 'ptp_mac' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:73]
 INFO: [Synth 8-256] done synthesizing module 'ptp_top' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_top.vhd:35]
 INFO: [Synth 8-256] done synthesizing module 'ptp_axil' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_axil.vhd:58]
 INFO: [Synth 8-256] done synthesizing module 'soc_top_master' (0#1) [/home/adrian/rv32i/soc_top_master.vhd:87]
@@ -125,7 +125,7 @@ INFO: [Synth 8-6155] done synthesizing module 'soc_top_master_wrap' (0#1) [/home
 INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_u_soc_ptp_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_u_soc_ptp_0/synth/bd_soc_usart_u_soc_ptp_0.v:53]
 WARNING: [Synth 8-6014] Unused sequential element id_ex_reg[ctrl][imm_fmt] was removed.  [/home/adrian/rv32i/cpu_pipeline.vhd:330]
 WARNING: [Synth 8-6014] Unused sequential element ev_ok_reg was removed.  [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/eth_rx_mii.vhd:91]
-WARNING: [Synth 8-6014] Unused sequential element rx_mack_sync_reg was removed.  [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:254]
+WARNING: [Synth 8-6014] Unused sequential element rx_mack_sync_reg was removed.  [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_mac.vhd:259]
 WARNING: [Synth 8-6014] Unused sequential element wready_r_reg was removed.  [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_axil.vhd:82]
 WARNING: [Synth 8-6014] Unused sequential element mm_we_reg was removed.  [/home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_axil.vhd:96]
 INFO: [Synth 8-7129] Port rx_seqid[15] in module ptp_pdelay_fsm is either unconnected or has no load
@@ -185,14 +185,14 @@ INFO: [Synth 8-7129] Port s_axi_araddr[9] in module ptp_axil is either unconnect
 INFO: [Synth 8-7129] Port s_axi_araddr[8] in module ptp_axil is either unconnected or has no load
 INFO: [Synth 8-7129] Port s_axi_araddr[1] in module ptp_axil is either unconnected or has no load
 INFO: [Synth 8-7129] Port s_axi_araddr[0] in module ptp_axil is either unconnected or has no load
+INFO: [Synth 8-7129] Port p_bresp[1] in module ptp_axil_master is either unconnected or has no load
+INFO: [Synth 8-7129] Port p_bresp[0] in module ptp_axil_master is either unconnected or has no load
+INFO: [Synth 8-7129] Port p_rresp[1] in module ptp_axil_master is either unconnected or has no load
+INFO: [Synth 8-7129] Port p_rresp[0] in module ptp_axil_master is either unconnected or has no load
 INFO: [Synth 8-7129] Port m_axi_bresp[1] in module dma_burst is either unconnected or has no load
 INFO: [Synth 8-7129] Port m_axi_bresp[0] in module dma_burst is either unconnected or has no load
 INFO: [Synth 8-7129] Port m_axi_rresp[1] in module dma_burst is either unconnected or has no load
 INFO: [Synth 8-7129] Port m_axi_rresp[0] in module dma_burst is either unconnected or has no load
-INFO: [Synth 8-7129] Port m_bresp[1] in module ptp_axil_master is either unconnected or has no load
-INFO: [Synth 8-7129] Port m_bresp[0] in module ptp_axil_master is either unconnected or has no load
-INFO: [Synth 8-7129] Port m_rresp[1] in module ptp_axil_master is either unconnected or has no load
-INFO: [Synth 8-7129] Port m_rresp[0] in module ptp_axil_master is either unconnected or has no load
 INFO: [Synth 8-7129] Port cpu_addr[31] in module dp_ram is either unconnected or has no load
 INFO: [Synth 8-7129] Port cpu_addr[30] in module dp_ram is either unconnected or has no load
 INFO: [Synth 8-7129] Port cpu_addr[29] in module dp_ram is either unconnected or has no load
@@ -230,18 +230,18 @@ INFO: [Synth 8-7129] Port axi_addr[22] in module dp_ram is either unconnected or
 INFO: [Synth 8-7129] Port axi_addr[21] in module dp_ram is either unconnected or has no load
 INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 ---------------------------------------------------------------------------------
-Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2798.836 ; gain = 538.656 ; free physical = 30734 ; free virtual = 52288
+Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2798.645 ; gain = 538.656 ; free physical = 2068 ; free virtual = 52022
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2810.711 ; gain = 550.531 ; free physical = 30718 ; free virtual = 52279
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2804.582 ; gain = 544.594 ; free physical = 2068 ; free virtual = 52022
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2810.711 ; gain = 550.531 ; free physical = 30718 ; free virtual = 52279
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2804.582 ; gain = 544.594 ; free physical = 2068 ; free virtual = 52022
 ---------------------------------------------------------------------------------
-Netlist sorting complete. Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.04 . Memory (MB): peak = 2810.711 ; gain = 0.000 ; free physical = 30709 ; free virtual = 52266
+Netlist sorting complete. Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.04 . Memory (MB): peak = 2804.582 ; gain = 0.000 ; free physical = 2068 ; free virtual = 52022
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
 INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
 INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
@@ -252,14 +252,14 @@ Processing XDC Constraints
 Initializing timing engine
 Completed Processing XDC Constraints
 
-Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2912.676 ; gain = 0.000 ; free physical = 30659 ; free virtual = 52218
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2915.516 ; gain = 0.000 ; free physical = 2056 ; free virtual = 52011
 INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
-Constraint Validation Runtime : Time (s): cpu = 00:00:00.1 ; elapsed = 00:00:00.03 . Memory (MB): peak = 2912.711 ; gain = 0.000 ; free physical = 30660 ; free virtual = 52218
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.08 ; elapsed = 00:00:00.03 . Memory (MB): peak = 2915.551 ; gain = 0.000 ; free physical = 2056 ; free virtual = 52010
 INFO: [Designutils 20-5008] Incremental synthesis strategy off
 ---------------------------------------------------------------------------------
-Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2912.711 ; gain = 652.531 ; free physical = 30412 ; free virtual = 51972
+Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2915.551 ; gain = 655.562 ; free physical = 2058 ; free virtual = 52012
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Loading Part and Timing Information
@@ -267,18 +267,18 @@ Start Loading Part and Timing Information
 Loading part: xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-6742] Reading net delay rules and data
 ---------------------------------------------------------------------------------
-Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2920.680 ; gain = 660.500 ; free physical = 30405 ; free virtual = 51965
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2923.520 ; gain = 663.531 ; free physical = 2057 ; free virtual = 52012
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying 'set_property' XDC Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2920.680 ; gain = 660.500 ; free physical = 30405 ; free virtual = 51965
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2923.520 ; gain = 663.531 ; free physical = 2057 ; free virtual = 52012
 ---------------------------------------------------------------------------------
 WARNING: [Synth 8-3936] Found unconnected internal register 'prod_reg' and it is trimmed from '66' to '64' bits. [/home/adrian/rv32i/muldiv.vhd:104]
 INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'muldiv'
-INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'ptp_axil_master'
 INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'dma_burst'
+INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'ptp_axil_master'
 INFO: [Synth 8-802] inferred FSM for state register 'wstate_reg' in module 'axil_soc'
 INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'ptp_tx'
 INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'eth_tx_mii'
@@ -296,17 +296,6 @@ INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 
 ---------------------------------------------------------------------------------------------------
                    State |                     New Encoding |                Previous Encoding 
 ---------------------------------------------------------------------------------------------------
-                  s_idle |                              000 |                              000
-                    s_aw |                              001 |                              001
-                     s_b |                              010 |                              010
-                    s_ar |                              011 |                              011
-                     s_r |                              100 |                              100
-                  s_done |                              101 |                              101
----------------------------------------------------------------------------------------------------
-INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'sequential' in module 'ptp_axil_master'
----------------------------------------------------------------------------------------------------
-                   State |                     New Encoding |                Previous Encoding 
----------------------------------------------------------------------------------------------------
                   d_idle |                          0000001 |                              000
                   d_calc |                          0000010 |                              001
                     r_ar |                          0000100 |                              010
@@ -316,6 +305,16 @@ INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'se
                   w_resp |                          1000000 |                              110
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 'one-hot' in module 'dma_burst'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  s_idle |                              000 |                              000
+                    s_wr |                              001 |                              001
+                 s_bresp |                              010 |                              010
+                    s_ar |                              011 |                              011
+                 s_rdata |                              100 |                              100
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'sequential' in module 'ptp_axil_master'
 ---------------------------------------------------------------------------------------------------
                    State |                     New Encoding |                Previous Encoding 
 ---------------------------------------------------------------------------------------------------
@@ -366,7 +365,7 @@ INFO: [Synth 8-3354] encoded FSM with state register 'rstt_reg' using encoding '
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'ist_reg' using encoding 'one-hot' in module 'ptp_pdelay_fsm'
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:08 ; elapsed = 00:00:08 . Memory (MB): peak = 2920.680 ; gain = 660.500 ; free physical = 30373 ; free virtual = 51934
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:08 ; elapsed = 00:00:08 . Memory (MB): peak = 2923.520 ; gain = 663.531 ; free physical = 2041 ; free virtual = 51997
 ---------------------------------------------------------------------------------
 No constraint files found.
 ---------------------------------------------------------------------------------
@@ -407,8 +406,8 @@ Detailed RTL Component Info :
 	               48 Bit    Registers := 11    
 	               40 Bit    Registers := 1     
 	               33 Bit    Registers := 1     
-	               32 Bit    Registers := 59    
-	               16 Bit    Registers := 4     
+	               32 Bit    Registers := 60    
+	               16 Bit    Registers := 5     
 	               12 Bit    Registers := 4     
 	               11 Bit    Registers := 7     
 	                9 Bit    Registers := 4     
@@ -416,10 +415,10 @@ Detailed RTL Component Info :
 	                7 Bit    Registers := 2     
 	                6 Bit    Registers := 4     
 	                5 Bit    Registers := 6     
-	                4 Bit    Registers := 9     
+	                4 Bit    Registers := 10    
 	                3 Bit    Registers := 11    
-	                2 Bit    Registers := 3     
-	                1 Bit    Registers := 88    
+	                2 Bit    Registers := 4     
+	                1 Bit    Registers := 90    
 +---Multipliers : 
 	              31x49  Multipliers := 6     
 	              33x33  Multipliers := 1     
@@ -467,23 +466,22 @@ Detailed RTL Component Info :
 	  12 Input    4 Bit        Muxes := 1     
 	   4 Input    4 Bit        Muxes := 1     
 	   9 Input    4 Bit        Muxes := 3     
-	   2 Input    3 Bit        Muxes := 7     
-	   6 Input    3 Bit        Muxes := 1     
+	   2 Input    3 Bit        Muxes := 6     
+	   5 Input    3 Bit        Muxes := 3     
 	   9 Input    3 Bit        Muxes := 1     
-	   5 Input    3 Bit        Muxes := 1     
 	   8 Input    2 Bit        Muxes := 1     
-	   3 Input    2 Bit        Muxes := 2     
-	   2 Input    2 Bit        Muxes := 4     
-	   4 Input    2 Bit        Muxes := 1     
-	   2 Input    1 Bit        Muxes := 133   
+	   3 Input    2 Bit        Muxes := 3     
+	   2 Input    2 Bit        Muxes := 5     
+	   4 Input    2 Bit        Muxes := 2     
+	   2 Input    1 Bit        Muxes := 131   
 	   8 Input    1 Bit        Muxes := 1     
 	   3 Input    1 Bit        Muxes := 23    
-	   6 Input    1 Bit        Muxes := 19    
 	   7 Input    1 Bit        Muxes := 5     
-	   5 Input    1 Bit        Muxes := 16    
+	   5 Input    1 Bit        Muxes := 31    
 	  12 Input    1 Bit        Muxes := 9     
 	   4 Input    1 Bit        Muxes := 12    
 	   9 Input    1 Bit        Muxes := 12    
+	   6 Input    1 Bit        Muxes := 7     
 ---------------------------------------------------------------------------------
 Finished RTL Component Statistics 
 ---------------------------------------------------------------------------------
@@ -725,7 +723,7 @@ WARNING: [Synth 8-3332] Sequential element (prod_reg[34]__1) is unused and will 
 WARNING: [Synth 8-3332] Sequential element (prod_reg[33]__1) is unused and will be removed from module muldiv.
 INFO: [Common 17-14] Message 'Synth 8-3332' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 ---------------------------------------------------------------------------------
-Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 28869 ; free virtual = 50489
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:24 ; elapsed = 00:00:25 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51667
 ---------------------------------------------------------------------------------
  Sort Area is  prod0_0 : 0 0 : 3982 5770 : Used 1 time 0
  Sort Area is  prod0_0 : 0 1 : 1788 5770 : Used 1 time 0
@@ -839,7 +837,7 @@ No constraint files found.
 Start Timing Optimization
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Timing Optimization : Time (s): cpu = 00:00:27 ; elapsed = 00:00:27 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 28864 ; free virtual = 50490
+Finished Timing Optimization : Time (s): cpu = 00:00:25 ; elapsed = 00:00:25 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51667
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP, Shift Register and Retiming Reporting
@@ -872,7 +870,7 @@ Start Technology Mapping
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 INFO: [Synth 8-7052] The timing for the instance inst/u_soc/u_ptp_axil/u_ptp/u_mac/u_mac/u_rx/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 ---------------------------------------------------------------------------------
-Finished Technology Mapping : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31588 ; free virtual = 53216
+Finished Technology Mapping : Time (s): cpu = 00:00:26 ; elapsed = 00:00:27 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start IO Insertion
@@ -891,37 +889,37 @@ Start Final Netlist Cleanup
 Finished Final Netlist Cleanup
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished IO Insertion : Time (s): cpu = 00:00:30 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31747 ; free virtual = 53376
+Finished IO Insertion : Time (s): cpu = 00:00:28 ; elapsed = 00:00:28 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Instances
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Instances : Time (s): cpu = 00:00:30 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31747 ; free virtual = 53376
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:28 ; elapsed = 00:00:28 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Rebuilding User Hierarchy
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31744 ; free virtual = 53372
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Ports
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Ports : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31742 ; free virtual = 53371
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31748 ; free virtual = 53377
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Nets
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Nets : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31748 ; free virtual = 53379
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Writing Synthesis Report
@@ -989,32 +987,32 @@ Report Cell Usage:
 |12    |DSP_PREADD_DATA58 |    24|
 |13    |DSP_SRCMX_OPTINV  |    24|
 |14    |LOOKAHEAD8        |   254|
-|15    |LUT1              |    19|
-|16    |LUT2              |   304|
-|17    |LUT3              |   708|
-|18    |LUT4              |   535|
-|19    |LUT5              |  1229|
-|20    |LUT6              |  1726|
+|15    |LUT1              |    22|
+|16    |LUT2              |   326|
+|17    |LUT3              |   707|
+|18    |LUT4              |   579|
+|19    |LUT5              |  1211|
+|20    |LUT6              |  1685|
 |21    |LUT6CY            |  1907|
-|22    |LUT6              |    17|
+|22    |LUT6              |    15|
 |23    |RAM32M            |     2|
 |24    |RAM32M16          |     4|
 |25    |RAM64M            |    32|
 |26    |RAM64M8           |   112|
 |27    |RAMB18E5          |     1|
 |28    |FDCE              |    47|
-|29    |FDRE              |  3323|
-|30    |FDSE              |    50|
+|29    |FDRE              |  3371|
+|30    |FDSE              |    45|
 +------+------------------+------+
 ---------------------------------------------------------------------------------
-Finished Writing Synthesis Report : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.812 ; gain = 1134.633 ; free physical = 31745 ; free virtual = 53376
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:28 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.660 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 ---------------------------------------------------------------------------------
 Synthesis finished with 0 errors, 0 critical warnings and 111 warnings.
-Synthesis Optimization Runtime : Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 3394.812 ; gain = 1032.633 ; free physical = 31745 ; free virtual = 53376
-Synthesis Optimization Complete : Time (s): cpu = 00:00:31 ; elapsed = 00:00:31 . Memory (MB): peak = 3394.820 ; gain = 1134.633 ; free physical = 31745 ; free virtual = 53376
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:27 ; elapsed = 00:00:27 . Memory (MB): peak = 3396.660 ; gain = 1025.703 ; free physical = 1875 ; free virtual = 51666
+Synthesis Optimization Complete : Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 3396.668 ; gain = 1136.672 ; free physical = 1875 ; free virtual = 51666
 INFO: [Project 1-571] Translating synthesized netlist
-Netlist sorting complete. Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.05 . Memory (MB): peak = 3394.820 ; gain = 0.000 ; free physical = 31934 ; free virtual = 53569
-INFO: [Netlist 29-17] Analyzing 2106 Unisim elements for replacement
+Netlist sorting complete. Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.04 . Memory (MB): peak = 3396.668 ; gain = 0.000 ; free physical = 2037 ; free virtual = 51828
+INFO: [Netlist 29-17] Analyzing 2104 Unisim elements for replacement
 WARNING: [Netlist 29-151] Pin 'WEA[1]' on instance 'inst/u_soc/u_ptp_axil/u_ptp/u_mac/u_mac/u_rx/mem_reg_bram_0' of cell type 'RAMB18E5' does not have an equivalent function on the new cell type 'RAMB18E5_INT'. Net 'mem[0]' that is connected to this pin will not be connected to the replacement instance.
 INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
@@ -1023,27 +1021,27 @@ INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
 INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
 INFO: [Project 1-570] Preparing netlist for logic optimization
 INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
-Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3450.840 ; gain = 0.000 ; free physical = 34736 ; free virtual = 56370
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3452.688 ; gain = 0.000 ; free physical = 2004 ; free virtual = 51796
 INFO: [Project 1-111] Unisim Transformation Summary:
-  A total of 2106 instances were transformed.
+  A total of 2104 instances were transformed.
   DSP58 => DSP58 (DSP_ALUADD, DSP_ALUMUX, DSP_ALUREG, DSP_A_B_DATA58, DSP_C_DATA58, DSP_MULTIPLIER58, DSP_M_DATA58, DSP_OUTPUT58, DSP_PATDET, DSP_PREADD58, DSP_PREADD_DATA58, DSP_SRCMX_OPTINV, VCC): 31 instances
   LUT6CY => LUT6CY (LUTCY1, LUTCY2): 1907 instances
-  LUT6_2 => LUT6_2 (LUT5, LUT6): 17 instances
+  LUT6_2 => LUT6_2 (LUT5, LUT6): 15 instances
   RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 2 instances
   RAM32M16 => RAM32M16 (RAMD32(x14), RAMS32(x2)): 4 instances
   RAM64M => RAM64M (RAMD64E5(x4), VCC): 32 instances
   RAM64M8 => RAM64M8 (RAMD64E5(x8), VCC): 112 instances
   RAMB18E5 => RAMB18E5_INT: 1 instance 
 
-Synth Design complete | Checksum: 285981ad
+Synth Design complete | Checksum: 99fc77f1
 INFO: [Common 17-83] Releasing license: Synthesis
 242 Infos, 107 Warnings, 0 Critical Warnings and 0 Errors encountered.
 synth_design completed successfully
-synth_design: Time (s): cpu = 00:00:38 ; elapsed = 00:00:37 . Memory (MB): peak = 3450.875 ; gain = 1698.602 ; free physical = 34736 ; free virtual = 56370
-INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2659.500; main = 2524.427; forked = 265.034
-INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4410.816; main = 3450.844; forked = 1016.000
+synth_design: Time (s): cpu = 00:00:36 ; elapsed = 00:00:34 . Memory (MB): peak = 3452.723 ; gain = 1700.328 ; free physical = 2003 ; free virtual = 51795
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2605.888; main = 2450.680; forked = 264.232
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4335.758; main = 3452.691; forked = 1016.133
 INFO: [Coretcl 2-1174] Renamed 28 cell refs.
-Write ShapeDB Complete: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3474.852 ; gain = 0.000 ; free physical = 34731 ; free virtual = 56367
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3476.699 ; gain = 0.000 ; free physical = 2000 ; free virtual = 51794
 INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/bd_soc_usart_u_soc_ptp_0_synth_1/bd_soc_usart_u_soc_ptp_0.dcp' has been generated.
 INFO: [Vivado 12-24828] Executing command : report_utilization -file bd_soc_usart_u_soc_ptp_0_utilization_synth.rpt -pb bd_soc_usart_u_soc_ptp_0_utilization_synth.pb
-INFO: [Common 17-206] Exiting Vivado at Sat Jul 11 17:50:16 2026...
+INFO: [Common 17-206] Exiting Vivado at Sun Jul 12 00:15:17 2026...

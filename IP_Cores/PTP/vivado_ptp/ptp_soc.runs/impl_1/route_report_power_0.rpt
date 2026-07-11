@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 -------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
-| Date             : Sat Jul 11 17:54:15 2026
+| Date             : Sun Jul 12 00:17:04 2026
 | Host             : adrian running 64-bit Ubuntu 24.04.4 LTS
 | Command          : report_power -file route_report_power_0.rpt -pb route_report_power_summary_0.pb -rpx route_report_power_0.rpx
 | Design           : bd_soc_usart_wrapper
@@ -31,12 +31,12 @@ Table of Contents
 ----------
 
 +--------------------------+--------------+
-| Total On-Chip Power (W)  | 4.959        |
+| Total On-Chip Power (W)  | 4.917        |
 | Design Power Budget (W)  | Unspecified* |
 | Power Budget Margin (W)  | NA           |
-| Dynamic (W)              | 3.006        |
+| Dynamic (W)              | 2.963        |
 | Device Static (W)        | 1.953**      |
-| Effective TJA (C/W)      | 15.1         |
+| Effective TJA (C/W)      | 15.2         |
 | Max Ambient (C)          | 25.0         |
 | Junction Temperature (C) | 100.0**      |
 | Confidence Level         | Low          |
@@ -64,27 +64,27 @@ For the Versal architecture, a default junction temperature of 100C is assumed w
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
 | Clocks                   |     0.016 |       10 |       --- |             --- |
-| Logic                    |     0.015 |    16481 |       --- |             --- |
-|   LUT as Logic           |     0.012 |     6162 |    150272 |            4.10 |
+| Logic                    |     0.015 |    16530 |       --- |             --- |
+|   LUT as Logic           |     0.012 |     6150 |    150272 |            4.09 |
 |   LUT as Distributed RAM |     0.002 |     1064 |     75136 |            1.42 |
-|   CLE FF Register        |    <0.001 |     4332 |    300544 |            1.44 |
+|   CLE FF Register        |    <0.001 |     4375 |    300544 |            1.46 |
 |   LOOKAHEAD8             |    <0.001 |      256 |     18784 |            1.36 |
-|   Others                 |     0.000 |     1358 |       --- |             --- |
+|   Others                 |     0.000 |     1359 |       --- |             --- |
 |   LUT as Shift Register  |     0.000 |        2 |     75136 |           <0.01 |
-| Signals                  |     0.086 |    19849 |       --- |             --- |
+| Signals                  |     0.086 |    19894 |       --- |             --- |
 | Block RAM                |    <0.001 |      0.5 |       155 |            0.32 |
 | XPLL                     |     0.230 |        3 |         8 |           37.50 |
 | DSPs                     |     0.013 |       31 |       --- |             --- |
 | I/O                      |     1.168 |      117 |       --- |             --- |
-| NoC-DDRMC                |     0.483 |        2 |       --- |             --- |
-|   NoC                    |     0.396 |        1 |       --- |             --- |
+| NoC-DDRMC                |     0.441 |        2 |       --- |             --- |
+|   NoC                    |     0.354 |        1 |       --- |             --- |
 |   DDRMC                  |     0.087 |        1 |         1 |          100.00 |
 | XRAM                     |     0.166 |        1 |         1 |          100.00 |
 | PS9                      |     0.829 |        1 |       --- |             --- |
 | Static Power             |     1.953 |          |           |                 |
 |   PS Static              |     0.194 |          |           |                 |
 |   PL Static              |     1.763 |          |           |                 |
-| Total                    |     4.959 |          |           |                 |
+| Total                    |     4.917 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -94,8 +94,8 @@ For the Versal architecture, a default junction temperature of 100C is assumed w
 +---------------+-------------+-----------+-------------+------------+-------------+-------------+------------+
 | Source        | Voltage (V) | Total (A) | Dynamic (A) | Static (A) | Powerup (A) | Budget (A)  | Margin (A) |
 +---------------+-------------+-----------+-------------+------------+-------------+-------------+------------+
-| Vccint        |       0.700 |     1.895 |       0.175 |      1.719 |       NA    | Unspecified | NA         |
-| VCC_SOC       |       0.800 |     1.058 |       0.612 |      0.446 |       NA    | Unspecified | NA         |
+| Vccint        |       0.700 |     1.894 |       0.175 |      1.719 |       NA    | Unspecified | NA         |
+| VCC_SOC       |       0.800 |     1.005 |       0.559 |      0.446 |       NA    | Unspecified | NA         |
 | VCC_IO        |       0.800 |     0.747 |       0.668 |      0.079 |       NA    | Unspecified | NA         |
 | VCC_RAM       |       0.800 |     0.020 |       0.001 |      0.019 |       NA    | Unspecified | NA         |
 | Vccaux        |       1.500 |     0.433 |       0.240 |      0.193 |       NA    | Unspecified | NA         |
@@ -148,7 +148,7 @@ For the Versal architecture, a default junction temperature of 100C is assumed w
 
 +------------------+------+
 | Ambient Temp (C) | 25.0 |
-| ThetaJA (C/W)    | 15.1 |
+| ThetaJA (C/W)    | 15.2 |
 +------------------+------+
 
 
@@ -178,10 +178,10 @@ For the Versal architecture, a default junction temperature of 100C is assumed w
 +----------------------+-----------+
 | Name                 | Power (W) |
 +----------------------+-----------+
-| bd_soc_usart_wrapper |     3.006 |
-|   bd_soc_usart_i     |     3.006 |
-|     axi_noc_0        |     1.910 |
-|       inst           |     1.910 |
+| bd_soc_usart_wrapper |     2.963 |
+|   bd_soc_usart_i     |     2.963 |
+|     axi_noc_0        |     1.868 |
+|       inst           |     1.868 |
 |     axi_smc          |     0.004 |
 |       inst           |     0.004 |
 |     u_soc_ptp        |     0.051 |
@@ -197,7 +197,7 @@ For the Versal architecture, a default junction temperature of 100C is assumed w
 +---------------------------------------------------------------------------------------+-----------+-----------------+--------+-------------------------+--------------+----------+----------+-------------+
 | Name                                                                                  | Power (W) | Frequency (MHz) | Buffer | Clock Buffer Enable (%) | Clock Enable | Fanout   | Sites    | Fanout/Site |
 +---------------------------------------------------------------------------------------+-----------+-----------------+--------+-------------------------+--------------+----------+----------+-------------+
-| bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG          |     0.013 |          100.00 | BUFG   |                     N/A | None         |     4915 |     1032 |        4.76 |
+| bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG          |     0.013 |          100.00 | BUFG   |                     N/A | None         |     4958 |     1025 |        4.84 |
 | bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/pll_clktoxphy[0]        |    <0.001 |         3200.00 | N/A    |                     N/A | None         |        9 |        9 |        1.00 |
 | bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/pll_clk_xpll            |    <0.001 |         3200.00 | N/A    |                     N/A | None         |        8 |        8 |        1.00 |
 | bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/bank1_xpll0_fifo_rd_clk |    <0.001 |          800.00 | N/A    |                     N/A | None         |       21 |       21 |        1.00 |

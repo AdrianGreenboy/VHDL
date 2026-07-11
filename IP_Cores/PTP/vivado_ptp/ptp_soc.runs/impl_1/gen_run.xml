@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<GenRun Id="impl_1" LaunchPart="xcve2302-sfva784-1LP-e-S" LaunchTime="1783785184">
+<GenRun Id="impl_1" LaunchPart="xcve2302-sfva784-1LP-e-S" LaunchTime="1783808078">
   <File Type="POSTROUTE-PHYSOPT-RQS-RPT" Name="postroute_physopt_report_qor_suggestions_0.rpt"/>
   <File Type="ROUTE-RQS-RPT" Name="route_report_qor_suggestions_0.rpt"/>
   <File Type="POSTROUTE-PHYSOPT-RQS" Name="bd_soc_usart_wrapper_postroute_physopted.rqs"/>
@@ -113,7 +113,6 @@
   <File Type="INIT-TIMING" Name="bd_soc_usart_wrapper_timing_summary_init.rpt"/>
   <File Type="REPORTS-TCL" Name="bd_soc_usart_wrapper_reports.tcl"/>
   <File Type="PA-TCL" Name="bd_soc_usart_wrapper.tcl"/>
-  <File Type="PA-DCP" Name="bd_soc_usart_wrapper.dcp"/>
   <FileSet Name="sources" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1" RelGenDir="$PGENDIR/sources_1">
     <Filter Type="Srcs"/>
     <File Path="$PPRDIR/../../../../rv32i/riscv_pkg.vhd">
@@ -364,8 +363,6 @@
     <Step Id="post_route_phys_opt_design"/>
     <Step Id="write_device_image"/>
   </Strategy>
-  <BlockFileSet Type="BlockSrcs" Name="bd_soc_usart_rst_versal_cips_0_240M_0"/>
   <BlockFileSet Type="BlockSrcs" Name="bd_soc_usart_u_soc_ptp_0"/>
-  <BlockFileSet Type="BlockSrcs" Name="bd_soc_usart_axi_smc_0"/>
-  <BlockFileSet Type="BlockSrcs" Name="bd_soc_usart_axi_noc_0_0"/>
+  <BlockFileSet Type="BlockSrcs" Name="bd_soc_usart_rst_versal_cips_0_240M_0"/>
 </GenRun>

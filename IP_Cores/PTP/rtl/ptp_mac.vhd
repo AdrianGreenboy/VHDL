@@ -103,6 +103,7 @@ architecture rtl of ptp_mac is
   signal frame_ready : std_logic := '0';
   signal tx_pending  : std_logic;
   signal tx_inflight : std_logic := '0';
+  signal sync_pend   : std_logic := '0';   -- CMD.send_sync en cola (no descartar)
 
   -- override
   signal ovr_en : std_logic;
@@ -185,7 +186,9 @@ begin
   -- resetearia ovr_dat_r al arrancar la siguiente trama mientras el MAC aun
   -- transmite la actual y aun no ha leido su ventana de override (byte del
   -- correctionField del Pdelay_Resp) -> residence=0.
-  tx_pending <= orch_send or (send_sync and not tx_busy and not tx_inflight);
+  -- send_sync se ENCOLA (sync_pend) y se lanza cuando el motor queda libre;
+  -- antes, un pulso de CMD durante una trama en vuelo se descartaba en silencio.
+  tx_pending <= orch_send or (sync_pend and not tx_busy and not tx_inflight);
   tx_send <= tx_pending;
   tx_sel  <= orch_sel  when orch_send = '1' else SEL_SYNC;
 
@@ -197,7 +200,17 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         tx_inflight <= '0';
+        sync_pend   <= '0';
       else
+        -- liberar la cola cuando el Sync efectivamente se lanza este ciclo
+        if sync_pend = '1' and orch_send = '0'
+           and tx_busy = '0' and tx_inflight = '0' then
+          sync_pend <= '0';
+        end if;
+        -- encolar CMD.send_sync (gana sobre la liberacion si coinciden)
+        if send_sync = '1' then
+          sync_pend <= '1';
+        end if;
         if tx_send = '1' then
           tx_inflight <= '1';
         elsif tx_inflight = '1' and frame_ready = '0'
