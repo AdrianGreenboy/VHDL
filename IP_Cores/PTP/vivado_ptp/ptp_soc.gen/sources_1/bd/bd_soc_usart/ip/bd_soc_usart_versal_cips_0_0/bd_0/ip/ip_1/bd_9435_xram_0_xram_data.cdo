@@ -1,0 +1,7 @@
+version 2.0
+marker 100 "XRAM_DATA"
+#Lock register for PCSR_MASK and PCR
+write 0xff95000c 0xf9e8d7c6
+#Lock register for PCSR_MASK and PCR
+write 0xff95000c 0xf9e8d7c7
+marker 101 "XRAM_DATA"

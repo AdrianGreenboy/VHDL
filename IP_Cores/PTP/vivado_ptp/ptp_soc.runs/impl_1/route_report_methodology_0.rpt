@@ -1,0 +1,40 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+-----------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date         : Sat Jul 11 17:54:07 2026
+| Host         : adrian running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_methodology -file route_report_methodology_0.rpt -pb route_report_methodology_0.pb -rpx route_report_methodology_0.rpx
+| Design       : bd_soc_usart_wrapper
+| Device       : xcve2302-sfva784-1LP-e-S
+| Speed File   : -1LP
+| Design State : Fully Routed
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Report Methodology
+
+Table of Contents
+-----------------
+1. REPORT SUMMARY
+2. REPORT DETAILS
+
+1. REPORT SUMMARY
+-----------------
+            Netlist: netlist
+          Floorplan: checkpoint_bd_soc_usart_wrapper
+      Design limits: <entire design considered>
+             Max checks: <unlimited>
+             Checks found: 1
++----------+----------+--------------------------------------------+--------+
+| Rule     | Severity | Description                                | Checks |
++----------+----------+--------------------------------------------+--------+
+| AVAL-344 | Warning  | Design_needs_USER_RAM_AVERAGE_ACTIVITY_set | 1      |
++----------+----------+--------------------------------------------+--------+
+
+2. REPORT DETAILS
+-----------------
+AVAL-344#1 Warning
+Design_needs_USER_RAM_AVERAGE_ACTIVITY_set  
+The design property USER_RAM_AVERAGE_ACTIVITY on the top-level current_design object is unset (or set to -1).  The estimated RAM_AVERAGE_ACTIVITY used for the design is 0 and assumes a worst-case switching scenario for the URAM and BRAM.  RAM activity directly impacts clock uncertainty and the RAM_AVERAGE_ACTIVITY property may not be accurate for designs that are not final.  It is recommended that the USER_RAM_AVERAGE_ACTIVITY property be specified.  Please refer to the Versal ACAP Clocking Resources Architecture Manual and the Versal ACAP Hardware, IP, and Platform Development Methodology User Guide for more information on specifying the USER_RAM_AVERAGE_ACTIVITY.
+Related violations: <none>
+
+

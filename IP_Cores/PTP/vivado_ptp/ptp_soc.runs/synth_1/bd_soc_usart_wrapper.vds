@@ -1,0 +1,768 @@
+#-----------------------------------------------------------
+# Vivado v2025.2.1 (64-bit)
+# SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
+# IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
+# SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
+# Start of session at: Sat Jul 11 17:50:17 2026
+# Process ID         : 50155
+# Current directory  : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1
+# Command line       : vivado -log bd_soc_usart_wrapper.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source bd_soc_usart_wrapper.tcl
+# Log file           : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/bd_soc_usart_wrapper.vds
+# Journal file       : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/vivado.jou
+# Running On         : adrian
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.4 LTS
+# Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
+# CPU Frequency      : 5500.000 MHz
+# CPU Physical cores : 24
+# CPU Logical cores  : 32
+# Host memory        : 67107 MB
+# Swap memory        : 8589 MB
+# Total Virtual      : 75697 MB
+# Available Virtual  : 61373 MB
+#-----------------------------------------------------------
+Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
+source bd_soc_usart_wrapper.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/home/adrian/Xilinx/2025.2.1/data/ip'.
+Command: synth_design -top bd_soc_usart_wrapper -part xcve2302-sfva784-1LP-e-S
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcve2302'
+INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 7 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 50204
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2698.910 ; gain = 391.688 ; free physical = 35013 ; free virtual = 56660
+---------------------------------------------------------------------------------
+INFO: [Synth 8-11241] undeclared symbol 'xpipe0_phystatus', assumed default net type 'wire' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:9847]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_wrapper' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/hdl/bd_soc_usart_wrapper.v:13]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:13]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_noc_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_noc_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
+WARNING: [Synth 8-7071] port 'S03_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+WARNING: [Synth 8-7071] port 'S04_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+WARNING: [Synth 8-7071] port 'S02_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+WARNING: [Synth 8-7071] port 'S01_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+WARNING: [Synth 8-7071] port 'S00_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+WARNING: [Synth 8-7023] instance 'axi_noc_0' of module 'bd_soc_usart_axi_noc_0_0' has 321 connections declared, but only 316 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_smc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_smc_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
+WARNING: [Synth 8-7071] port 'M00_AXI_awprot' of module 'bd_soc_usart_axi_smc_0' is unconnected for instance 'axi_smc' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
+WARNING: [Synth 8-7071] port 'M00_AXI_arprot' of module 'bd_soc_usart_axi_smc_0' is unconnected for instance 'axi_smc' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
+WARNING: [Synth 8-7023] instance 'axi_smc' of module 'bd_soc_usart_axi_smc_0' has 60 connections declared, but only 58 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
+WARNING: [Synth 8-7071] port 'mb_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
+WARNING: [Synth 8-7071] port 'bus_struct_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
+WARNING: [Synth 8-7071] port 'peripheral_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
+WARNING: [Synth 8-7071] port 'interconnect_aresetn' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
+WARNING: [Synth 8-7023] instance 'rst_versal_cips_0_240M' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' has 10 connections declared, but only 6 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_u_soc_ptp_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_u_soc_ptp_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-50155-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_versal_cips_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/synth/bd_soc_usart_versal_cips_0_0.v:53]
+INFO: [Synth 8-6157] synthesizing module 'bd_9435' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/synth/bd_9435.v:10]
+INFO: [Synth 8-6157] synthesizing module 'bd_9435_pspmc_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:53]
+INFO: [Synth 8-6157] synthesizing module 'pspmc_v1_4_7_pspmc' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3]
+INFO: [Synth 8-6157] synthesizing module 'BUFG_PS' [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:2914]
+INFO: [Synth 8-6155] done synthesizing module 'BUFG_PS' (0#1) [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:2914]
+INFO: [Synth 8-6157] synthesizing module 'PS9' [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:143413]
+INFO: [Synth 8-6155] done synthesizing module 'PS9' (0#1) [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:143413]
+WARNING: [Synth 8-689] width (4) of port connection 'FMIOSD1SDIFDATIN' does not match port width (8) of module 'PS9' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8320]
+WARNING: [Synth 8-689] width (2) of port connection 'PSPLTRACEDATA' does not match port width (32) of module 'PS9' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8887]
+WARNING: [Synth 8-689] width (10) of port connection 'SAXIGP4ARUSER' does not match port width (11) of module 'PS9' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:9600]
+WARNING: [Synth 8-689] width (10) of port connection 'SAXIGP4AWUSER' does not match port width (11) of module 'PS9' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:9611]
+INFO: [Synth 8-7071] port 'CCI_NOC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'CCI_NOC_1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'CCI_NOC_2' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'CCI_NOC_3' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0ADDMATCHVEC' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0RXDATABUFWRQ0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0RXDATABUFWRQ1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0RXWQUEUE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0TXRQUEUE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM0TXRTIMESTAMP' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1ADDMATCHVEC' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1RXDATABUFWRQ0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1RXDATABUFWRQ1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1RXWQUEUE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1TXRQUEUE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOGEM1TXRTIMESTAMP' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRECOECO' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NCI_NOC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NCI_NOC_1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NPICLK' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NPIRSTN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PCIE_NOC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PCIE_NOC_1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PMCERRORTOPL' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PMC_NOC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSMERRORTOPL' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSPLAFVALID' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSPLSYNCREQ' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'RPU_NOC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_DONE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_ERROROUT' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_JTAGTCK' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_JTAGTDI' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_JTAGTDO' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_JTAGTMS' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_MODE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_PMCMIO' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_PUDCB' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_REFCLK' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_RTCPADI' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PSS_PAD_RTCPADO' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'AXDS4COHDISABLE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOFPDLPDEMIOOE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOFPDLPDEMIOOUT' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOLPDPMCEMIOOE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'FMIOLPDPMCEMIOOUT' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRCPMPSSPARE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRBISRDONE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRBISRERR' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRCALDONE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRCALERROR' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRINCAL' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRMEMCLRDONE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRMEMCLRPASS' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRSCANCLRDONE' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'IFPSCPMPCSRPSRSCANCLRPASS' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_CCI_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_CCI_1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_NCI_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_NCI_1' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_PCIE_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NOC_PMC_0' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'NPIINTERRUPTOUT' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLFPDSPARE0IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLFPDSPARE1IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLLPDSPARE0IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLLPDSPARE1IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLLPDSPARE2IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLLPDSPARE3IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLLPDSPARE4IN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLPMCCSSDTRIG' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLPMCFPGACLOCKSTOP' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PLPSAFREADY' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PPU1PLTRIGACKOUT' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7071] port 'PPU1PLTRIGIN' of module 'PS9' is unconnected for instance 'PS9_inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-7023] instance 'PS9_inst' of module 'PS9' has 2288 connections declared, but only 2213 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:8112]
+INFO: [Synth 8-6155] done synthesizing module 'pspmc_v1_4_7_pspmc' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3]
+INFO: [Synth 8-7071] port 'pl_pcie0_resetn' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'pl_pcie1_resetn' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma0_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma1_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma2_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma3_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma4_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma5_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma6_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma7_cack' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma0_tvld' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma1_tvld' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma2_tvld' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-7071] port 'lpd_dma3_tvld' of module 'pspmc_v1_4_7_pspmc' is unconnected for instance 'inst' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Common 17-14] Message 'Synth 8-7071' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-7023] instance 'inst' of module 'pspmc_v1_4_7_pspmc' has 3235 connections declared, but only 352 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:1239]
+INFO: [Synth 8-6155] done synthesizing module 'bd_9435_pspmc_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:53]
+INFO: [Synth 8-6157] synthesizing module 'bd_9435_xram_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/synth/bd_9435_xram_0.v:53]
+INFO: [Synth 8-6157] synthesizing module 'xram_v1_0_1' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/hdl/xram_v1_0_1.v:1]
+INFO: [Synth 8-6157] synthesizing module 'XRAM' [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:177787]
+INFO: [Synth 8-6155] done synthesizing module 'XRAM' (0#1) [/home/adrian/Xilinx/2025.2.1/Vivado/scripts/rt/data/unisim_comp.v:177787]
+WARNING: [Synth 8-7023] instance 'XRAM_inst' of module 'XRAM' has 222 connections declared, but only 57 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/hdl/xram_v1_0_1.v:280]
+INFO: [Synth 8-6155] done synthesizing module 'xram_v1_0_1' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/hdl/xram_v1_0_1.v:1]
+INFO: [Synth 8-7023] instance 'inst' of module 'xram_v1_0_1' has 222 connections declared, but only 57 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/synth/bd_9435_xram_0.v:255]
+INFO: [Synth 8-6155] done synthesizing module 'bd_9435_xram_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/synth/bd_9435_xram_0.v:53]
+INFO: [Synth 8-6155] done synthesizing module 'bd_9435' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/synth/bd_9435.v:10]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_versal_cips_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/synth/bd_soc_usart_versal_cips_0_0.v:53]
+WARNING: [Synth 8-7023] instance 'versal_cips_0' of module 'bd_soc_usart_versal_cips_0_0' has 295 connections declared, but only 293 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:860]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:13]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_wrapper' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/hdl/bd_soc_usart_wrapper.v:13]
+INFO: [Synth 8-3848] Net pl_pcie0_resetn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:217]
+INFO: [Synth 8-3848] Net pl_pcie1_resetn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:218]
+INFO: [Synth 8-3848] Net i2c0_scl_t in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:310]
+INFO: [Synth 8-3848] Net i2c0_scl_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:311]
+INFO: [Synth 8-3848] Net i2c0_sda_t in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:313]
+INFO: [Synth 8-3848] Net i2c0_sda_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:314]
+INFO: [Synth 8-3848] Net i2c1_scl_t in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:317]
+INFO: [Synth 8-3848] Net i2c1_scl_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:318]
+INFO: [Synth 8-3848] Net i2c1_sda_t in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:320]
+INFO: [Synth 8-3848] Net i2c1_sda_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:321]
+INFO: [Synth 8-3848] Net pmc_i2c_scl_oen in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:323]
+INFO: [Synth 8-3848] Net pmc_i2c_scl_oen_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:324]
+INFO: [Synth 8-3848] Net pmc_i2c_sda_oen in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:326]
+INFO: [Synth 8-3848] Net pmc_i2c_sda_oen_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:327]
+INFO: [Synth 8-3848] Net emio_wdt0rsto in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:393]
+INFO: [Synth 8-3848] Net emio_wdt1rsto in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:394]
+INFO: [Synth 8-3848] Net lpd_gpio_t in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:400]
+INFO: [Synth 8-3848] Net lpd_gpio_tn in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:401]
+INFO: [Synth 8-3848] Net pmc_gpio_oe in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:404]
+INFO: [Synth 8-3848] Net pmc_gpio_oen in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:405]
+INFO: [Synth 8-3848] Net pmc_gpio_out in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:406]
+INFO: [Synth 8-3848] Net pl0_sem in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:409]
+INFO: [Synth 8-3848] Net pl1_sem in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:410]
+INFO: [Synth 8-3848] Net pl2_sem in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:411]
+INFO: [Synth 8-3848] Net pl3_sem in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:412]
+INFO: [Synth 8-3848] Net m_axi_fpd_wdata_i in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3831]
+INFO: [Synth 8-3848] Net m_axi_fpd_wstrb_i in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3829]
+INFO: [Synth 8-3848] Net m_axi_lpd_wdata_i in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3832]
+INFO: [Synth 8-3848] Net m_axi_lpd_wstrb_i in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:3830]
+INFO: [Synth 8-3848] Net trace_ctrl in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1063]
+INFO: [Synth 8-3848] Net trace_data in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1064]
+INFO: [Synth 8-3848] Net trace_clk in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1065]
+INFO: [Synth 8-3848] Net ps_pl_trigack in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1067]
+INFO: [Synth 8-3848] Net ps_pl_trigger in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1068]
+INFO: [Synth 8-3848] Net ps_ps_noc_nci_axi2_clk in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1075]
+INFO: [Synth 8-3848] Net s_axi_gp2_arready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1129]
+INFO: [Synth 8-3848] Net s_axi_gp2_awready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1130]
+INFO: [Synth 8-3848] Net s_axi_gp2_bid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1131]
+INFO: [Synth 8-3848] Net s_axi_gp2_bresp in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1132]
+INFO: [Synth 8-3848] Net s_axi_gp2_bvalid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1133]
+INFO: [Synth 8-3848] Net s_axi_gp2_racount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1134]
+INFO: [Synth 8-3848] Net s_axi_gp2_rcount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1135]
+INFO: [Synth 8-3848] Net s_axi_gp2_rdata in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1136]
+INFO: [Synth 8-3848] Net s_axi_gp2_rid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1137]
+INFO: [Synth 8-3848] Net s_axi_gp2_rlast in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1138]
+INFO: [Synth 8-3848] Net s_axi_gp2_rresp in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1139]
+INFO: [Synth 8-3848] Net s_axi_gp2_rvalid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1140]
+INFO: [Synth 8-3848] Net s_axi_gp2_wacount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1141]
+INFO: [Synth 8-3848] Net s_axi_gp2_wcount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1142]
+INFO: [Synth 8-3848] Net s_axi_gp2_wready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1143]
+INFO: [Synth 8-3848] Net s_cci_fpd_arready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1811]
+INFO: [Synth 8-3848] Net s_cci_fpd_awready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1812]
+INFO: [Synth 8-3848] Net s_cci_fpd_bid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1813]
+INFO: [Synth 8-3848] Net s_cci_fpd_bresp in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1814]
+INFO: [Synth 8-3848] Net s_cci_fpd_bvalid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1815]
+INFO: [Synth 8-3848] Net s_cci_fpd_racount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1816]
+INFO: [Synth 8-3848] Net s_cci_fpd_rcount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1817]
+INFO: [Synth 8-3848] Net s_cci_fpd_rdata in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1818]
+INFO: [Synth 8-3848] Net s_cci_fpd_rid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1819]
+INFO: [Synth 8-3848] Net s_cci_fpd_rlast in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1820]
+INFO: [Synth 8-3848] Net s_cci_fpd_rresp in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1821]
+INFO: [Synth 8-3848] Net s_cci_fpd_rvalid in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1822]
+INFO: [Synth 8-3848] Net s_cci_fpd_wacount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1823]
+INFO: [Synth 8-3848] Net s_cci_fpd_wcount in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1824]
+INFO: [Synth 8-3848] Net s_cci_fpd_wready in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:1825]
+INFO: [Synth 8-3848] Net ps_pmc_to_core in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2068]
+INFO: [Synth 8-3848] Net dbg0 in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2070]
+INFO: [Synth 8-3848] Net dbg0_ext in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2071]
+INFO: [Synth 8-3848] Net dbg1 in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2072]
+INFO: [Synth 8-3848] Net dbg1_ext in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2073]
+INFO: [Synth 8-3848] Net dbg2 in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2074]
+INFO: [Synth 8-3848] Net dbg2_ext in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2075]
+INFO: [Synth 8-3848] Net dbg3 in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2076]
+INFO: [Synth 8-3848] Net dbg3_ext in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2077]
+INFO: [Synth 8-3848] Net dbg4 in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2078]
+INFO: [Synth 8-3848] Net dbg4_ext in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2079]
+INFO: [Synth 8-3848] Net cpmdpllpcie0userclk in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2155]
+INFO: [Synth 8-3848] Net cpmdpllpcie1userclk in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2156]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgccixedrdataratechangereq in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2157]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgcurrentspeed in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2158]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgedrenable in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2159]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgerrcorout in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2160]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgerrfatalout in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2161]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgerrnonfatalout in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2162]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextfunctionnumber in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2163]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextreadreceived in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2164]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextregisternumber in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2165]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextwritebyteenable in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2166]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextwritedata in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2167]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgextwritereceived in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2168]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcnpd in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2169]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcnpdscale in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2170]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcnph in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2171]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcnphscale in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2172]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcpd in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2173]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcpdscale in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2174]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcph in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2175]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfgfcphscale in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2176]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfghotresetout in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2177]
+INFO: [Synth 8-3848] Net ifextplpcie0cfghpocfginterruptsent in module/entity pspmc_v1_4_7_pspmc does not have driver. [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:2178]
+INFO: [Common 17-14] Message 'Synth 8-3848' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+WARNING: [Synth 8-7129] Port ifplxramaxi0arready in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0awready in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[15] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[14] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[13] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[12] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[11] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[10] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[9] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[8] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[7] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[6] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[5] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[4] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[3] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[2] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[1] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bid[0] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bresp[1] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bresp[0] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0buser[0] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0bvalid in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[255] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[254] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[253] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[252] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[251] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[250] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[249] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[248] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[247] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[246] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[245] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[244] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[243] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[242] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[241] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[240] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[239] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[238] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[237] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[236] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[235] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[234] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[233] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[232] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[231] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[230] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[229] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[228] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[227] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[226] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[225] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[224] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[223] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[222] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[221] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[220] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[219] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[218] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[217] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[216] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[215] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[214] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[213] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[212] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[211] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[210] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[209] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[208] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[207] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[206] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[205] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[204] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[203] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[202] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[201] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[200] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[199] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[198] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[197] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[196] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[195] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[194] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[193] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[192] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[191] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[190] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[189] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[188] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[187] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[186] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[185] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[184] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[183] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[182] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[181] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[180] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[179] in module xram_v1_0_1 is either unconnected or has no load
+WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[178] in module xram_v1_0_1 is either unconnected or has no load
+INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.457 ; gain = 531.234 ; free physical = 34863 ; free virtual = 56508
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.457 ; gain = 531.234 ; free physical = 34863 ; free virtual = 56508
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.457 ; gain = 531.234 ; free physical = 34863 ; free virtual = 56508
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2838.457 ; gain = 0.000 ; free physical = 34863 ; free virtual = 56508
+INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
+INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
+INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
+INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_noc_0'
+create_clock: Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 3024.484 ; gain = 107.188 ; free physical = 34754 ; free virtual = 56403
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_noc_0'
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_smc'
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_smc'
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_rst_versal_cips_0_240M_0/bd_soc_usart_rst_versal_cips_0_240M_0/bd_soc_usart_rst_versal_cips_0_240M_0_in_context.xdc] for cell 'bd_soc_usart_i/rst_versal_cips_0_240M'
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_rst_versal_cips_0_240M_0/bd_soc_usart_rst_versal_cips_0_240M_0/bd_soc_usart_rst_versal_cips_0_240M_0_in_context.xdc] for cell 'bd_soc_usart_i/rst_versal_cips_0_240M'
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_u_soc_ptp_0/bd_soc_usart_u_soc_ptp_0/bd_soc_usart_u_soc_ptp_0_in_context.xdc] for cell 'bd_soc_usart_i/u_soc_ptp'
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_u_soc_ptp_0/bd_soc_usart_u_soc_ptp_0/bd_soc_usart_u_soc_ptp_0_in_context.xdc] for cell 'bd_soc_usart_i/u_soc_ptp'
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/bd_9435_pspmc_0_0.xdc] for cell 'bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst'
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/bd_9435_pspmc_0_0.xdc] for cell 'bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst'
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/bd_9435_xram_0.xdc] for cell 'bd_soc_usart_i/versal_cips_0/inst/xram/inst'
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_1/bd_9435_xram_0.xdc] for cell 'bd_soc_usart_i/versal_cips_0/inst/xram/inst'
+Parsing XDC File [/home/adrian/m1553_ip/m1553_pins.xdc]
+WARNING: [Vivado 12-584] No ports matched 'm1553_rx'. [/home/adrian/m1553_ip/m1553_pins.xdc:31]
+WARNING: [Vivado 12-584] No ports matched 'm1553_tx'. [/home/adrian/m1553_ip/m1553_pins.xdc:32]
+WARNING: [Vivado 12-584] No ports matched 'm1553_txen'. [/home/adrian/m1553_ip/m1553_pins.xdc:33]
+WARNING: [Vivado 12-584] No ports matched 'm1553_rx'. [/home/adrian/m1553_ip/m1553_pins.xdc:35]
+WARNING: [Vivado 12-584] No ports matched 'm1553_tx'. [/home/adrian/m1553_ip/m1553_pins.xdc:35]
+WARNING: [Vivado 12-584] No ports matched 'm1553_txen'. [/home/adrian/m1553_ip/m1553_pins.xdc:35]
+WARNING: [Vivado 12-584] No ports matched 'm1553_tx'. [/home/adrian/m1553_ip/m1553_pins.xdc:36]
+WARNING: [Vivado 12-584] No ports matched 'm1553_txen'. [/home/adrian/m1553_ip/m1553_pins.xdc:36]
+WARNING: [Vivado 12-584] No ports matched 'm1553_rx'. [/home/adrian/m1553_ip/m1553_pins.xdc:40]
+Finished Parsing XDC File [/home/adrian/m1553_ip/m1553_pins.xdc]
+WARNING: [Project 1-498] One or more constraints failed evaluation while reading constraint file [/home/adrian/m1553_ip/m1553_pins.xdc] and the design contains unresolved black boxes. These constraints will be read post-synthesis (as long as their source constraint file is marked as used_in_implementation) and should be applied correctly then. You should review the constraints listed in the file [.Xil/bd_soc_usart_wrapper_propImpl.xdc] and check the run log file to verify that these constraints were correctly applied.
+Parsing XDC File [/home/adrian/eth_ip/eth_pins.xdc]
+WARNING: [Vivado 12-584] No ports matched 'mii_txd[0]'. [/home/adrian/eth_ip/eth_pins.xdc:24]
+WARNING: [Vivado 12-584] No ports matched 'mii_txd[1]'. [/home/adrian/eth_ip/eth_pins.xdc:25]
+WARNING: [Vivado 12-584] No ports matched 'mii_txd[2]'. [/home/adrian/eth_ip/eth_pins.xdc:26]
+WARNING: [Vivado 12-584] No ports matched 'mii_txd[3]'. [/home/adrian/eth_ip/eth_pins.xdc:27]
+WARNING: [Vivado 12-584] No ports matched 'mii_tx_en'. [/home/adrian/eth_ip/eth_pins.xdc:28]
+WARNING: [Vivado 12-584] No ports matched 'mii_rxd[0]'. [/home/adrian/eth_ip/eth_pins.xdc:31]
+WARNING: [Vivado 12-584] No ports matched 'mii_rxd[1]'. [/home/adrian/eth_ip/eth_pins.xdc:32]
+WARNING: [Vivado 12-584] No ports matched 'mii_rxd[2]'. [/home/adrian/eth_ip/eth_pins.xdc:33]
+WARNING: [Vivado 12-584] No ports matched 'mii_rxd[3]'. [/home/adrian/eth_ip/eth_pins.xdc:34]
+WARNING: [Vivado 12-584] No ports matched 'mii_rx_dv'. [/home/adrian/eth_ip/eth_pins.xdc:35]
+WARNING: [Vivado 12-584] No ports matched 'mii_txd[*]'. [/home/adrian/eth_ip/eth_pins.xdc:38]
+WARNING: [Vivado 12-584] No ports matched 'mii_tx_en'. [/home/adrian/eth_ip/eth_pins.xdc:39]
+WARNING: [Vivado 12-584] No ports matched 'mii_rxd[*]'. [/home/adrian/eth_ip/eth_pins.xdc:40]
+WARNING: [Vivado 12-584] No ports matched 'mii_rx_dv'. [/home/adrian/eth_ip/eth_pins.xdc:41]
+Finished Parsing XDC File [/home/adrian/eth_ip/eth_pins.xdc]
+WARNING: [Project 1-498] One or more constraints failed evaluation while reading constraint file [/home/adrian/eth_ip/eth_pins.xdc] and the design contains unresolved black boxes. These constraints will be read post-synthesis (as long as their source constraint file is marked as used_in_implementation) and should be applied correctly then. You should review the constraints listed in the file [.Xil/bd_soc_usart_wrapper_propImpl.xdc] and check the run log file to verify that these constraints were correctly applied.
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/dont_touch.xdc]
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/dont_touch.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/dont_touch.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/bd_soc_usart_wrapper_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/bd_soc_usart_wrapper_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3026.484 ; gain = 0.000 ; free physical = 34739 ; free virtual = 56388
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+validate_noc  -part xcve2302-sfva784-1LP-e-S -no_compile 
+INFO: [Vivado 12-29114] Run validate_noc command, to invoke NoC compiler, catch the DRC at design entry & populate the project level NoC view
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3035.391 ; gain = 0.000 ; free physical = 34739 ; free virtual = 56388
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 3035.391 ; gain = 728.168 ; free physical = 34764 ; free virtual = 56409
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xcve2302-sfva784-1LP-e-S
+INFO: [Synth 8-6742] Reading net delay rules and data
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 3043.395 ; gain = 736.172 ; free physical = 34764 ; free virtual = 56409
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 3043.395 ; gain = 736.172 ; free physical = 34764 ; free virtual = 56409
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 3043.395 ; gain = 736.172 ; free physical = 34756 ; free virtual = 56403
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 464 (col length:116)
+BRAMs: 310 (col length: RAMB18 120 RAMB36 60)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 3043.395 ; gain = 736.172 ; free physical = 34747 ; free virtual = 56411
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:21 ; elapsed = 00:00:21 . Memory (MB): peak = 3927.457 ; gain = 1620.234 ; free physical = 33907 ; free virtual = 55567
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:21 ; elapsed = 00:00:21 . Memory (MB): peak = 3962.465 ; gain = 1655.242 ; free physical = 33867 ; free virtual = 55527
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `pspmc_v1_4_7_pspmc`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `pspmc_v1_4_7_pspmc' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_9435_pspmc_0_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_pspmc_0_0' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `xram_v1_0_1`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `xram_v1_0_1' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_9435_xram_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_xram_0' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_9435`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_versal_cips_0_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_versal_cips_0_0' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart' done
+
+
+INFO: [Synth 8-11328] No retiming is needed, due to no register satisfying retiming conditions
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_wrapper`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_wrapper' done
+
+
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:21 ; elapsed = 00:00:21 . Memory (MB): peak = 3988.348 ; gain = 1681.125 ; free physical = 33852 ; free virtual = 55512
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+INFO: [Synth 8-5816] Retiming module `pspmc_v1_4_7_pspmc`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `pspmc_v1_4_7_pspmc' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_pspmc_0_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_pspmc_0_0' done
+
+
+INFO: [Synth 8-5816] Retiming module `xram_v1_0_1`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `xram_v1_0_1' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_xram_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435_xram_0' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_9435' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_versal_cips_0_0`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_versal_cips_0_0' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart' done
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_wrapper`
+   Worst Slack before retiming is invalid and worst slack after retiming is invalid
+   Numbers of local forward move = 0, and local backward move = 0
+
+
+INFO: [Synth 8-5816] Retiming module `bd_soc_usart_wrapper' done
+
+
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33724 ; free virtual = 55384
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++------+--------------------------------------+----------+
+|      |BlackBox name                         |Instances |
++------+--------------------------------------+----------+
+|1     |bd_soc_usart_axi_noc_0_0              |         1|
+|2     |bd_soc_usart_axi_smc_0                |         1|
+|3     |bd_soc_usart_rst_versal_cips_0_240M_0 |         1|
+|4     |bd_soc_usart_u_soc_ptp_0              |         1|
++------+--------------------------------------+----------+
+
+Report Cell Usage: 
++------+------------------------------------+------+
+|      |Cell                                |Count |
++------+------------------------------------+------+
+|1     |bd_soc_usart_axi_noc_0              |     1|
+|2     |bd_soc_usart_axi_smc                |     1|
+|3     |bd_soc_usart_rst_versal_cips_0_240M |     1|
+|4     |bd_soc_usart_u_soc_ptp              |     1|
+|5     |BUFG_PS                             |     1|
+|6     |LUT1                                |     2|
+|7     |PS9                                 |     1|
+|8     |XRAM                                |     1|
++------+------------------------------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 56258 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 4150.160 ; gain = 1646.004 ; free physical = 33716 ; free virtual = 55376
+Synthesis Optimization Complete : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.160 ; gain = 1842.938 ; free physical = 33716 ; free virtual = 55376
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00.07 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4150.160 ; gain = 0.000 ; free physical = 33900 ; free virtual = 55560
+INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
+INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
+INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
+INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.gen/sources_1/common/nsln/bd_soc_usart_wrapper_xpm_constrs.xdc]
+Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.gen/sources_1/common/nsln/bd_soc_usart_wrapper_xpm_constrs.xdc]
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4150.160 ; gain = 0.000 ; free physical = 33904 ; free virtual = 55562
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Synth Design complete | Checksum: ed949853
+INFO: [Common 17-83] Releasing license: Synthesis
+51 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:30 ; elapsed = 00:00:29 . Memory (MB): peak = 4150.160 ; gain = 2401.531 ; free physical = 33903 ; free virtual = 55565
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 3256.955; main = 3256.955; forked = 293.776
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4648.141; main = 4135.289; forked = 1016.000
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/bd_soc_usart_wrapper.dcp' has been generated.
+INFO: [Vivado 12-24828] Executing command : report_utilization -file bd_soc_usart_wrapper_utilization_synth.rpt -pb bd_soc_usart_wrapper_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Sat Jul 11 17:50:49 2026...

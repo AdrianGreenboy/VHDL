@@ -1,0 +1,91 @@
+-------------------------------------
+| Tool Version : Vivado v.2025.2.1
+| Date         : Sat Jul 11 17:53:40 2026
+| Host         : adrian
+| Device       : xcve2302-sfva784-1LP-E-S
+-------------------------------------
+
+For more information on clockInfo.txt clock routing debug file see https://adaptivesupport.amd.com/s/article/000035660?language=en_US
+
+********************************
+All Clocks With User Constraints
+********************************
+No user input conflicts found
+
+***********************
+Number Of Global Clocks
+***********************
+Number of global clocks: 1
+	Number of BUFGCE: 0
+	Number of BUFGCE_HDIO: 0
+	Number of BUFGCTRL: 0
+	Number of BUFGCE_DIV: 0
+	Number of BUFG_GT: 0
+	Number of BUFG_PS: 1
+	Number of BUFG_FABRIC: 0
+
+
+**************************************
+Clock Nets/Source Overview (CRP Input)
+**************************************
+Clock 1: bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/pl0_ref_clk
+	Clock source type: BUFG_PS fixed to track 6
+	Clock source region: X1Y1
+	Clock regions with fixed/placed loads: X0Y1 
+	Initial load regions: X0Y1 X1Y1 X1Y2 X2Y1 X2Y2 
+	Number of loads: 3989
+
+
+***************************************
+Validating Clocks With User Constraints:
+***************************************
+No clocks with user constraints found
+
+*****************
+Tool Constraints:
+*****************
+No tool constraints found
+
+
+
+*********************************
+Clock Routing & Distribution Info
+*********************************
+clock name: bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/pl0_ref_clk
+  Source: X1Y1
+  VR/Distribution Track: 0
+  HR regions: X1Y1
+  VR regions: X1Y1
+  Root: X1Y1
+  VD regions: X1Y1, X1Y2, X1Y3
+  HD regions: X0Y1, X0Y2, X0Y3, X1Y1, X1Y2, X1Y3, X2Y1, X2Y2, X2Y3
+
+
+Number of clock sources in each region:
+#BUFGCE, #BUFGCE_DIV, #BUFGCTRL, #BUFG_GT, #BUFG_PS, #BUFG_FABRIC, #BUFGCE_HDIO
+   ------------------------------------------------------------------------------------
+ Y4| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0|
+   ------------------------------------------------------------------------------------
+ Y3| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0|                   X|
+   ------------------------------------------------------------------------------------
+ Y2| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0|                   X|
+   ------------------------------------------------------------------------------------
+ Y1| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 1, 0, 0| 0, 0, 0, 0, 0, 0, 0|                   X|
+   ------------------------------------------------------------------------------------
+ Y0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0| 0, 0, 0, 0, 0, 0, 0|
+   ------------------------------------------------------------------------------------
+              X0                   X1                   X2                   X3       
+
+
+**************************************************************
+Clock Routing & Distribution Info After Depositing Clock Trees
+**************************************************************
+Clock name: bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/pl0_ref_clk
+Clock source: X1Y1
+VR/Distribution Track: 0
+Clock root: X1Y1
+Clock expansion window: CLOCKREGION_X0Y1:CLOCKREGION_X2Y2
+Clock region(s) of placed loads: X0Y1 X1Y1 X1Y2 X2Y1 X2Y2 
+Number of loads: 5467
+
+

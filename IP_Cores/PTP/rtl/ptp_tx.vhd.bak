@@ -1,0 +1,254 @@
+-- ptp_tx.vhd — motor TX-PTP unificado (IP PTP / IEEE 802.1AS v1)
+-- FSM que genera Sync, Pdelay_Req, Pdelay_Resp desde plantillas ROM y parchea
+-- campos variables. Override 1-step por tipo: originTimestamp (Sync/Req) o
+-- correctionField=residence (Resp). Interfaz de escritura explicita a FIFO.
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use work.ptp_pkg.all;
+use work.ptp_msg_pkg.all;
+
+entity ptp_tx is
+  port (
+    clk        : in  std_logic;
+    rst        : in  std_logic;
+    send       : in  std_logic;
+    sel        : in  msg_sel_t;
+    busy       : out std_logic;
+    done       : out std_logic;
+    clock_id   : in  std_logic_vector(63 downto 0);
+    port_num   : in  std_logic_vector(15 downto 0);
+    src_mac    : in  std_logic_vector(47 downto 0);
+    req_rx_sec : in  std_logic_vector(SEC_W-1 downto 0);
+    req_rx_ns  : in  std_logic_vector(NS_W-1 downto 0);
+    req_portid : in  std_logic_vector(79 downto 0);
+    ts_sec     : in  std_logic_vector(SEC_W-1 downto 0);
+    ts_ns      : in  std_logic_vector(NS_W-1 downto 0);
+    ts_valid   : in  std_logic;
+    ts_ack     : out std_logic;
+    fifo_wr    : out std_logic;
+    fifo_din   : out std_logic_vector(8 downto 0);
+    fifo_full  : in  std_logic;
+    ovr_en     : out std_logic;
+    ovr_off    : out std_logic_vector(10 downto 0);
+    ovr_len    : out std_logic_vector(3 downto 0);
+    ovr_data   : out std_logic_vector(79 downto 0)
+  );
+end entity ptp_tx;
+
+architecture rtl of ptp_tx is
+
+  constant TPL_SYNC : byte_arr(0 to SYNC_FRAME_LEN-1)   := sync_template;
+  constant TPL_REQ  : byte_arr(0 to PDELAY_FRAME_LEN-1) := pdelay_req_template;
+  constant TPL_RESP : byte_arr(0 to PDELAY_FRAME_LEN-1) := pdelay_resp_template;
+
+  type st_t is (S_IDLE, S_PUSH, S_WAIT_TS, S_DONE);
+  signal st : st_t := S_IDLE;
+
+  signal idx      : integer range 0 to PDELAY_FRAME_LEN := 0;
+  signal frame_len: integer range 0 to PDELAY_FRAME_LEN := SYNC_FRAME_LEN;
+  signal seq_r    : unsigned(15 downto 0) := (others => '0');
+  signal sel_r    : msg_sel_t := SEL_SYNC;
+  signal busy_r   : std_logic := '0';
+  signal done_r   : std_logic := '0';
+  signal ack_r    : std_logic := '0';
+
+  signal fwr_r    : std_logic := '0';
+  signal fdin_r   : std_logic_vector(8 downto 0) := (others => '0');
+
+  signal ovr_en_r : std_logic := '0';
+  signal ovr_dat_r: std_logic_vector(79 downto 0) := (others => '0');
+  signal ovr_off_r: std_logic_vector(10 downto 0) := (others => '0');
+  signal ovr_len_r: std_logic_vector(3 downto 0)  := (others => '0');
+
+  function tpl_byte(s : msg_sel_t; i : integer) return std_logic_vector is
+  begin
+    case s is
+      when SEL_SYNC        => return TPL_SYNC(i);
+      when SEL_PDELAY_REQ  => return TPL_REQ(i);
+      when SEL_PDELAY_RESP => return TPL_RESP(i);
+      when others          => return TPL_SYNC(i);
+    end case;
+  end function;
+
+  function patched_byte(s : msg_sel_t; i : integer;
+                        clkid : std_logic_vector(63 downto 0);
+                        pnum  : std_logic_vector(15 downto 0);
+                        smac  : std_logic_vector(47 downto 0);
+                        seq   : unsigned(15 downto 0);
+                        t2sec : std_logic_vector(SEC_W-1 downto 0);
+                        t2ns  : std_logic_vector(NS_W-1 downto 0);
+                        rpid  : std_logic_vector(79 downto 0))
+    return std_logic_vector is
+    variable b : std_logic_vector(7 downto 0);
+  begin
+    b := tpl_byte(s, i);
+    if i >= OFF_ETH_SRC and i < OFF_ETH_SRC + 6 then
+      b := smac((5-(i-OFF_ETH_SRC))*8+7 downto (5-(i-OFF_ETH_SRC))*8);
+    elsif i >= OFF_SPID and i < OFF_SPID + 8 then
+      b := clkid((7-(i-OFF_SPID))*8+7 downto (7-(i-OFF_SPID))*8);
+    elsif i = OFF_SPID + 8 then b := pnum(15 downto 8);
+    elsif i = OFF_SPID + 9 then b := pnum(7 downto 0);
+    elsif i = OFF_SEQID then     b := std_logic_vector(seq(15 downto 8));
+    elsif i = OFF_SEQID + 1 then b := std_logic_vector(seq(7 downto 0));
+    end if;
+    if s = SEL_PDELAY_RESP then
+      if i >= OFF_REQ_RX_TS and i < OFF_REQ_RX_TS + 6 then
+        b := t2sec((5-(i-OFF_REQ_RX_TS))*8+7 downto (5-(i-OFF_REQ_RX_TS))*8);
+      elsif i >= OFF_REQ_RX_TS + 6 and i < OFF_REQ_RX_TS + 10 then
+        b := t2ns((3-(i-OFF_REQ_RX_TS-6))*8+7 downto (3-(i-OFF_REQ_RX_TS-6))*8);
+      elsif i >= OFF_REQ_PORTID and i < OFF_REQ_PORTID + 10 then
+        b := rpid((9-(i-OFF_REQ_PORTID))*8+7 downto (9-(i-OFF_REQ_PORTID))*8);
+      end if;
+    end if;
+    return b;
+  end function;
+
+  function pack_origin_ts(sec : std_logic_vector(SEC_W-1 downto 0);
+                          ns  : std_logic_vector(NS_W-1 downto 0))
+    return std_logic_vector is
+    variable d : std_logic_vector(79 downto 0) := (others => '0');
+  begin
+    for i in 0 to 5 loop
+      d(i*8+7 downto i*8) := sec((5-i)*8+7 downto (5-i)*8);
+    end loop;
+    for i in 0 to 3 loop
+      d((6+i)*8+7 downto (6+i)*8) := ns((3-i)*8+7 downto (3-i)*8);
+    end loop;
+    return d;
+  end function;
+
+  -- residence = (t3 - t2) en ns, escalado a 2^-16 ns (unidad del
+  -- correctionField). t3 = SFD TX del Resp (ts_*), t2 = req_rx_* (SFD RX del
+  -- Req). En loopback t3-t2 es pequeno y positivo. Se calcula con signo y se
+  -- empaqueta big-endian en los 8 bytes del correctionField.
+  function calc_residence(t3sec, t2sec : std_logic_vector(SEC_W-1 downto 0);
+                          t3ns,  t2ns  : std_logic_vector(NS_W-1 downto 0))
+    return std_logic_vector is
+    variable t3v, t2v, dns : signed(63 downto 0);
+    variable corr : signed(63 downto 0);
+    variable d : std_logic_vector(79 downto 0) := (others => '0');
+    -- limites de saturacion +/-2^40, construidos con shift para evitar el
+    -- desborde del integer de 32b de VHDL al escribir 2**40 literal.
+    constant SAT_POS : signed(63 downto 0) := shift_left(to_signed(1, 64), 40);
+    constant SAT_NEG : signed(63 downto 0) := -shift_left(to_signed(1, 64), 40);
+  begin
+    t3v := resize(signed('0' & t3sec) * to_signed(1_000_000_000, 34), 64)
+           + resize(signed('0' & t3ns), 64);
+    t2v := resize(signed('0' & t2sec) * to_signed(1_000_000_000, 34), 64)
+           + resize(signed('0' & t2ns), 64);
+    dns := t3v - t2v;                        -- residence en ns
+    -- el residence real es pequeno (ns). Saturar antes del shift de 16 para
+    -- evitar overflow con valores transitorios patologicos. Limite 2^40 ns
+    -- construido por patron de bits (integer VHDL de 32b no admite 2**40).
+    if dns > SAT_POS then
+      dns := SAT_POS;
+    elsif dns < SAT_NEG then
+      dns := SAT_NEG;
+    end if;
+    corr := shift_left(dns, 16);             -- a 2^-16 ns
+    for i in 0 to 7 loop
+      d(i*8+7 downto i*8) := std_logic_vector(corr((7-i)*8+7 downto (7-i)*8));
+    end loop;
+    return d;
+  end function;
+
+begin
+
+  busy     <= busy_r;
+  done     <= done_r;
+  ts_ack   <= ack_r;
+  fifo_wr  <= fwr_r;
+  fifo_din <= fdin_r;
+  ovr_en   <= ovr_en_r;
+  ovr_off  <= ovr_off_r;
+  ovr_len  <= ovr_len_r;
+  ovr_data <= ovr_dat_r;
+
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      done_r <= '0';
+      ack_r  <= '0';
+      if rst = '1' then
+        st <= S_IDLE; idx <= 0; seq_r <= (others => '0');
+        busy_r <= '0'; fwr_r <= '0'; fdin_r <= (others => '0');
+        ovr_en_r <= '0'; ovr_dat_r <= (others => '0');
+        ovr_off_r <= (others => '0'); ovr_len_r <= (others => '0');
+      else
+        case st is
+
+          when S_IDLE =>
+            fwr_r <= '0';
+            if send = '1' then
+              busy_r <= '1'; idx <= 0; sel_r <= sel;
+              ovr_en_r <= '1'; ovr_dat_r <= (others => '0');
+              case sel is
+                when SEL_SYNC =>
+                  frame_len <= SYNC_FRAME_LEN;
+                  ovr_off_r <= std_logic_vector(to_unsigned(OFF_ORIGIN_TS, 11));
+                  ovr_len_r <= std_logic_vector(to_unsigned(10, 4));
+                when SEL_PDELAY_REQ =>
+                  frame_len <= PDELAY_FRAME_LEN;
+                  ovr_off_r <= std_logic_vector(to_unsigned(OFF_ORIGIN_TS, 11));
+                  ovr_len_r <= std_logic_vector(to_unsigned(10, 4));
+                when SEL_PDELAY_RESP =>
+                  frame_len <= PDELAY_FRAME_LEN;
+                  ovr_off_r <= std_logic_vector(to_unsigned(OFF_CORR, 11));
+                  ovr_len_r <= std_logic_vector(to_unsigned(8, 4));
+                when others =>
+                  frame_len <= SYNC_FRAME_LEN;
+                  ovr_off_r <= std_logic_vector(to_unsigned(OFF_ORIGIN_TS, 11));
+                  ovr_len_r <= std_logic_vector(to_unsigned(10, 4));
+              end case;
+              st <= S_PUSH;
+            end if;
+
+          when S_PUSH =>
+            if fifo_full = '0' then
+              fwr_r <= '1';
+              if idx = frame_len-1 then
+                fdin_r <= '1' & patched_byte(sel_r, idx, clock_id, port_num,
+                            src_mac, seq_r, req_rx_sec, req_rx_ns, req_portid);
+                st <= S_WAIT_TS;
+              else
+                fdin_r <= '0' & patched_byte(sel_r, idx, clock_id, port_num,
+                            src_mac, seq_r, req_rx_sec, req_rx_ns, req_portid);
+                idx <= idx + 1;
+              end if;
+            else
+              fwr_r <= '0';
+            end if;
+            if ts_valid = '1' then
+              if sel_r = SEL_PDELAY_RESP then
+                ovr_dat_r <= calc_residence(ts_sec, req_rx_sec, ts_ns, req_rx_ns);
+              else
+                ovr_dat_r <= pack_origin_ts(ts_sec, ts_ns);
+              end if;
+            end if;
+
+          when S_WAIT_TS =>
+            fwr_r <= '0';
+            if ts_valid = '1' then
+              if sel_r = SEL_PDELAY_RESP then
+                ovr_dat_r <= calc_residence(ts_sec, req_rx_sec, ts_ns, req_rx_ns);
+              else
+                ovr_dat_r <= pack_origin_ts(ts_sec, ts_ns);
+              end if;
+              ack_r <= '1';
+              st <= S_DONE;
+            end if;
+
+          when S_DONE =>
+            busy_r <= '0'; done_r <= '1'; seq_r <= seq_r + 1;
+            st <= S_IDLE;
+
+          when others =>
+            st <= S_IDLE;
+
+        end case;
+      end if;
+    end if;
+  end process;
+
+end architecture rtl;

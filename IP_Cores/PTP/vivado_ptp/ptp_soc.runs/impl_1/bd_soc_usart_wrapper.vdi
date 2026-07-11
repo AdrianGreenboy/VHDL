@@ -1,0 +1,1436 @@
+#-----------------------------------------------------------
+# Vivado v2025.2.1 (64-bit)
+# SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
+# IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
+# SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
+# Start of session at: Sat Jul 11 17:53:06 2026
+# Process ID         : 50635
+# Current directory  : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1
+# Command line       : vivado -log bd_soc_usart_wrapper.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source bd_soc_usart_wrapper.tcl -notrace
+# Log file           : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper.vdi
+# Journal file       : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/vivado.jou
+# Running On         : adrian
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.4 LTS
+# Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
+# CPU Frequency      : 5500.000 MHz
+# CPU Physical cores : 24
+# CPU Logical cores  : 32
+# Host memory        : 67107 MB
+# Swap memory        : 8589 MB
+# Total Virtual      : 75697 MB
+# Available Virtual  : 59800 MB
+#-----------------------------------------------------------
+Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
+source bd_soc_usart_wrapper.tcl -notrace
+Command: open_checkpoint /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper.dcp
+
+Starting open_checkpoint Task
+
+Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.01 . Memory (MB): peak = 1596.426 ; gain = 0.000 ; free physical = 34881 ; free virtual = 56576
+INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
+Netlist sorting complete. Time (s): cpu = 00:00:00.15 ; elapsed = 00:00:00.15 . Memory (MB): peak = 2264.898 ; gain = 0.000 ; free physical = 34087 ; free virtual = 55872
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/home/adrian/Xilinx/2025.2.1/data/ip'.
+INFO: [Project 1-479] Netlist was created with Vivado 2025.2.1
+INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
+INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
+INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
+INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
+INFO: [Project 1-570] Preparing netlist for logic optimization
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/IO_VREF[0].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/IO_VREF[1].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/IO_VREF[2].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/IO_VREF[3].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[0].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[1].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[2].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[3].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[4].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[5].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[6].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/IO_VREF[7].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/IO_VREF[0].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/IO_VREF[1].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/IO_VREF[2].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+WARNING: [Constraints 18-549] Could not create 'VOH' constraint because cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/IO_VREF[3].I_VREF' is not directly connected to top level port. 'VOH' is ignored by Vivado but preserved inside the database.
+Resolution: It is recommended to apply the I/O constraint directly to the top level port instead of applying the constraint to the cell connected to the port.
+Read ShapeDB Complete: Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2523.258 ; gain = 0.000 ; free physical = 33965 ; free virtual = 55652
+Reading Traffic File '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper/bd_soc_usart_wrapper.nts'
+INFO: [Ipconfig 75-709] Read and Merge Traffic Stats:  Before Read: 0 insts (0 INI), 0 paths (0 INI). Read In: 8 insts (0 INI), 7 paths (0 INI). After Merge: 8 insts (0 INI), 7 paths (0 INI). Noc Frequency: 960 0 error slaves
+Reading NOC Solution File '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper/bd_soc_usart_wrapper.ncr'
+INFO: [Constraints 18-5158] Loading Memory Image Database: /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper/bd_soc_usart_wrapper_mem_image.db
+INFO: [Timing 38-478] Restoring timing data from binary archive.
+INFO: [Timing 38-479] Binary timing data restore complete.
+INFO: [Project 1-856] Restoring constraints from binary archive.
+INFO: [Project 1-853] Binary constraint restore complete.
+INFO: [Designutils 20-5722] Start Reading Physical Databases.
+Reading placement.
+Read Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3152.461 ; gain = 0.000 ; free physical = 33362 ; free virtual = 55039
+Reading placer database...
+Read Device Cache: Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.05 . Memory (MB): peak = 3171.461 ; gain = 19.000 ; free physical = 33334 ; free virtual = 55011
+Read PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3171.461 ; gain = 0.000 ; free physical = 33334 ; free virtual = 55011
+Read placeStorage: Time (s): cpu = 00:00:00.56 ; elapsed = 00:00:00.56 . Memory (MB): peak = 3204.477 ; gain = 1.000 ; free physical = 33322 ; free virtual = 55003
+Read PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3204.477 ; gain = 0.000 ; free physical = 33322 ; free virtual = 55003
+Reading routing.
+Read RouteStorage: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 3208.859 ; gain = 4.383 ; free physical = 33314 ; free virtual = 54995
+Read Physdb Files: Time (s): cpu = 00:00:00.63 ; elapsed = 00:00:00.64 . Memory (MB): peak = 3208.859 ; gain = 56.398 ; free physical = 33314 ; free virtual = 54995
+Restored from archive | CPU: 4.470000 secs | Memory: 369.455063 MB |
+Finished XDEF File Restore: Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 3749.883 ; gain = 597.422 ; free physical = 32786 ; free virtual = 54464
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3749.883 ; gain = 0.000 ; free physical = 32786 ; free virtual = 54464
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 1055 instances were transformed.
+  DSP58C => DSP58C (DSP_ALUADD, DSP_ALUMUX, DSP_ALUREG, DSP_A_B_DATA58, DSP_C_DATA58, DSP_MULTIPLIER58, DSP_M_DATA58, DSP_OUTPUT58, DSP_PATDET, DSP_PREADD58, DSP_PREADD_DATA58, DSP_SRCMX_OPTINV): 31 instances
+  RAMD64E => RAMD64E (RAMD64E5, VCC): 1024 instances
+
+INFO: [Project 1-604] Checkpoint was created with Vivado v2025.2.1 (64-bit) build 6403652
+open_checkpoint: Time (s): cpu = 00:00:22 ; elapsed = 00:00:19 . Memory (MB): peak = 3749.918 ; gain = 2153.492 ; free physical = 32785 ; free virtual = 54463
+Command: opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcve2302'
+Running DRC as a precondition to command opt_design
+
+Starting DRC Task
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Project 1-461] DRC finished with 0 Errors
+INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.35 . Memory (MB): peak = 3754.648 ; gain = 4.730 ; free physical = 32774 ; free virtual = 54461
+
+Starting Logic Optimization Task
+
+Phase 1 Initialization
+
+Phase 1.1 Core Generation And Design Setup
+
+Phase 1.1.1 Generate And Synthesize MIG/Advanced IO Wizard Cores
+INFO: [Mig 66-554] Skip IXC Flow for bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc instance, because the netlist of that IP instance is matched with pinout.
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3981.539 ; gain = 0.000 ; free physical = 32563 ; free virtual = 54246
+Phase 1.1.1 Generate And Synthesize MIG/Advanced IO Wizard Cores | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:00.7 ; elapsed = 00:00:00.72 . Memory (MB): peak = 3981.539 ; gain = 8.906 ; free physical = 32563 ; free virtual = 54246
+Phase 1.1 Core Generation And Design Setup | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:00.7 ; elapsed = 00:00:00.73 . Memory (MB): peak = 3981.539 ; gain = 8.906 ; free physical = 32563 ; free virtual = 54246
+
+Phase 1.2 Setup Constraints And Sort Netlist
+Phase 1.2 Setup Constraints And Sort Netlist | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:00.71 ; elapsed = 00:00:00.73 . Memory (MB): peak = 3981.539 ; gain = 8.906 ; free physical = 32563 ; free virtual = 54246
+Phase 1 Initialization | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:00.71 ; elapsed = 00:00:00.73 . Memory (MB): peak = 3981.539 ; gain = 8.906 ; free physical = 32563 ; free virtual = 54246
+
+Phase 2 Timer Update And Timing Data Collection
+
+Phase 2.1 Detect if minReqCache needed
+Phase 2.1 Detect if minReqCache needed | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:00.72 ; elapsed = 00:00:00.75 . Memory (MB): peak = 3981.539 ; gain = 8.906 ; free physical = 32563 ; free virtual = 54246
+
+Phase 2.2 Timer Update
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Phase 2.2 Timer Update | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4300.812 ; gain = 328.180 ; free physical = 32270 ; free virtual = 53949
+Phase 2 Timer Update And Timing Data Collection | Checksum: 1d50b0db6
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4300.812 ; gain = 328.180 ; free physical = 32270 ; free virtual = 53949
+
+Phase 3 Retarget
+INFO: [Opt 31-1851] Number of loadless carry chains removed were: 0
+INFO: [Opt 31-1853] Transformed chains with multiple outputs in this design
+INFO: [Opt 31-1834] Total Chains To Be Transformed Were: 3 AND Number of Transformed insts Created are: 5
+INFO: [Opt 31-1566] Pulled 6 inverters resulting in an inversion of 38 pins
+INFO: [Opt 31-138] Pushed 30 inverter(s) to 1601 load pin(s).
+INFO: [Opt 31-49] Retargeted 0 cell(s).
+Phase 3 Retarget | Checksum: 2906479b1
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4356.840 ; gain = 384.207 ; free physical = 32271 ; free virtual = 53950
+Retarget | Checksum: 2906479b1
+INFO: [Opt 31-389] Phase Retarget created 4 cells and removed 59 cells
+INFO: [Opt 31-1021] In phase Retarget, 20 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 4 Constant propagation
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Phase 4 Constant propagation | Checksum: 251afd5eb
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 4356.840 ; gain = 384.207 ; free physical = 32271 ; free virtual = 53950
+Constant propagation | Checksum: 251afd5eb
+INFO: [Opt 31-389] Phase Constant propagation created 4 cells and removed 10 cells
+INFO: [Opt 31-1021] In phase Constant propagation, 20 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 5 Sweep
+INFO: [Constraints 18-11670] Building netlist checker database with flags, 0x8
+Done building netlist checker database: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4356.840 ; gain = 0.000 ; free physical = 32271 ; free virtual = 53950
+INFO: [Constraints 18-11670] Building netlist checker database with flags, 0x8
+Done building netlist checker database: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 4356.840 ; gain = 0.000 ; free physical = 32271 ; free virtual = 53950
+Phase 5 Sweep | Checksum: 1c17c90b5
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 4356.840 ; gain = 384.207 ; free physical = 32271 ; free virtual = 53950
+Sweep | Checksum: 1c17c90b5
+INFO: [Opt 31-389] Phase Sweep created 0 cells and removed 85 cells
+INFO: [Opt 31-1021] In phase Sweep, 703 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 6 BUFG optimization
+INFO: [Opt 31-1077] Phase BUFG optimization inserted 0 global clock buffer(s) for CLOCK_LOW_FANOUT.
+Phase 6 BUFG optimization | Checksum: 1c17c90b5
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:03 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32272 ; free virtual = 53950
+BUFG optimization | Checksum: 1c17c90b5
+INFO: [Opt 31-662] Phase BUFG optimization created 0 cells of which 0 are BUFGs and removed 0 cells.
+
+Phase 7 Shift Register Optimization
+INFO: [Opt 31-1064] SRL Remap converted 0 SRLs to 0 registers and converted 0 registers of register chains to 0 SRLs
+Phase 7 Shift Register Optimization | Checksum: 1c17c90b5
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:03 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32272 ; free virtual = 53950
+Shift Register Optimization | Checksum: 1c17c90b5
+INFO: [Opt 31-389] Phase Shift Register Optimization created 0 cells and removed 0 cells
+
+Phase 8 Post Processing Netlist
+Phase 8 Post Processing Netlist | Checksum: 278d57099
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:03 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32272 ; free virtual = 53950
+Post Processing Netlist | Checksum: 278d57099
+INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 0 cells
+INFO: [Opt 31-1021] In phase Post Processing Netlist, 36 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 9 Finalization
+
+Phase 9.1 Finalizing Design Cores and Updating Shapes
+Phase 9.1 Finalizing Design Cores and Updating Shapes | Checksum: 29be7483d
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:04 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32265 ; free virtual = 53952
+
+Phase 9.2 Verifying Netlist Connectivity
+
+Starting Connectivity Check Task
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4388.855 ; gain = 0.000 ; free physical = 32266 ; free virtual = 53953
+Phase 9.2 Verifying Netlist Connectivity | Checksum: 29be7483d
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:04 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32266 ; free virtual = 53953
+Phase 9 Finalization | Checksum: 29be7483d
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:04 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32266 ; free virtual = 53953
+Opt_design Change Summary
+=========================
+
+
+-------------------------------------------------------------------------------------------------------------------------
+|  Phase                        |  #Cells created  |  #Cells Removed  |  #Constrained objects preventing optimizations  |
+-------------------------------------------------------------------------------------------------------------------------
+|  Retarget                     |               4  |              59  |                                             20  |
+|  Constant propagation         |               4  |              10  |                                             20  |
+|  Sweep                        |               0  |              85  |                                            703  |
+|  BUFG optimization            |               0  |               0  |                                              0  |
+|  Shift Register Optimization  |               0  |               0  |                                              0  |
+|  Post Processing Netlist      |               0  |               0  |                                             36  |
+-------------------------------------------------------------------------------------------------------------------------
+
+
+Ending Logic Optimization Task | Checksum: 29be7483d
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:04 . Memory (MB): peak = 4388.855 ; gain = 416.223 ; free physical = 32266 ; free virtual = 53953
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 4388.855 ; gain = 0.000 ; free physical = 32266 ; free virtual = 53953
+INFO: [Common 17-83] Releasing license: Implementation
+47 Infos, 16 Warnings, 0 Critical Warnings and 0 Errors encountered.
+opt_design completed successfully
+opt_design: Time (s): cpu = 00:00:08 ; elapsed = 00:00:05 . Memory (MB): peak = 4388.855 ; gain = 638.938 ; free physical = 32266 ; free virtual = 53953
+INFO: [Vivado 12-24828] Executing command : report_drc -file opt_report_drc_0.rpt -pb opt_report_drc_0.pb -rpx opt_report_drc_0.rpx
+Command: report_drc -file opt_report_drc_0.rpt -pb opt_report_drc_0.pb -rpx opt_report_drc_0.rpx
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 2-168] The results of DRC are in file /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/opt_report_drc_0.rpt.
+report_drc completed successfully
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Wrote PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32229 ; free virtual = 53920
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32229 ; free virtual = 53920
+Writing XDEF routing.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32233 ; free virtual = 53921
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00.36 ; elapsed = 00:00:00.09 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32230 ; free virtual = 53920
+Wrote PlaceStorage: Time (s): cpu = 00:00:00.08 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32229 ; free virtual = 53920
+Wrote Netlist Cache: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32227 ; free virtual = 53920
+Wrote Device Cache: Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32213 ; free virtual = 53915
+Write Physdb Complete: Time (s): cpu = 00:00:00.57 ; elapsed = 00:00:00.15 . Memory (MB): peak = 4636.977 ; gain = 0.000 ; free physical = 32213 ; free virtual = 53915
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper_opt.dcp' has been generated.
+Command: place_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-83] Releasing license: Implementation
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Running DRC as a precondition to command place_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors, 1 Warnings
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs
+
+Starting Placer Task
+INFO: [Place 46-575] Running place_design with the Advanced Flow feature set.
+
+Phase 1 Placer Initialization
+
+Phase 1.1 Mandatory Logic Optimization
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4668.992 ; gain = 0.000 ; free physical = 32251 ; free virtual = 53940
+Phase 1.1 Mandatory Logic Optimization | Checksum: 330723a13
+----- Checksum: PlaceDB: cc18d033 ShapeSum: ddbd9475 Design: 99e08a16 Context: ecbb4b55 
+
+Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.03 . Memory (MB): peak = 4668.992 ; gain = 32.016 ; free physical = 32251 ; free virtual = 53940
+
+Phase 1.2 Add Constraints
+
+Phase 1.2.1 Add User PBlocks
+Phase 1.2.1 Add User PBlocks | Checksum: 330723a13
+----- Checksum: PlaceDB: cc18d033 ShapeSum: ddbd9475 Design: 99e08a16 Context: ecbb4b55 
+
+Time (s): cpu = 00:00:00.04 ; elapsed = 00:00:00.04 . Memory (MB): peak = 4668.992 ; gain = 32.016 ; free physical = 32251 ; free virtual = 53940
+Phase 1.2 Add Constraints | Checksum: 330723a13
+----- Checksum: PlaceDB: cc18d033 ShapeSum: ddbd9475 Design: 99e08a16 Context: ecbb4b55 
+
+Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.04 . Memory (MB): peak = 4668.992 ; gain = 32.016 ; free physical = 32251 ; free virtual = 53940
+
+Phase 1.3 Build Placer Infrastructure/IO Clock Placement
+
+Phase 1.3.1 Build Netlist
+Phase 1.3.1 Build Netlist | Checksum: 25e11828c
+----- Checksum: PlaceDB: 68b7a40b ShapeSum: ddbd9475 Design: 52e777ce Context: c4b4d23e 
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 32087 ; free virtual = 53842
+
+Phase 1.3.2 Build PBlock Handler
+Phase 1.3.2 Build PBlock Handler | Checksum: 22117bc5c
+----- Checksum: PlaceDB: 68b7a40b ShapeSum: ddbd9475 Design: 15edb19e Context: c4b4d23e 
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 32087 ; free virtual = 53842
+
+Phase 1.3.3 Commit IO Placement
+Phase 1.3.3 Commit IO Placement | Checksum: 285c32d76
+----- Checksum: PlaceDB: 499738cd ShapeSum: ddbd9475 Design: bb8091d5 Context: a2edce5f 
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:03 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 32081 ; free virtual = 53835
+Phase 1.3 Build Placer Infrastructure/IO Clock Placement | Checksum: 17ebded53
+----- Checksum: PlaceDB: 499738cd ShapeSum: 194fe29f Design: bb8091d5 Context: 60564012 
+
+Time (s): cpu = 00:00:09 ; elapsed = 00:00:04 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 31947 ; free virtual = 53804
+Phase 1 Placer Initialization | Checksum: 196d810c7
+----- Checksum: PlaceDB: 499738cd ShapeSum: 194fe29f Design: bb8091d5 Context: 78706386 
+
+Time (s): cpu = 00:00:09 ; elapsed = 00:00:04 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 31910 ; free virtual = 53798
+
+Phase 2 Floorplanning
+
+Phase 2.1 Build Partitions
+Phase 2.1 Build Partitions | Checksum: 1070a8b21
+----- Checksum: Design: bb8091d5 Context: 4b89f94c 
+
+Time (s): cpu = 00:00:10 ; elapsed = 00:00:04 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 31910 ; free virtual = 53798
+
+Phase 2.2 Coarse Floorplanning
+Phase 2.2 Coarse Floorplanning | Checksum: 112f3a05a
+----- Checksum: Design: bb8091d5 Context: 57730e85 
+
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:05 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 31898 ; free virtual = 53804
+
+Phase 2.3 Core Floorplanning
+Phase 2.3 Core Floorplanning | Checksum: 124546a8a
+----- Checksum: Design: bb8091d5 Context: 68d3d8b5 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 32099 ; free virtual = 53928
+
+Phase 2.4 BUFG_FABRIC replication
+Phase 2.4 BUFG_FABRIC replication | Checksum: 124546a8a
+----- Checksum: Design: bb8091d5 Context: 68d3d8b5 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4747.984 ; gain = 111.008 ; free physical = 32099 ; free virtual = 53928
+
+Phase 2.5 NOC Placement
+Generating placement and routing for NoC components
+NoC TrafficSpec | Checksum: 250af4d4
+NoC Constraints | Checksum: b33c3ca9
+NoC Incremental Solution | Checksum: 9c6265a6
+INFO: [Ipconfig 75-133] Running NoC Routing
+NoC Compiler Finished Successfully
+NoC Solution | Checksum: fa48c405
+Phase 2.5 NOC Placement | Checksum: 179206f94
+----- Checksum: Design: bb8091d5 Context: bd9fddbf 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32098 ; free virtual = 53928
+
+Phase 2.6 Physical Synthesis After Partition
+INFO: [Physopt 32-1123] No candidate cells found for Shift Register to Pipeline optimization
+INFO: [Physopt 32-775] End 2 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32097 ; free virtual = 53929
+
+Summary of Physical Synthesis Optimizations
+============================================
+
+
+---------------------------------------------------------------------------------------------------------------------------------------
+|  Optimization                 |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed   |
+---------------------------------------------------------------------------------------------------------------------------------------
+|  Shift Register to Pipeline   |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Total                        |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+---------------------------------------------------------------------------------------------------------------------------------------
+
+
+Phase 2.6 Physical Synthesis After Partition | Checksum: 179206f94
+----- Checksum: Design: bb8091d5 Context: bd9fddbf 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32097 ; free virtual = 53929
+
+Phase 2.7 Clock Region Placement
+Phase 2.7 Clock Region Placement | Checksum: 1b7cdc278
+----- Checksum: Design: bb8091d5 Context: fc4d30a3 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+
+Phase 2.8 Commit Global Clocks
+Phase 2.8 Commit Global Clocks | Checksum: 1b7cdc278
+----- Checksum: Design: bb8091d5 Context: fc4d30a3 
+
+Time (s): cpu = 00:00:14 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+
+Phase 2.9 Deposit Clock Trees to estimator
+Phase 2.9 Deposit Clock Trees to estimator | Checksum: 1b7cdc278
+----- Checksum: Design: bb8091d5 Context: fc4d30a3 
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+
+Phase 2.10 Physical Synthesis After Floorplan
+
+Starting Post FP PSIP Lite Task
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+INFO: [Physopt 32-65] No nets found for high-fanout optimization.
+INFO: [Physopt 32-232] Optimized 0 net. Created 0 new instance.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+INFO: [Physopt 32-670] No setup violation found.  Equivalent Driver Rewiring was not performed.
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+INFO: [Physopt 32-1359] No control set reduced for control set optimization
+INFO: [Physopt 32-1360] Optimized 0 flops during control set optimization
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-670] No setup violation found.  DSP Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  Shift Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  BRAM Register Optimization was not performed.
+INFO: [Physopt 32-670] No setup violation found.  URAM Register Optimization was not performed.
+INFO: [Physopt 32-949] No candidate nets found for dynamic/static region interface net replication
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+
+Summary of Physical Synthesis Optimizations
+============================================
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Optimization                                     |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed   |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Very High Fanout                                 |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Retime                                           |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Equivalent Driver Rewiring                       |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Post Floorplan Control Set                       |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  DSP Register                                     |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Shift Register                                   |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  BRAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  URAM Register                                    |            0  |              0  |                     0  |           0  |           0  |  00:00:00  |
+|  Dynamic/Static Region Interface Net Replication  |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Total                                            |            0  |              0  |                     0  |           0  |           4  |  00:00:00  |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+Time (s): cpu = 00:00:00.27 ; elapsed = 00:00:00.28 . Memory (MB): peak = 4755.988 ; gain = 0.000 ; free physical = 32096 ; free virtual = 53930
+Phase 2.10 Physical Synthesis After Floorplan | Checksum: da12f958
+----- Checksum: Design: 31b95c76 Context: a8599ce2 
+
+Time (s): cpu = 00:00:15 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+
+Phase 2.11 BI inserter
+Phase 2.11 BI inserter | Checksum: 3f409705
+----- Checksum: Design: 31b95c76 Context: 0d873a8f 
+
+Time (s): cpu = 00:00:16 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+Phase 2 Floorplanning | Checksum: 3f409705
+----- Checksum: Design: 31b95c76 Context: 0d873a8f 
+
+Time (s): cpu = 00:00:16 ; elapsed = 00:00:06 . Memory (MB): peak = 4755.988 ; gain = 119.012 ; free physical = 32096 ; free virtual = 53930
+
+Phase 3 Global Placement
+
+Phase 3.1 Core Global Placement
+Phase 3.1 Core Global Placement | Checksum: e5ac6dfb
+----- Checksum: Design: 4cdf98da Context: 98ccd521 
+
+Time (s): cpu = 00:00:33 ; elapsed = 00:00:09 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32056 ; free virtual = 53840
+Phase 3 Global Placement | Checksum: e5ac6dfb
+----- Checksum: Design: 4cdf98da Context: 98ccd521 
+
+Time (s): cpu = 00:00:33 ; elapsed = 00:00:09 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32056 ; free virtual = 53840
+
+***   Global Placement Summary   ***
+
+SLR0:
+
+Post_GP Estimated Congestion
+ _______________________________________________________________________
+|           | Global Congestion |  Long Congestion  | Short Congestion  |
+|           |___________________|___________________|___________________|
+| Direction | Size    | MaxCong | Size    | MaxCong | Size    | MaxCong |
+|___________|_________|_________|_________|_________|_________|_________|
+|      NORTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|      SOUTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       EAST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       WEST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+Total net WL:   17512500 =    3231500 +   14281000, avg : 939.159114 = 173.298654 +  765.86046  num:   18647
+
+
+Phase 4 Detailed Placement
+
+Phase 4.1 Initial Placement Refinement
+Phase 4.1 Initial Placement Refinement | Checksum: 6f5bdf35
+----- Checksum: Design: 4cdf98da Context: 227c465b 
+
+Time (s): cpu = 00:00:34 ; elapsed = 00:00:10 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32047 ; free virtual = 53859
+
+Phase 4.2 Multi-Slice Object Legalization
+Phase 4.2 Multi-Slice Object Legalization | Checksum: 56a521db
+----- Checksum: Design: 4cdf98da Context: 09c58901 
+
+Time (s): cpu = 00:00:34 ; elapsed = 00:00:10 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32047 ; free virtual = 53858
+
+Phase 4.3 Slice Legalization
+Phase 4.3 Slice Legalization | Checksum: 1bb85ac6b
+----- Checksum: Design: cca9481c Context: eedc644f 
+
+Time (s): cpu = 00:00:35 ; elapsed = 00:00:10 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32047 ; free virtual = 53858
+
+Phase 4.4 Slice Swap
+Phase 4.4 Slice Swap | Checksum: 17fe185c1
+----- Checksum: Design: cca9481c Context: b3383da5 
+
+Time (s): cpu = 00:00:35 ; elapsed = 00:00:11 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32057 ; free virtual = 53869
+Phase 4 Detailed Placement | Checksum: f539c535
+----- Checksum: Design: cca9481c Context: 28907d19 
+
+Time (s): cpu = 00:00:36 ; elapsed = 00:00:11 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32057 ; free virtual = 53869
+
+***   Detailed Placement Summary   ***
+
+SLR0:
+
+Post_DP Estimated Congestion
+ _______________________________________________________________________
+|           | Global Congestion |  Long Congestion  | Short Congestion  |
+|           |___________________|___________________|___________________|
+| Direction | Size    | MaxCong | Size    | MaxCong | Size    | MaxCong |
+|___________|_________|_________|_________|_________|_________|_________|
+|      NORTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|      SOUTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       EAST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       WEST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+Total net WL:   17869600 =    3524700 +   14344900, avg : 958.309648 = 189.022363 + 769.287285  num:   18647
+
+
+Phase 5 Post Place Optimization
+
+Phase 5.1 Core Post Place Optimization
+Phase 5.1 Core Post Place Optimization | Checksum: 17667fe0e
+----- Checksum: Design: cca9481c Context: a9beb5f2 
+
+Time (s): cpu = 00:00:36 ; elapsed = 00:00:11 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32058 ; free virtual = 53869
+
+Phase 5.2 Leaf Clock and CLE Clock Legalization
+Phase 5.2 Leaf Clock and CLE Clock Legalization | Checksum: 17667fe0e
+----- Checksum: Design: cca9481c Context: a9beb5f2 
+
+Time (s): cpu = 00:00:36 ; elapsed = 00:00:11 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32058 ; free virtual = 53869
+Phase 5 Post Place Optimization | Checksum: 17667fe0e
+----- Checksum: Design: cca9481c Context: a9beb5f2 
+
+Time (s): cpu = 00:00:36 ; elapsed = 00:00:11 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32058 ; free virtual = 53869
+
+Phase 6 Commit Placement
+Phase 6 Commit Placement | Checksum: 28b37ee30
+----- Checksum: PlaceDB: fb800d83 ShapeSum: 194fe29f Design: cca9481c Context: a9beb5f2 
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32064 ; free virtual = 53876
+
+Phase 7 Place Remaining
+Phase 7 Place Remaining | Checksum: 00000000
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32064 ; free virtual = 53876
+
+Phase 8 BUFG_FABRIC Optimization
+INFO: [Implflow 47-2863] found 0 BUFG_FABRIC candidates for optimization as follows:
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4843.715 ; gain = 0.000 ; free physical = 32073 ; free virtual = 53885
+INFO: [Implflow 47-2862] Number of candidate nets identified for BUFG_FABRIC optimization: 0, inserted nets: 0, replicated nets: 0, skipped nets due to netlist constraints: 0, deleted nets due to timing degradation: 0
+Phase 8 BUFG_FABRIC Optimization | Checksum: 16b279acb
+----- Checksum: Design: cca9481c Context: 9e7e52af 
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+
+Phase 9 Deposit Clock Trees to RouteDB
+Phase 9 Deposit Clock Trees to RouteDB | Checksum: 16b279acb
+----- Checksum: Design: cca9481c Context: 9e7e52af 
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+
+Phase 10 Update Clock Tree Type and Deposit
+Phase 10 Update Clock Tree Type and Deposit | Checksum: 16b279acb
+----- Checksum: Design: cca9481c Context: 9e7e52af 
+
+Time (s): cpu = 00:00:38 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+
+Phase 11 Placer Reporting
+INFO: [Implflow 47-2776] Post-Placement Estimated Congestion
+SLR0:
+
+Post_Placement Estimated Congestion
+ _______________________________________________________________________
+|           | Global Congestion |  Long Congestion  | Short Congestion  |
+|           |___________________|___________________|___________________|
+| Direction | Size    | MaxCong | Size    | MaxCong | Size    | MaxCong |
+|___________|_________|_________|_________|_________|_________|_________|
+|      NORTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|      SOUTH|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       EAST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+|       WEST|      1x1|     1.00|      1x1|     1.00|      1x1|     1.00|
+|___________|_________|_________|_________|_________|_________|_________|
+Total net WL:   17869600 =    3524700 +   14344900, avg : 943.534506 = 186.108031 + 757.426474  num:   18939
+
+Phase 11 Placer Reporting | Checksum: d7cb097b
+----- Checksum: Design: cca9481c Context: 0b21c15f 
+
+Time (s): cpu = 00:00:39 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+Ending Placer Task | Checksum: 21368b918
+
+Time (s): cpu = 00:00:39 ; elapsed = 00:00:12 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+83 Infos, 16 Warnings, 0 Critical Warnings and 0 Errors encountered.
+place_design completed successfully
+place_design: Time (s): cpu = 00:00:44 ; elapsed = 00:00:14 . Memory (MB): peak = 4843.715 ; gain = 206.738 ; free physical = 32073 ; free virtual = 53885
+INFO: [Vivado 12-24838] Running report commands "report_control_sets, report_io, report_utilization" in parallel.
+Running report generation with 3 threads.
+INFO: [Vivado 12-24828] Executing command : report_control_sets -verbose -file place_report_control_sets_0.rpt
+report_control_sets: Time (s): cpu = 00:00:00.16 ; elapsed = 00:00:00.09 . Memory (MB): peak = 4859.723 ; gain = 0.000 ; free physical = 32099 ; free virtual = 53884
+INFO: [Vivado 12-24828] Executing command : report_io -file place_report_io_0.rpt
+report_io: Time (s): cpu = 00:00:00.3 ; elapsed = 00:00:00.18 . Memory (MB): peak = 4859.723 ; gain = 0.000 ; free physical = 32078 ; free virtual = 53864
+INFO: [Vivado 12-24828] Executing command : report_utilization -file place_report_utilization_0.rpt -pb place_report_utilization_0.pb
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Wrote PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32083 ; free virtual = 53872
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32083 ; free virtual = 53872
+Writing XDEF routing.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32082 ; free virtual = 53873
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00.4 ; elapsed = 00:00:00.1 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32084 ; free virtual = 53873
+Wrote PlaceStorage: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.34 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32058 ; free virtual = 53861
+Wrote Netlist Cache: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32058 ; free virtual = 53864
+Wrote Device Cache: Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32050 ; free virtual = 53867
+Write Physdb Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.49 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32050 ; free virtual = 53867
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper_placed.dcp' has been generated.
+Command: phys_opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcve2302'
+
+Starting Initial Update Timing Task
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:01 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32071 ; free virtual = 53864
+INFO: [Vivado_Tcl 4-2279] Estimated Timing Summary | WNS= 1.487 | TNS= 0.000 | 
+INFO: [Vivado_Tcl 4-383] Design worst setup slack (WNS) is greater than or equal to 0.000 ns. All physical synthesis setup optimizations will be skipped.
+INFO: [Vivado_Tcl 4-232] No setup violation found. The netlist was not modified.
+INFO: [Common 17-83] Releasing license: Implementation
+95 Infos, 16 Warnings, 0 Critical Warnings and 0 Errors encountered.
+phys_opt_design completed successfully
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Wrote PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32060 ; free virtual = 53864
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32060 ; free virtual = 53864
+Writing XDEF routing.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.09 ; elapsed = 00:00:00.02 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32059 ; free virtual = 53865
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00.36 ; elapsed = 00:00:00.1 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32055 ; free virtual = 53864
+Wrote PlaceStorage: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.34 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32033 ; free virtual = 53861
+Wrote Netlist Cache: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.01 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32032 ; free virtual = 53863
+Wrote Device Cache: Time (s): cpu = 00:00:00.07 ; elapsed = 00:00:00.03 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32025 ; free virtual = 53866
+Write Physdb Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.49 . Memory (MB): peak = 4867.727 ; gain = 0.000 ; free physical = 32025 ; free virtual = 53866
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper_physopt.dcp' has been generated.
+Command: route_design
+INFO: [Vivado_Tcl 4-2300] Running route_design with the Advanced Flow feature set.
+Attempting to get a license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcve2302'
+
+
+Starting Routing Task
+INFO: [Route 35-254] Multithreading enabled for route_design using a maximum of 8 CPUs
+
+Phase 1 Build RT Design
+DB_checksum | Checksum: 21368b918
+----- Checksum: PlaceDB: fb800d83 ConstDB: 00000000 ShapeSum: 194fe29f RouteDB: fe98c8f6 
+Nodegraph reading from file.  Time (s): cpu = 00:00:00.51 ; elapsed = 00:00:00.54 . Memory (MB): peak = 4924.727 ; gain = 57.000 ; free physical = 31990 ; free virtual = 53805
+Post Restoration Checksum: NetGraph: 349d3503 | NumContArr: b05680da | Constraints: 3d58a72f | Timing: c2a8fa9d
+Phase 1 Build RT Design | Checksum: 1e4f557a9
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:02 . Memory (MB): peak = 4981.539 ; gain = 113.812 ; free physical = 31938 ; free virtual = 53750
+
+Phase 2 Router Initialization
+
+Phase 2.1 Fix Topology Constraints
+Phase 2.1 Fix Topology Constraints | Checksum: 1e4f557a9
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:02 . Memory (MB): peak = 4981.539 ; gain = 113.812 ; free physical = 31938 ; free virtual = 53751
+
+Phase 2.2 Pre Route Cleanup
+INFO: [Route 35-556] 0 Nets skipped to route as DONT_ROUTE property is set on them
+Phase 2.2 Pre Route Cleanup | Checksum: 1e4f557a9
+
+Time (s): cpu = 00:00:06 ; elapsed = 00:00:02 . Memory (MB): peak = 4981.539 ; gain = 113.812 ; free physical = 31938 ; free virtual = 53751
+
+Phase 2.3 Global Clock Net Routing
+ Number of Nodes with overlaps = 0
+Phase 2.3 Global Clock Net Routing | Checksum: 281eb5333
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:02 . Memory (MB): peak = 5006.891 ; gain = 139.164 ; free physical = 31916 ; free virtual = 53730
+
+Phase 2.4 Update Timing
+Phase 2.4 Update Timing | Checksum: 16c261ac5
+
+Time (s): cpu = 00:00:10 ; elapsed = 00:00:03 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31883 ; free virtual = 53693
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.570  | TNS=0.000  | WHS=-0.031 | THS=-0.031 |
+
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 0 %
+  Global Horizontal Routing Utilization  = 0 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 15511
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 11356
+  Number of Partially Routed Nets     = 4155
+  Number of Node Overlaps             = 0
+
+Phase 2 Router Initialization | Checksum: 1b5e2ac65
+
+Time (s): cpu = 00:00:13 ; elapsed = 00:00:04 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31876 ; free virtual = 53695
+
+Phase 3 Global Routing
+
+Phase 3.1 SLL Assignment
+Phase 3.1 SLL Assignment | Checksum: 1b5e2ac65
+
+Time (s): cpu = 00:00:13 ; elapsed = 00:00:04 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31876 ; free virtual = 53695
+Phase 3 Global Routing | Checksum: 1b5e2ac65
+
+Time (s): cpu = 00:00:13 ; elapsed = 00:00:04 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31876 ; free virtual = 53695
+
+Phase 4 Initial Routing
+
+Phase 4.1 Initial Net Routing Pass
+Phase 4.1 Initial Net Routing Pass | Checksum: 227f1d614
+
+Time (s): cpu = 00:00:17 ; elapsed = 00:00:05 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31876 ; free virtual = 53695
+Phase 4 Initial Routing | Checksum: 1dcfd8447
+
+Time (s): cpu = 00:00:17 ; elapsed = 00:00:05 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31876 ; free virtual = 53695
+
+Phase 5 Rip-up And Reroute
+
+Phase 5.1 Global Iteration 0
+ Number of Nodes with overlaps = 823
+ Number of Nodes with overlaps = 23
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.499  | TNS=0.000  | WHS=0.019  | THS=0.000  |
+
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.499  | TNS=0.000  | WHS=0.019  | THS=0.000  |
+
+Phase 5.1 Global Iteration 0 | Checksum: eaefd061
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 5.2 Additional Iteration for Hold
+Phase 5.2 Additional Iteration for Hold | Checksum: 112115b56
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+Phase 5 Rip-up And Reroute | Checksum: 112115b56
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 6 Delay and Skew Optimization
+
+Phase 6.1 Delay CleanUp
+Phase 6.1 Delay CleanUp | Checksum: 112115b56
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 6.2 Clock Skew Optimization
+Phase 6.2 Clock Skew Optimization | Checksum: 112115b56
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+Phase 6 Delay and Skew Optimization | Checksum: 112115b56
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 7 Post Hold Fix
+
+Phase 7.1 Hold Fix Iter
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.499  | TNS=0.000  | WHS=0.019  | THS=0.000  |
+
+Phase 7.1 Hold Fix Iter | Checksum: 17cf0ad0d
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+Phase 7 Post Hold Fix | Checksum: 17cf0ad0d
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 8 Leaf Clock Prog Delay Opt
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=1.499  | TNS=0.000  | WHS=0.019  | THS=0.000  |
+
+Phase 8 Leaf Clock Prog Delay Opt | Checksum: 17cf0ad0d
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 9 Route finalize
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 1.22349 %
+  Global Horizontal Routing Utilization  = 1.3308 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 0
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 0
+  Number of Partially Routed Nets     = 0
+  Number of Node Overlaps             = 0
+
+Phase 9 Route finalize | Checksum: 17cf0ad0d
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:10 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 10 Verifying routed nets
+
+ Verification completed successfully
+Phase 10 Verifying routed nets | Checksum: 17cf0ad0d
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:11 . Memory (MB): peak = 5043.914 ; gain = 176.188 ; free physical = 31874 ; free virtual = 53709
+
+Phase 11 Depositing Routes
+Phase 11 Depositing Routes | Checksum: 24a1dfb8f
+
+Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31877 ; free virtual = 53711
+
+Phase 12 Post Process Routing
+Phase 12 Post Process Routing | Checksum: 24a1dfb8f
+
+Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31903 ; free virtual = 53715
+
+Phase 13 Post Router Timing
+INFO: [Route 35-57] Estimated Timing Summary | WNS=1.499  | TNS=0.000  | WHS=0.019  | THS=0.000  |
+
+INFO: [Route 35-327] The final timing numbers are based on the router estimated timing analysis. For a complete and accurate timing signoff, please run report_timing_summary.
+Phase 13 Post Router Timing | Checksum: 24a1dfb8f
+
+Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31903 ; free virtual = 53715
+Total Elapsed time in route_design: 10.96 secs
+
+Phase 14 Post-Route Event Processing
+Phase 14 Post-Route Event Processing | Checksum: 151f6af55
+
+Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31903 ; free virtual = 53715
+INFO: [Route 35-16] Router Completed Successfully
+Ending Routing Task | Checksum: 151f6af55
+
+Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31903 ; free virtual = 53715
+
+Routing Is Done.
+INFO: [Common 17-83] Releasing license: Implementation
+110 Infos, 16 Warnings, 0 Critical Warnings and 0 Errors encountered.
+route_design completed successfully
+route_design: Time (s): cpu = 00:00:32 ; elapsed = 00:00:11 . Memory (MB): peak = 5044.914 ; gain = 177.188 ; free physical = 31889 ; free virtual = 53707
+INFO: [Vivado 12-24828] Executing command : report_drc -file route_report_drc_0.rpt -pb route_report_drc_0.pb -rpx route_report_drc_0.rpx
+Command: report_drc -file route_report_drc_0.rpt -pb route_report_drc_0.pb -rpx route_report_drc_0.rpx
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 2-168] The results of DRC are in file /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/route_report_drc_0.rpt.
+report_drc completed successfully
+INFO: [Vivado 12-24828] Executing command : report_methodology -file route_report_methodology_0.rpt -pb route_report_methodology_0.pb -rpx route_report_methodology_0.rpx
+Command: report_methodology -file route_report_methodology_0.rpt -pb route_report_methodology_0.pb -rpx route_report_methodology_0.rpx
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [DRC 23-133] Running Methodology with 8 threads
+INFO: [Vivado_Tcl 2-1520] The results of Report Methodology are in file /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/route_report_methodology_0.rpt.
+report_methodology completed successfully
+INFO: [Vivado 12-24828] Executing command : report_timing_summary -max_paths 10 -report_unconstrained -file route_report_timing_summary_0.rpt -pb route_report_timing_summary_0.pb -rpx route_report_timing_summary_0.rpx
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1LP, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Vivado 12-24838] Running report commands "report_bus_skew, report_incremental_reuse, report_route_status" in parallel.
+Running report generation with 3 threads.
+INFO: [Vivado 12-24828] Executing command : report_incremental_reuse -file route_report_incremental_reuse_0.rpt
+INFO: [Vivado_Tcl 4-1062] Incremental flow is disabled. No incremental reuse Info to report.
+INFO: [Vivado 12-24828] Executing command : report_bus_skew -warn_on_violation -file route_report_bus_skew_0.rpt -pb route_report_bus_skew_0.pb -rpx route_report_bus_skew_0.rpx
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -1LP, Temperature grade: E, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 8 CPUs
+INFO: [Vivado 12-24828] Executing command : report_route_status -file route_report_route_status_0.rpt -pb route_report_route_status_0.pb
+INFO: [Vivado 12-24828] Executing command : report_power -file route_report_power_0.rpt -pb route_report_power_summary_0.pb -rpx route_report_power_0.rpx
+Command: report_power -file route_report_power_0.rpt -pb route_report_power_summary_0.pb -rpx route_report_power_0.rpx
+INFO: [Power 33-23] Power model is not available for IO_VREF[0].I_VREF
+INFO: [Power 33-23] Power model is not available for u_ddrmc_riu
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+WARNING: [Designutils 20-5774] No environmental constraints detected, worst case junction temperature (Tj) will be used, this will not impact the dynamic power estimate but will impact the static power shown.
+To more accurately reflect the environmental and thermal operating condition of the application the following constraints should be applied, to reflect the applications specifications:
+   set_operating_conditions -ambient_temp 25
+   set_operating_conditions -thetaja 1.0
+
+Where Ambient Temperature is defined as degrees Celsius and Theta Ja is the effectiveness of the thermal solution described as C/W to represent the rise in junction temperature for every watt dissipated
+To set the junction temperature to a specific value the following constraint should be used:
+   set_operating_conditions -junction_temp 25
+
+For the Versal architecture, a default junction temperature of 100C is assumed when no environmental conditions are set (Ta/Tj/TJA).
+WARNING: [Power 33-332] Found switching activity that implies high-fanout reset nets being asserted for excessive periods of time which may result in inaccurate power analysis.
+Resolution: To review and fix problems, please run Power Constraints Advisor in the GUI from Tools > Power Constraints Advisor or run report_power with the -advisory option to generate a text report.
+132 Infos, 18 Warnings, 0 Critical Warnings and 0 Errors encountered.
+report_power completed successfully
+report_power: Time (s): cpu = 00:00:26 ; elapsed = 00:00:07 . Memory (MB): peak = 5221.527 ; gain = 71.145 ; free physical = 31766 ; free virtual = 53592
+INFO: [Vivado 12-24828] Executing command : report_clock_utilization -file route_report_clock_utilization_0.rpt
+generate_parallel_reports: Time (s): cpu = 00:00:43 ; elapsed = 00:00:11 . Memory (MB): peak = 5221.527 ; gain = 176.613 ; free physical = 31767 ; free virtual = 53594
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Wrote PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31761 ; free virtual = 53591
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31761 ; free virtual = 53591
+Writing XDEF routing.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31758 ; free virtual = 53589
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00.67 ; elapsed = 00:00:00.16 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31740 ; free virtual = 53582
+Wrote PlaceStorage: Time (s): cpu = 00:00:00.95 ; elapsed = 00:00:00.36 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31722 ; free virtual = 53579
+Wrote Netlist Cache: Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31721 ; free virtual = 53581
+Wrote Device Cache: Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.02 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31713 ; free virtual = 53583
+Write Physdb Complete: Time (s): cpu = 00:00:02 ; elapsed = 00:00:00.57 . Memory (MB): peak = 5221.527 ; gain = 0.000 ; free physical = 31713 ; free virtual = 53583
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/bd_soc_usart_wrapper_routed.dcp' has been generated.
+Command: write_device_image -force bd_soc_usart_wrapper.pdi
+Attempting to get a license for feature 'Implementation' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xcve2302'
+Running DRC as a precondition to command write_device_image
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado 12-3199] DRC finished with 0 Errors
+INFO: [Vivado 12-3200] Please refer to the DRC report (report_drc) for more information.
+Integrating Hard IP ELF/MEM with the PDI.
+INFO: [Constraints 18-5160] Reading Static MEM File '_mem_tmp.mem' for cell 'bd_soc_usart_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_ddrmc_main'
+Generating PS PMC files.
+INFO: [Designutils 20-5748] Running write_device_image with 8 threads.
+Loading data files...
+Loading site data...
+Loading route data...
+Processing options...
+Creating bitmap...
+INFO: [Bitstream 40-812] Reading NPI Startup sequence definitions
+INFO: [Bitstream 40-811] Reading NPI Shutdown sequence definitions
+INFO: [Bitstream 40-810] Reading NPI Preconfig sequence definitions
+Creating bitstream...
+INFO: [Bitstream 40-283] Bitstream size = 4376192 bits
+Writing CDO partition ./bd_soc_usart_wrapper.rcdo...
+Writing NPI partition ./bd_soc_usart_wrapper.rnpi...
+Generating bif file bd_soc_usart_wrapper.bif for base design.
+Generating Hard Block Files
+INFO: [SDTGen-1] Generating SDT...
+/home/adrian/Xilinx/2025.2.1/Vivado/ids_lite/ISE/../../bin/sdtgen -eval "set_dt_param -dir ./.Xil/Vivado-50635-adrian/SDT -xsa ./.Xil/Vivado-50635-adrian/HWDEF/pspmc.hwdef -domain pmc; generate_sdt"
+INFO: [Hsi 55-2053] elapsed time for repository (/home/adrian/Xilinx/2025.2.1/data/embeddedsw) loading 0 seconds
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_1 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_2 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_3 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_4 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_5 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_6 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_7 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_8 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_9 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_10 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_11 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_12 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_13 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_14 in the soc specific dtsi file
+WARNING: Add the node for versal_cips_0_pspmc_0_psv_pmc_cfi_cframe_bcast in the soc specific dtsi file
+
+INFO: [SDTGen-3] Generated SDT successfully
+INFO: [Hsi 55-2204] SDT generation using SDTGen took time: 3.4300003.0800000.310000
+INFO: [Lopper-1] Generating Versal PLM Application Using Lopper
+INFO: [Lopper-3] This process will create the BSP and App and then build the App to generate the Versal PLM application.
+sh /home/adrian/Xilinx/2025.2.1/data/versal/lopper_env/gen_app.sh /home/adrian/Xilinx/2025.2.1/data/embeddedsw ./.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp ./.Xil/Vivado-50635-adrian/SDT/system-top.dts psv_pmc_0 ./.Xil/Vivado-50635-adrian/versal_plm
+EMPYRO_PATH: /home/adrian/Xilinx/2025.2.1/Vivado/bin/empyro
+[INFO]: Initializing repositories
+[INFO]: Successfully set the EmbeddedSW path, refer .repo.yaml for more details.
+[Lopper]: The repo is set to embeddedsw
+[Lopper]: Creating the BSP
+[INFO]: Validating inputs
+[INFO]: Starting domain creation
+[INFO]: Generating Domain-specific DTS for psv_pmc_0
+[INFO]: Generating required metadata from domain specific DT
+[INFO]: Successfully created Domain at /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp
+[Lopper]: BSP created successfully
+[Lopper]: Creating the App
+[INFO]: Validating inputs
+[INFO]: Successfully Created Application sources at /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/src
+[Lopper]: App created successfully
+[Lopper]: Building the App
+[INFO]: Starting Application build process
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/build_configs/gen_bsp
+[INFO]: Building BSP
+[1/324] ========== BSP Build Information ==========
+
+Compiler PATH: /home/adrian/Xilinx/2025.2.1/Vivado/gnu/microblaze/lin/bin/mb-gcc
+
+Compiler FLAGS:  -O2  -mlittle-endian -mxl-barrel-shift -mxl-pattern-compare -mxl-reorder -mno-xl-so
+ft-mul -mxl-multiply-high -mno-xl-soft-div -Os -flto -ffat-lto-objects -mcpu=v10.0 -DSDT  -MMD -MP -
+specs=/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/ve
+rsal_plm/versal_plm_bsp/Xilinx.spec -I/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/im
+pl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/include  -g -ffunction-sections -fdata-secti
+ons -Wall -Wextra -fno-tree-loop-distribute-patterns -DNDEBUG
+
+===========================================
+** The above flags are BSP level flags. Increase verbosity to see component specific flags **
+===========================================
+[2/324] Building C object libsrc/cframe/src/CMakeFiles/cframe.dir/xcframe_g.c.obj
+[3/324] Building C object libsrc/csudma/src/CMakeFiles/csudma.dir/xcsudma_g.c.obj
+[4/324] Building C object libsrc/csudma/src/CMakeFiles/csudma.dir/xcsudma_sinit.c.obj
+[5/324] Building C object libsrc/cfupmc/src/CMakeFiles/cfupmc.dir/xcfupmc_selftest.c.obj
+[6/324] Building C object libsrc/cfupmc/src/CMakeFiles/cfupmc.dir/xcfupmc_sinit.c.obj
+[7/324] Building C object libsrc/cfupmc/src/CMakeFiles/cfupmc.dir/xcfupmc_g.c.obj
+[8/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_g.c.obj
+/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/emacps/src/xemacps_g.c:16:9: warning: missing initializer for field 'S1GDiv0' of 'XEmacPs_Config' [-Wmissing-field-initializers]
+   16 |         },
+      |         ^
+In file included from /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/emacps/src/xemacps_g.c:1:
+/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/emacps/src/xemacps.h:540:13: note: 'S1GDiv0' declared here
+  540 |         u16 S1GDiv0;    /**< 1Gbps Clock Divider 0 */
+      |             ^~~~~~~
+[9/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_hw.c.obj
+[10/324] Building C object libsrc/cframe/src/CMakeFiles/cframe.dir/xcframe_selftest.c.obj
+[11/324] Building C object libsrc/cframe/src/CMakeFiles/cframe.dir/xcframe_sinit.c.obj
+[12/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_sinit.c.obj
+[13/324] Building C object libsrc/csudma/src/CMakeFiles/csudma.dir/xcsudma_intr.c.obj
+[14/324] Building C object libsrc/csudma/src/CMakeFiles/csudma.dir/xcsudma_selftest.c.obj
+[15/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops_g.c.obj
+[16/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_pcs.c.obj
+[17/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_g.c.obj
+[18/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops_selftest.c.obj
+[19/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops_sinit.c.obj
+[20/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_intr.c.obj
+[21/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_intr.c.obj
+[22/324] Building C object libsrc/cfupmc/src/CMakeFiles/cfupmc.dir/xcfupmc.c.obj
+[23/324] Building C object libsrc/cframe/src/CMakeFiles/cframe.dir/xcframe.c.obj
+[24/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_selftest.c.obj
+[25/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops_hw.c.obj
+[26/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps.c.obj
+[27/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_g.c.obj
+/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/iomodule/src/xiomodule_g.c:8:17: warning: conversion from 'long long unsigned int' to 'unsigned int' changes value from '18446744073709551615' to '4294967295' [-Woverflow]
+    8 |                 0xffffffffffffffff, /* reg */
+      |                 ^~~~~~~~~~~~~~~~~~
+[28/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_hw.c.obj
+[29/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_sinit.c.obj
+[30/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps.c.obj
+[31/324] Linking C static library libsrc/cfupmc/src/libcfupmc.a
+[32/324] Linking C static library libsrc/cframe/src/libcframe.a
+[33/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_intr.c.obj
+[34/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_options.c.obj
+[35/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_extra.c.obj
+[36/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_l.c.obj
+[37/324] Building C object libsrc/csudma/src/CMakeFiles/csudma.dir/xcsudma.c.obj
+[38/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_master.c.obj
+[39/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_bdring.c.obj
+[40/324] Building C object libsrc/ipipsu/src/CMakeFiles/ipipsu.dir/xipipsu_g.c.obj
+[41/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_xfer.c.obj
+[42/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops_intr.c.obj
+[43/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_uart.c.obj
+[44/324] Building C object libsrc/iicps/src/CMakeFiles/iicps.dir/xiicps_slave.c.obj
+[45/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_options.c.obj
+[46/324] Building C object libsrc/ipipsu/src/CMakeFiles/ipipsu.dir/xipipsu_sinit.c.obj
+[47/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_stats.c.obj
+[48/324] Building C object libsrc/ipipsu/src/CMakeFiles/ipipsu.dir/xipipsu_buf.c.obj
+[49/324] Linking C static library libsrc/csudma/src/libcsudma.a
+[50/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_selftest.c.obj
+[51/324] Building C object libsrc/ipipsu/src/CMakeFiles/ipipsu.dir/xipipsu_helper.c.obj
+[52/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_g.c.obj
+[53/324] Building C object libsrc/emacps/src/CMakeFiles/emacps.dir/xemacps_control.c.obj
+[54/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_sinit.c.obj
+[55/324] Linking C static library libsrc/iicps/src/libiicps.a
+[56/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule_uart_intr.c.obj
+[57/324] Building C object libsrc/gpiops/src/CMakeFiles/gpiops.dir/xgpiops.c.obj
+[58/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/xsysmonpsv_sinit.c.obj
+[59/324] Building C object libsrc/ipipsu/src/CMakeFiles/ipipsu.dir/xipipsu.c.obj
+[60/324] Linking C static library libsrc/emacps/src/libemacps.a
+[61/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps_sinit.c.obj
+[62/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/xsysmonpsv_g.c.obj
+[63/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps_g.c.obj
+[64/324] Linking C static library libsrc/gpiops/src/libgpiops.a
+[65/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_xfer.c.obj
+[66/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_options.c.obj
+[67/324] Linking C static library libsrc/ipipsu/src/libipipsu.a
+[68/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_control.c.obj
+[69/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv_hw.c.obj
+[70/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/xtrngpsv_g.c.obj
+[71/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/services/xsysmonpsv_services.c.obj
+[72/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/lowlevel/xsysmonpsv_direct.c.obj
+[73/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/xtrngpsv_sinit.c.obj
+[74/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/xsysmonpsv_intr.c.obj
+[75/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps.c.obj
+[76/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps_options.c.obj
+[77/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_g.c.obj
+[78/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_selftest.c.obj
+[79/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/xtrngpsv_df.c.obj
+[80/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_l.c.obj
+[81/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_sinit.c.obj
+[82/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/xtrngpsv_tests.c.obj
+[83/324] Building C object libsrc/iomodule/src/CMakeFiles/iomodule.dir/xiomodule.c.obj
+[84/324] Building C object libsrc/ospipsv/src/CMakeFiles/ospipsv.dir/xospipsv.c.obj
+[85/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/common/xsysmonpsv_common.c.obj
+[86/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_intr.c.obj
+[87/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_g.c.obj
+[88/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite.c.obj
+[89/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps_host.c.obj
+[90/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/CompactAES.c.obj
+[91/324] Building C object libsrc/uartlite/src/CMakeFiles/uartlite.dir/xuartlite_stats.c.obj
+[92/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_hw.c.obj
+[93/324] Linking C static library libsrc/ospipsv/src/libospipsv.a
+[94/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_intr.c.obj
+[95/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_g.c.obj
+[96/324] Linking C static library libsrc/iomodule/src/libiomodule.a
+[97/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_hibernation.c.obj
+[98/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_selftest.c.obj
+[99/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_sinit.c.obj
+[100/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_sinit.c.obj
+[101/324] Linking C static library libsrc/uartlite/src/libuartlite.a
+[102/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_controltransfers.c.obj
+[103/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_endpoint.c.obj
+[104/324] Building C object libsrc/zdma/src/CMakeFiles/zdma.dir/xzdma_g.c.obj
+[105/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv.c.obj
+[106/324] Building C object libsrc/zdma/src/CMakeFiles/zdma.dir/xzdma_sinit.c.obj
+[107/324] Generating microblaze_interrupt_handler.o
+[108/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_event.c.obj
+[109/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_intr.c.obj
+[110/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_command.c.obj
+[111/324] Building C object libsrc/zdma/src/CMakeFiles/zdma.dir/xzdma_intr.c.obj
+[112/324] Building C object libsrc/zdma/src/CMakeFiles/zdma.dir/xzdma_selftest.c.obj
+[113/324] Building C object libsrc/xiltimer/src/CMakeFiles/xiltimer.dir/core/default_timer/microblaze_sleep.c.obj
+[114/324] Building C object libsrc/xiltimer/src/CMakeFiles/xiltimer.dir/xiltimer.c.obj
+[115/324] Building C object libsrc/uartpsv/src/CMakeFiles/uartpsv.dir/xuartpsv_options.c.obj
+[116/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_ep0handler.c.obj
+[117/324] Building C object libsrc/sdps/src/CMakeFiles/sdps.dir/xsdps_card.c.obj
+[118/324] Building C object libsrc/xilffs/src/CMakeFiles/xilffs.dir/ffsystem.c.obj
+[119/324] Building C object libsrc/trngpsv/src/CMakeFiles/trngpsv.dir/xtrngpsv.c.obj
+[120/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu.c.obj
+[121/324] Building C object libsrc/sysmonpsv/src/CMakeFiles/sysmonpsv.dir/xsysmonpsv.c.obj
+[122/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_testcache.c.obj
+[123/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_assert.c.obj
+[124/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/print.c.obj
+[125/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_mem.c.obj
+[126/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_device.c.obj
+[127/324] Linking C static library libsrc/uartpsv/src/libuartpsv.a
+[128/324] Building C object libsrc/xilffs/src/CMakeFiles/xilffs.dir/ffunicode.c.obj
+[129/324] Linking C static library libsrc/sdps/src/libsdps.a
+[130/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xpm_init.c.obj
+[131/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/inbyte.c.obj
+[132/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/outbyte.c.obj
+[133/324] Building C object libsrc/xilffs/src/CMakeFiles/xilffs.dir/diskio.c.obj
+[134/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_testio.c.obj
+[135/324] Linking C static library libsrc/sysmonpsv/src/libsysmonpsv.a
+[136/324] Linking C static library libsrc/trngpsv/src/libtrngpsv.a
+[137/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xplatform_info.c.obj
+[138/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/xmicroblaze_g.c.obj
+[139/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_printf.c.obj
+[140/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_testmem.c.obj
+[141/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/errno.c.obj
+[142/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/_exit.c.obj
+[143/324] Building C object libsrc/xilpdi/src/CMakeFiles/xilpdi.dir/common/xilpdi.c.obj
+[144/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/fcntl.c.obj
+[145/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/microblaze_interrupts_g.c.obj
+[146/324] Building ASM object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/hw_exception_handler.S.obj
+[147/324] Building C object libsrc/zdma/src/CMakeFiles/zdma.dir/xzdma.c.obj
+[148/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/microblaze_exception_handler.c.obj
+[149/324] Building ASM object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/microblaze_scrub.S.obj
+[150/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/pvr.c.obj
+[151/324] Linking C static library libsrc/xiltimer/src/libxiltimer.a
+[152/324] Building C object libsrc/usbpsu/src/CMakeFiles/usbpsu.dir/xusbpsu_ephandler.c.obj
+[153/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/xio.c.obj
+[154/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/xil_exception.c.obj
+[155/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/xil_cache.c.obj
+[156/324] Linking C static library libsrc/xilpdi/src/libxilpdi.a
+[157/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_util.c.obj
+[158/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/microblaze/xil_misc_psreset_api.c.obj
+[159/324] Linking C static library libsrc/zdma/src/libzdma.a
+[160/324] Linking C static library libsrc/usbpsu/src/libusbpsu.a
+[161/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_modules.c.obj
+[162/324] Building C object libsrc/standalone/src/CMakeFiles/xilstandalone.dir/common/xil_sutil.c.obj
+[163/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_sysmon.c.obj
+[164/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_gic_interrupts.c.obj
+[165/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_err_cmd.c.obj
+[166/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_util.c.obj
+[167/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_debug.c.obj
+[168/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_tamper.c.obj
+[169/324] Linking C static library libsrc/standalone/src/libxilstandalone.a
+[170/324] Archiving C static library libsrc/build_configs/gen_bsp/libxil.a
+[171/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_cmd.c.obj
+[172/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi.c.obj
+[173/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_event_logging.c.obj
+[174/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_proc.c.obj
+[175/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_task.c.obj
+[176/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_cdo.c.obj
+[177/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_scheduler.c.obj
+[178/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_dfu_util.c.obj
+[179/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/versal/server/xplmi_wdt.c.obj
+[180/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_err_psm.c.obj
+[181/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/versal/server/xplmi_err.c.obj
+[182/324] Building C object libsrc/xilffs/src/CMakeFiles/xilffs.dir/ff.c.obj
+/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/xilffs/src/ff.c: In function 'get_ldnumber':
+/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/libsrc/xilffs/src/ff.c:4000:13: warning: unused variable 'vol' [-Wunused-variable]
+ 4000 |         int vol = -1;
+      |             ^~~
+[183/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_qspi.c.obj
+[184/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_usb.c.obj
+[185/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/versal/server/xplmi_ssit.c.obj
+[186/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_ipi.c.obj
+[187/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_ddr.c.obj
+[188/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/versal/server/xplmi_plat.c.obj
+[189/324] Linking C static library libsrc/xilffs/src/libxilffs.a
+[190/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_sbi.c.obj
+[191/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_cfi.c.obj
+[192/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_intr.c.obj
+[193/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_dma.c.obj
+[194/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_ddr_init.c.obj
+[195/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_prtn_load.c.obj
+[196/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_err_common.c.obj
+[197/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_auth_jtag.c.obj
+[198/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_sd.c.obj
+[199/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_ospi.c.obj
+[200/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_apucore.c.obj
+[201/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/versal/server/xloader_plat_secure.c.obj
+[202/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_gic_proxy.c.obj
+[203/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_ipi.c.obj
+[204/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_device_idle.c.obj
+[205/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_core.c.obj
+[206/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_node.c.obj
+[207/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_common.c.obj
+[208/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_cmd.c.obj
+[209/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_secure.c.obj
+[210/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_access.c.obj
+[211/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader.c.obj
+[212/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pmc.c.obj
+[213/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pldomain.c.obj
+[214/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_periph.c.obj
+[215/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_bisr.c.obj
+[216/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_ioctl.c.obj
+[217/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_psm.c.obj
+[218/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_regulator.c.obj
+[219/324] Building C object libsrc/xilplmi/src/CMakeFiles/xilplmi.dir/common/server/xplmi_generic.c.obj
+[220/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_rail.c.obj
+[221/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_clock.c.obj
+[222/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_mem.c.obj
+[223/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_requirement.c.obj
+[224/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/versal/server/xloader_plat.c.obj
+[225/324] Linking C static library libsrc/xilplmi/src/libxilplmi.a
+[226/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_psm_api.c.obj
+[227/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_ams_trim.c.obj
+[228/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pldevice.c.obj
+[229/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_rpucore.c.obj
+[230/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_apucore_plat.c.obj
+[231/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pll.c.obj
+[232/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pinfunc.c.obj
+[233/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_aiedevice.c.obj
+[234/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_common_plat.c.obj
+[235/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_power.c.obj
+[236/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_notifier.c.obj
+[237/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_clock_plat.c.obj
+[238/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_pin.c.obj
+[239/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_reset.c.obj
+[240/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_ioctl_plat.c.obj
+[241/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_notifier_plat.c.obj
+[242/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_subsystem.c.obj
+[243/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_core_plat.c.obj
+[244/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_device_plat.c.obj
+[245/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_noc_config.c.obj
+[246/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pldevice_plat.c.obj
+[247/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_domain_iso.c.obj
+[248/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pll_plat.c.obj
+[249/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_api_plat.c.obj
+[250/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pmcdomain.c.obj
+[251/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_psm_plat.c.obj
+[252/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_psm_api_plat.c.obj
+[253/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_power_plat.c.obj
+[254/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_mem_plat.c.obj
+[255/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_rpucore_plat.c.obj
+[256/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pin_plat.c.obj
+[257/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_psfpdomain.c.obj
+[258/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_repair.c.obj
+[259/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_cpmdomain.c.obj
+[260/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_noc_config_vp1902.c.obj
+[261/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pslpdomain.c.obj
+[262/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_subsystem_plat.c.obj
+[263/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pinfunc_plat.c.obj
+[264/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_reset_plat.c.obj
+[265/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/ecdsa/xsecure_ellipticcrvs.c.obj
+[266/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/sha/sha_pmx/xsecure_sha_ipihandler.c.obj
+[267/324] Building C object libsrc/xilloader/src/CMakeFiles/xilloader.dir/common/server/xloader_auth_enc.c.obj
+[268/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_aie.c.obj
+[269/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/aes/xsecure_aes_ipihandler.c.obj
+[270/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/generic/xsecure_cryptochk.c.obj
+[271/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_device.c.obj
+[272/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/rsa/xsecure_rsa_ipihandler.c.obj
+[273/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_bisr_plat.c.obj
+[274/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/ecdsa/xsecure_elliptic_ipihandler.c.obj
+[275/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/crypto_kat/xsecure_kat_ipihandler.c.obj
+[276/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/rsa/xsecure_rsa.c.obj
+[277/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/util/xsecure_utils.c.obj
+[278/324] Linking C static library libsrc/xilloader/src/libxilloader.a
+[279/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_npdomain.c.obj
+[280/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/util/xsecure_sss.c.obj
+[281/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/generic/xsecure_init.c.obj
+[282/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/rsa/xsecure_rsa_core.c.obj
+[283/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/generic/xsecure_resourcehandling.c.obj
+[284/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/sha/sha_pmx/xsecure_sha.c.obj
+[285/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_powerdomain.c.obj
+[286/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/versal/xsecure_plat_kat.c.obj
+[287/324] Building C object libsrc/xilpuf/src/CMakeFiles/xilpuf.dir/versal_gen/server/xpuf_cmd.c.obj
+[288/324] Building C object libsrc/xilpuf/src/CMakeFiles/xilpuf.dir/versal_gen/server/xpuf_plat.c.obj
+[289/324] Building C object libsrc/xilpuf/src/CMakeFiles/xilpuf.dir/versal_gen/server/xpuf_ipihandler.c.obj
+[290/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/common/core/xsecure_core.c.obj
+[291/324] Building C object libsrc/xilpuf/src/CMakeFiles/xilpuf.dir/versal_gen/server/xpuf_init.c.obj
+[292/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/common/server/xnvm_init.c.obj
+[293/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/versal/xsecure_plat_ipihandler.c.obj
+[294/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/common/server/xnvm_bbram_common_cdohandler.c.obj
+[295/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/versal/server/xnvm_cmd.c.obj
+[296/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/ecdsa/xsecure_elliptic.c.obj
+[297/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/versal/xsecure_plat.c.obj
+[298/324] Building C object libsrc/xilocp/src/CMakeFiles/xilocp.dir/server/xocp_init.c.obj
+[299/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/versal/server/xnvm_efuse_ipihandler.c.obj
+[300/324] Building C object libsrc/xilocp/src/CMakeFiles/xilocp.dir/server/xocp_ipihandler.c.obj
+[301/324] Building C object libsrc/xilocp/src/CMakeFiles/xilocp.dir/server/xocp_cmd.c.obj
+[302/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/versal/xsecure_cmd.c.obj
+[303/324] Building C object libsrc/xilocp/src/CMakeFiles/xilocp.dir/server/xocp.c.obj
+[304/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/crypto_kat/xsecure_kat.c.obj
+[305/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/common/xnvm_utils.c.obj
+[306/324] Building C object libsrc/xilocp/src/CMakeFiles/xilocp.dir/server/xocp_keymgmt.c.obj
+[307/324] Building C object libsrc/xilcert/src/CMakeFiles/xilcert.dir/xcert_genx509cert.c.obj
+[308/324] Building C object libsrc/xilcert/src/CMakeFiles/xilcert.dir/xcert_createfield.c.obj
+[309/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/common/server/xnvm_bbram.c.obj
+[310/324] Building C object libsrc/xiltpm/src/CMakeFiles/xiltpm.dir/xtpm.c.obj
+[311/324] Building C object libsrc/xiltpm/src/CMakeFiles/xiltpm.dir/xtpm_util.c.obj
+[312/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal_common/server/xpm_api.c.obj
+[313/324] Linking C static library libsrc/xilocp/src/libxilocp.a
+[314/324] Linking C static library libsrc/xilcert/src/libxilcert.a
+[315/324] Linking C static library libsrc/xiltpm/src/libxiltpm.a
+[316/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/common/server/xnvm_efuse_common.c.obj
+[317/324] Building C object libsrc/xilpuf/src/CMakeFiles/xilpuf.dir/versal_gen/server/xpuf.c.obj
+[318/324] Building C object libsrc/xilsecure/src/CMakeFiles/xilsecure.dir/server/core/aes/xsecure_aes.c.obj
+[319/324] Linking C static library libsrc/xilsecure/src/libxilsecure.a
+[320/324] Linking C static library libsrc/xilpuf/src/libxilpuf.a
+[321/324] Building C object libsrc/xilpm/src/CMakeFiles/xilpm.dir/versal/server/xpm_pldomain_plat.c.obj
+[322/324] Linking C static library libsrc/xilpm/src/libxilpm.a
+[323/324] Building C object libsrc/xilnvm/src/CMakeFiles/xilnvm.dir/versal_gen/versal/server/xnvm_efuse.c.obj[INFO]: Copying headers and built archives
+[INFO]: Successfully built BSP. Generated libxilnvm.a, libtrngpsv.a, libxilpm.a, libxiltimer.a, libxilffs.a, libxilsecure.a, libcframe.a, libxilcert.a, libxilocp.a, libxilloader.a, libxilplmi.a, libxiltpm.a, libxilsem.a, libxil.a, libcfupmc.a, libxilpuf.a, libxilpdi.a, libxilstandalone.a
+[INFO]: Building Application
+
+[324/324] Linking C static library libsrc/xilnvm/src/libxilnvm.a
+[1/13] ==========Application Build Information ==========
+
+Compiler Flags:  -O2  -mlittle-endian -mxl-barrel-shift -mxl-pattern-compare -mxl-reorder -mno-xl-so
+ft-mul -mxl-multiply-high -mno-xl-soft-div -Os -flto -ffat-lto-objects -mcpu=v10.0 -DSDT  -MMD -MP -
+specs=/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/ve
+rsal_plm/versal_plm_bsp/Xilinx.spec -I/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/im
+pl_1/.Xil/Vivado-50635-adrian/versal_plm/versal_plm_bsp/include  
+
+Linker Flags:       -Wl,-Map=versal_plm.map -Wl,--build-id=none -Wl,--gc-sections -T"/home/adrian/vh
+dl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-adrian/versal_plm/src/versal/l
+script.ld" -L"/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1/.Xil/Vivado-50635-a
+drian/versal_plm/versal_plm_bsp/lib/" -L"/" -Wl,--start-group,-lxilstandalone,-lxiltimer,-lxilffs,-l
+xilpdi,-lxilplmi,-lxilloader,-lxilpm,-lxilsecure,-lxilsem,-lxilpuf,-lxilnvm,-lxilocp,-lxilcert,-lxil
+tpm,-lgloss,-lxil,-lxiltimer,-lxilsecure,-lxilffs,-lxilpuf,-lxilpdi,-lxilplmi,-lxilloader,-lxilnvm,-
+lxilsem,-lxiltpm,-lxilpm,-lgcc,-lc -Wl,--end-group
+
+===========================================
+[2/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_stl.c.obj
+[3/13] Building C object CMakeFiles/versal_plm.elf.dir/versal/xplm_ssitcomm.c.obj
+[4/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_sem_init.c.obj
+[5/13] Building C object CMakeFiles/versal_plm.elf.dir/versal/xplm_plat.c.obj
+[6/13] Building C object CMakeFiles/versal_plm.elf.dir/versal/xplm_hooks.c.obj
+[7/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_startup.c.obj
+[8/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_proc.c.obj
+[9/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_module.c.obj
+[10/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_main.c.obj
+[11/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_loader.c.obj
+[12/13] Building C object CMakeFiles/versal_plm.elf.dir/common/xplm_pm.c.obj
+[13/13] Linking C executable versal_plm.elf
+lto-wrapper.real: warning: using serial compilation of 6 LTRANS jobs
+lto-wrapper.real: note: see the '-flto' option documentation for more information
+   text	   data	    bss	    dec	    hex	filename
+ 305668	  14168	  60120	 379956	  5cc34	versal_plm.elf
+[Lopper]: App built successfully
+
+INFO: [Hsi 55-2125] App generation using lopper took time: Wall-18.100000 s, User-28.250000 s, System-8.050000 s
+INFO: [Project 1-5217] Successfully generated the Versal_PLM application.
+INFO: [Project 1-1179] Generating bd_soc_usart_wrapper.bif file ...
+INFO: [Project 1-5212] File ./gen_files/pmc_data.cdo generated successfully.
+INFO: [Project 1-5212] File ./gen_files/lpd_data.cdo generated successfully.
+INFO: [Project 1-5212] File ./gen_files/fpd_data.cdo generated successfully.
+INFO: [Project 1-5212] File bd_soc_usart_wrapper_markers.rcdo generated successfully.
+INFO: [Project 1-5212] File bd_soc_usart_wrapper_markers.rnpi generated successfully.
+INFO: [Project 1-5210] BIF generation completed successfully.
+INFO: [Bootgen-1] Starting bootgen to generate PDI.
+Running bootgen.
+Found bootgen at /home/adrian/Xilinx/2025.2.1/Vivado/bin/bootgen
+Running '/home/adrian/Xilinx/2025.2.1/Vivado/bin/bootgen -arch versal -image bd_soc_usart_wrapper.bif -w -o bd_soc_usart_wrapper.pdi'
+
+
+****** Bootgen v2025.2.1
+  **** Build date : Mar 13 2026-14:13:46
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
+
+[INFO]   : Bootimage generated successfully
+
+Bootgen Completed Successfully.
+INFO: [Bootgen-2] Bootgen finished and PDI generated successfully.
+INFO: [Vivado 12-1842] Bitgen Completed Successfully.
+INFO: [Common 17-83] Releasing license: Implementation
+164 Infos, 18 Warnings, 0 Critical Warnings and 0 Errors encountered.
+write_device_image completed successfully
+write_device_image: Time (s): cpu = 00:00:50 ; elapsed = 00:00:51 . Memory (MB): peak = 5816.578 ; gain = 595.051 ; free physical = 30732 ; free virtual = 52752
+INFO: [Common 17-206] Exiting Vivado at Sat Jul 11 17:55:10 2026...

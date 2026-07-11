@@ -1,0 +1,141 @@
+==================== CELDAS ====================
+/axi_noc_0  (xilinx.com:ip:axi_noc:1.1)
+/axi_smc  (xilinx.com:ip:smartconnect:1.0)
+/rst_versal_cips_0_240M  (xilinx.com:ip:proc_sys_reset:5.0)
+/u_soc_ptp  (xilinx.com:module_ref:soc_top_master_wrap:1.0)
+/versal_cips_0  (xilinx.com:ip:versal_cips:3.4)
+
+==================== PUERTOS EXTERNOS ====================
+/ddr4_bank0_act_n  dir=O
+/ddr4_bank0_adr  dir=O
+/ddr4_bank0_ba  dir=O
+/ddr4_bank0_bg  dir=O
+/ddr4_bank0_ck_c  dir=O
+/ddr4_bank0_ck_t  dir=O
+/ddr4_bank0_cke  dir=O
+/ddr4_bank0_cs_n  dir=O
+/ddr4_bank0_dm_n  dir=IO
+/ddr4_bank0_dq  dir=IO
+/ddr4_bank0_dqs_c  dir=IO
+/ddr4_bank0_dqs_t  dir=IO
+/ddr4_bank0_odt  dir=O
+/ddr4_bank0_reset_n  dir=O
+/ddr4_bank0_sys_clk_clk_n  dir=I
+/ddr4_bank0_sys_clk_clk_p  dir=I
+/ddr4_bank0  (intf: xilinx.com:interface:ddr4_rtl:1.0) mode=Master
+/ddr4_bank0_sys_clk  (intf: xilinx.com:interface:diff_clock_rtl:1.0) mode=Slave
+
+==================== NETS DE INTERFAZ ====================
+/axi_noc_0_CH0_DDR4_0
+    conecta: /axi_noc_0/CH0_DDR4_0 /ddr4_bank0
+/axi_smc_M00_AXI
+    conecta: /axi_smc/M00_AXI /u_soc_ptp/s_axi 
+/ddr4_bank0_sys_clk_1
+    conecta: /axi_noc_0/sys_clk0 /ddr4_bank0_sys_clk
+/u_soc_m_axi
+    conecta: /u_soc_ptp/m_axi /axi_noc_0/S06_AXI 
+/versal_cips_0_FPD_CCI_NOC_0
+    conecta: /versal_cips_0/FPD_CCI_NOC_0 /axi_noc_0/S00_AXI 
+/versal_cips_0_FPD_CCI_NOC_1
+    conecta: /versal_cips_0/FPD_CCI_NOC_1 /axi_noc_0/S01_AXI 
+/versal_cips_0_FPD_CCI_NOC_2
+    conecta: /versal_cips_0/FPD_CCI_NOC_2 /axi_noc_0/S02_AXI 
+/versal_cips_0_FPD_CCI_NOC_3
+    conecta: /versal_cips_0/FPD_CCI_NOC_3 /axi_noc_0/S03_AXI 
+/versal_cips_0_LPD_AXI_NOC_0
+    conecta: /versal_cips_0/LPD_AXI_NOC_0 /axi_noc_0/S04_AXI 
+/versal_cips_0_M_AXI_LPD
+    conecta: /versal_cips_0/M_AXI_LPD /axi_smc/S00_AXI 
+/versal_cips_0_PMC_NOC_AXI_0
+    conecta: /versal_cips_0/PMC_NOC_AXI_0 /axi_noc_0/S05_AXI 
+
+==================== NETS (senales sueltas) ====================
+/mii_rx_dv_1
+    conecta:  
+/mii_rxd_1
+    conecta:  
+/rst_versal_cips_0_240M_peripheral_aresetn
+    conecta: /rst_versal_cips_0_240M/peripheral_aresetn /axi_smc/aresetn /u_soc_ptp/aresetn 
+/u_soc_eth_mii_tx_en
+    conecta:  
+/u_soc_eth_mii_txd
+    conecta:  
+/u_soc_irq_out
+    conecta: /u_soc_ptp/irq_out /versal_cips_0/pl_ps_irq0 
+/u_soc_usart_irq_out
+    conecta: /versal_cips_0/pl_ps_irq1 
+/versal_cips_0_fpd_cci_noc_axi0_clk
+    conecta: /versal_cips_0/fpd_cci_noc_axi0_clk /axi_noc_0/aclk0 
+/versal_cips_0_fpd_cci_noc_axi1_clk
+    conecta: /versal_cips_0/fpd_cci_noc_axi1_clk /axi_noc_0/aclk1 
+/versal_cips_0_fpd_cci_noc_axi2_clk
+    conecta: /versal_cips_0/fpd_cci_noc_axi2_clk /axi_noc_0/aclk2 
+/versal_cips_0_fpd_cci_noc_axi3_clk
+    conecta: /versal_cips_0/fpd_cci_noc_axi3_clk /axi_noc_0/aclk3 
+/versal_cips_0_lpd_axi_noc_clk
+    conecta: /versal_cips_0/lpd_axi_noc_clk /axi_noc_0/aclk4 
+/versal_cips_0_pl0_ref_clk
+    conecta: /versal_cips_0/pl0_ref_clk /versal_cips_0/m_axi_lpd_aclk /axi_smc/aclk /rst_versal_cips_0_240M/slowest_sync_clk /axi_noc_0/aclk6 /u_soc_ptp/aclk 
+/versal_cips_0_pl0_resetn
+    conecta: /versal_cips_0/pl0_resetn /rst_versal_cips_0_240M/ext_reset_in 
+/versal_cips_0_pmc_axi_noc_axi0_clk
+    conecta: /versal_cips_0/pmc_axi_noc_axi0_clk /axi_noc_0/aclk5 
+
+==================== CONFIG DEL NOC ====================
+CONFIG.NUM_SI = 7
+CONFIG.NUM_MI = 0
+CONFIG.NUM_CLKS = 7
+CONFIG.NUM_MC = 1
+CONFIG.NUM_MCP = 4
+CONFIG.MC_BOARD_INTRF_EN = true
+--- conectividad y reloj por SI ---
+/axi_noc_0/S00_AXI CONNECTIONS = MC_3 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S01_AXI CONNECTIONS = MC_2 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S02_AXI CONNECTIONS = MC_0 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S03_AXI CONNECTIONS = MC_1 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S04_AXI CONNECTIONS = MC_3 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S05_AXI CONNECTIONS = MC_2 {read_bw {100} write_bw {100} read_avg_burst {4} write_avg_burst {4} initial_boot {true} }
+/axi_noc_0/S06_AXI CONNECTIONS = MC_0 {read_bw {500} write_bw {500}}
+/axi_noc_0/aclk0 ASSOCIATED_BUSIF = S00_AXI
+/axi_noc_0/aclk1 ASSOCIATED_BUSIF = S01_AXI
+/axi_noc_0/aclk2 ASSOCIATED_BUSIF = S02_AXI
+/axi_noc_0/aclk3 ASSOCIATED_BUSIF = S03_AXI
+/axi_noc_0/aclk4 ASSOCIATED_BUSIF = S04_AXI
+/axi_noc_0/aclk5 ASSOCIATED_BUSIF = S05_AXI
+/axi_noc_0/aclk6 ASSOCIATED_BUSIF = S06_AXI
+
+==================== MAPA DE DIRECCIONES ====================
+/axi_noc_0/S00_AXI/C3_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S00_AXI/C3_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S01_AXI/C2_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S01_AXI/C2_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S02_AXI/C0_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S02_AXI/C0_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S03_AXI/C1_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S03_AXI/C1_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S04_AXI/C3_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S04_AXI/C3_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S05_AXI/C2_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S05_AXI/C2_DDR_LOW1  offset=  range=0x000800000000
+/axi_noc_0/S06_AXI/C0_DDR_LOW0  offset=  range=0x80000000
+/axi_noc_0/S06_AXI/C0_DDR_LOW1  offset=  range=0x000800000000
+/u_soc_ptp/m_axi/SEG_axi_noc_0_C0_DDR_LOW0  offset=0x0000000000  range=0x0080000000
+/u_soc_ptp/s_axi/reg0  offset=  range=0x00010000
+/versal_cips_0/FPD_CCI_NOC_0/SEG_axi_noc_0_C3_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/FPD_CCI_NOC_0/SEG_axi_noc_0_C3_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+/versal_cips_0/FPD_CCI_NOC_1/SEG_axi_noc_0_C2_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/FPD_CCI_NOC_1/SEG_axi_noc_0_C2_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+/versal_cips_0/FPD_CCI_NOC_2/SEG_axi_noc_0_C0_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/FPD_CCI_NOC_2/SEG_axi_noc_0_C0_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+/versal_cips_0/FPD_CCI_NOC_3/SEG_axi_noc_0_C1_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/FPD_CCI_NOC_3/SEG_axi_noc_0_C1_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+/versal_cips_0/LPD_AXI_NOC_0/SEG_axi_noc_0_C3_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/LPD_AXI_NOC_0/SEG_axi_noc_0_C3_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+/versal_cips_0/M_AXI_LPD/SEG_u_soc_ptp_reg0  offset=0x00080000000  range=0x00000010000
+/versal_cips_0/PMC_NOC_AXI_0/SEG_axi_noc_0_C2_DDR_LOW0  offset=0x0000000000000000  range=0x0000000080000000
+/versal_cips_0/PMC_NOC_AXI_0/SEG_axi_noc_0_C2_DDR_LOW1  offset=0x0000000800000000  range=0x0000000180000000
+
+==================== RELOJ/RESET DE u_soc ====================
+
+==================== VALIDATE ====================
+VALIDATE OK (revisa igual los criticos en la consola de Vivado)
