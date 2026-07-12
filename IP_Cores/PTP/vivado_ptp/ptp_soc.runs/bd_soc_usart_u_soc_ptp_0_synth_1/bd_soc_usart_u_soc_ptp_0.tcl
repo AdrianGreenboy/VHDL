@@ -107,7 +107,7 @@ read_vhdl -vhdl2008 -library xil_defaultlib {
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_clock.vhd
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tstamp.vhd
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_tx.vhd
-  /home/adrian/spw_ip/spw_fifo.vhd
+  /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/spw_fifo.vhd
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_rx.vhd
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay_fsm.vhd
   /home/adrian/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay.vhd

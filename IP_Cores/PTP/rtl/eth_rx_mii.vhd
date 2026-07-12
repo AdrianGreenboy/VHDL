@@ -42,7 +42,10 @@ entity eth_rx_mii is
     ev_drop  : out std_logic;                     -- descartada por filtro MAC
     -- pulso de 1 ciclo en el instante de deteccion del SFD (para PTP TS).
     -- Convenio identico al TX (nibble 0xD, fin de preambulo).
-    rx_sfd_pulse : out std_logic
+    rx_sfd_pulse : out std_logic;
+    -- sonda: dst capturado de la trama en curso/ultima (para debug de filtro)
+    dbg_dst  : out std_logic_vector(47 downto 0);
+    dbg_nb   : out std_logic_vector(11 downto 0)
   );
 end entity eth_rx_mii;
 
@@ -80,6 +83,9 @@ architecture rtl of eth_rx_mii is
   end function;
 
 begin
+
+  dbg_dst <= dst;
+  dbg_nb  <= std_logic_vector(to_unsigned(nb, 12));
 
   process(clk)
     variable v_crc : std_logic_vector(31 downto 0);

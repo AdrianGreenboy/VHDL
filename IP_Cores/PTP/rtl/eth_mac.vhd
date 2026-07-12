@@ -37,6 +37,8 @@ entity eth_mac is
     rx_ev_crc : out std_logic;
     rx_ev_runt: out std_logic;
     rx_ev_drop: out std_logic;
+    rx_dbg_dst: out std_logic_vector(47 downto 0);
+    rx_dbg_nb : out std_logic_vector(11 downto 0);
     -- pines MII (PHY externo; inertes en LOOP_INT v1 pero presentes)
     mii_txd   : out std_logic_vector(3 downto 0);
     mii_tx_en : out std_logic;
@@ -108,6 +110,7 @@ begin
       rxd => rxd_i, rx_dv => rxdv_i,
       rx_data => rx_data, rx_valid => rx_valid, rx_last => rx_last,
       ev_ok => rx_ev_ok, ev_crc => rx_ev_crc, ev_runt => rx_ev_runt, ev_drop => rx_ev_drop,
+      dbg_dst => rx_dbg_dst, dbg_nb => rx_dbg_nb,
       rx_sfd_pulse => rx_sfd_pulse);
 
 end architecture rtl;

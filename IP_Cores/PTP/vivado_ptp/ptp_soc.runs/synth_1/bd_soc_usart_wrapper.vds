@@ -3,8 +3,8 @@
 # SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
 # IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
 # SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
-# Start of session at: Sun Jul 12 00:15:18 2026
-# Process ID         : 333748
+# Start of session at: Sun Jul 12 09:33:41 2026
+# Process ID         : 586021
 # Current directory  : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1
 # Command line       : vivado -log bd_soc_usart_wrapper.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source bd_soc_usart_wrapper.tcl
 # Log file           : /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/bd_soc_usart_wrapper.vds
@@ -13,13 +13,13 @@
 # Platform           : Ubuntu
 # Operating System   : Ubuntu 24.04.4 LTS
 # Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
-# CPU Frequency      : 5500.000 MHz
+# CPU Frequency      : 800.000 MHz
 # CPU Physical cores : 24
 # CPU Logical cores  : 32
 # Host memory        : 67107 MB
 # Swap memory        : 8589 MB
 # Total Virtual      : 75697 MB
-# Available Virtual  : 56563 MB
+# Available Virtual  : 51225 MB
 #-----------------------------------------------------------
 Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
 source bd_soc_usart_wrapper.tcl -notrace
@@ -33,35 +33,35 @@ INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcve230
 INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 7 processes.
 INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
-INFO: [Synth 8-7075] Helper process launched with PID 333798
+INFO: [Synth 8-7075] Helper process launched with PID 586070
 ---------------------------------------------------------------------------------
-Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2697.938 ; gain = 382.688 ; free physical = 2600 ; free virtual = 52140
+Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2698.859 ; gain = 391.688 ; free physical = 14617 ; free virtual = 46910
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-11241] undeclared symbol 'xpipe0_phystatus', assumed default net type 'wire' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/hdl/pspmc_v1_4_7.v:9847]
 INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_wrapper' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/hdl/bd_soc_usart_wrapper.v:13]
 INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:13]
-INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_noc_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
-INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_noc_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_noc_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_noc_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_axi_noc_0_0_stub.v:6]
 WARNING: [Synth 8-7071] port 'S03_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
 WARNING: [Synth 8-7071] port 'S04_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
 WARNING: [Synth 8-7071] port 'S02_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
 WARNING: [Synth 8-7071] port 'S01_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
 WARNING: [Synth 8-7071] port 'S00_AXI_ruser' of module 'bd_soc_usart_axi_noc_0_0' is unconnected for instance 'axi_noc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
 WARNING: [Synth 8-7023] instance 'axi_noc_0' of module 'bd_soc_usart_axi_noc_0_0' has 321 connections declared, but only 316 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:419]
-INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_smc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
-INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_smc_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_axi_smc_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_axi_smc_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_axi_smc_0_stub.v:6]
 WARNING: [Synth 8-7071] port 'M00_AXI_awprot' of module 'bd_soc_usart_axi_smc_0' is unconnected for instance 'axi_smc' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
 WARNING: [Synth 8-7071] port 'M00_AXI_arprot' of module 'bd_soc_usart_axi_smc_0' is unconnected for instance 'axi_smc' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
 WARNING: [Synth 8-7023] instance 'axi_smc' of module 'bd_soc_usart_axi_smc_0' has 60 connections declared, but only 58 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:736]
-INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
-INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_rst_versal_cips_0_240M_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_rst_versal_cips_0_240M_0_stub.v:6]
 WARNING: [Synth 8-7071] port 'mb_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
 WARNING: [Synth 8-7071] port 'bus_struct_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
 WARNING: [Synth 8-7071] port 'peripheral_reset' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
 WARNING: [Synth 8-7071] port 'interconnect_aresetn' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' is unconnected for instance 'rst_versal_cips_0_240M' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
 WARNING: [Synth 8-7023] instance 'rst_versal_cips_0_240M' of module 'bd_soc_usart_rst_versal_cips_0_240M_0' has 10 connections declared, but only 6 given [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/synth/bd_soc_usart.v:795]
-INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_u_soc_ptp_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
-INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_u_soc_ptp_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-333748-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_u_soc_ptp_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'bd_soc_usart_u_soc_ptp_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.Xil/Vivado-586021-adrian/realtime/bd_soc_usart_u_soc_ptp_0_stub.v:6]
 INFO: [Synth 8-6157] synthesizing module 'bd_soc_usart_versal_cips_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/synth/bd_soc_usart_versal_cips_0_0.v:53]
 INFO: [Synth 8-6157] synthesizing module 'bd_9435' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/synth/bd_9435.v:10]
 INFO: [Synth 8-6157] synthesizing module 'bd_9435_pspmc_0_0' [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_versal_cips_0_0/bd_0/ip/ip_0/synth/bd_9435_pspmc_0_0.v:53]
@@ -384,18 +384,18 @@ WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[179] in module xram_v1_0_1 is eit
 WARNING: [Synth 8-7129] Port ifplxramaxi0rdata[178] in module xram_v1_0_1 is either unconnected or has no load
 INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 ---------------------------------------------------------------------------------
-Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.453 ; gain = 523.203 ; free physical = 2439 ; free virtual = 51982
+Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.406 ; gain = 531.234 ; free physical = 14457 ; free virtual = 46753
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.453 ; gain = 523.203 ; free physical = 2439 ; free virtual = 51982
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.406 ; gain = 531.234 ; free physical = 14457 ; free virtual = 46753
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.453 ; gain = 523.203 ; free physical = 2439 ; free virtual = 51982
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:03 ; elapsed = 00:00:04 . Memory (MB): peak = 2838.406 ; gain = 531.234 ; free physical = 14457 ; free virtual = 46753
 ---------------------------------------------------------------------------------
-Netlist sorting complete. Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.06 . Memory (MB): peak = 2838.453 ; gain = 0.000 ; free physical = 2438 ; free virtual = 51981
+Netlist sorting complete. Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.05 . Memory (MB): peak = 2838.406 ; gain = 0.000 ; free physical = 14462 ; free virtual = 46757
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
 INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
 INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
@@ -405,7 +405,7 @@ INFO: [Project 1-570] Preparing netlist for logic optimization
 Processing XDC Constraints
 Initializing timing engine
 Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_noc_0'
-create_clock: Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 3027.449 ; gain = 110.156 ; free physical = 2313 ; free virtual = 51856
+create_clock: Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 3025.402 ; gain = 107.188 ; free physical = 14436 ; free virtual = 46731
 Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0/bd_soc_usart_axi_noc_0_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_noc_0'
 Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_smc'
 Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0/bd_soc_usart_axi_smc_0_in_context.xdc] for cell 'bd_soc_usart_i/axi_smc'
@@ -452,15 +452,15 @@ INFO: [Project 1-236] Implementation specific constraints were found while readi
 Resolution: To avoid this warning, move constraints listed in [.Xil/bd_soc_usart_wrapper_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
 Completed Processing XDC Constraints
 
-Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3027.449 ; gain = 0.000 ; free physical = 2297 ; free virtual = 51840
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3026.402 ; gain = 0.000 ; free physical = 14436 ; free virtual = 46731
 INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
 validate_noc  -part xcve2302-sfva784-1LP-e-S -no_compile 
 INFO: [Vivado 12-29114] Run validate_noc command, to invoke NoC compiler, catch the DRC at design entry & populate the project level NoC view
-Constraint Validation Runtime : Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3036.879 ; gain = 0.000 ; free physical = 2288 ; free virtual = 51832
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3035.309 ; gain = 0.000 ; free physical = 14443 ; free virtual = 46739
 ---------------------------------------------------------------------------------
-Finished Constraint Validation : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 3036.879 ; gain = 721.629 ; free physical = 2302 ; free virtual = 51845
+Finished Constraint Validation : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 3035.309 ; gain = 728.137 ; free physical = 14477 ; free virtual = 46773
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Loading Part and Timing Information
@@ -468,16 +468,16 @@ Start Loading Part and Timing Information
 Loading part: xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-6742] Reading net delay rules and data
 ---------------------------------------------------------------------------------
-Finished Loading Part and Timing Information : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 3044.883 ; gain = 729.633 ; free physical = 2302 ; free virtual = 51845
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 3043.312 ; gain = 736.141 ; free physical = 14477 ; free virtual = 46773
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying 'set_property' XDC Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 3044.883 ; gain = 729.633 ; free physical = 2314 ; free virtual = 51857
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 3043.312 ; gain = 736.141 ; free physical = 14477 ; free virtual = 46773
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 3044.883 ; gain = 729.633 ; free physical = 2305 ; free virtual = 51851
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:14 ; elapsed = 00:00:14 . Memory (MB): peak = 3043.312 ; gain = 736.141 ; free physical = 14460 ; free virtual = 46758
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start RTL Component Statistics 
@@ -499,19 +499,19 @@ Finished Part Resource Summary
 Start Cross Boundary and Area Optimization
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 3044.883 ; gain = 729.633 ; free physical = 2302 ; free virtual = 51856
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 3043.312 ; gain = 736.141 ; free physical = 14472 ; free virtual = 46778
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying XDC Timing Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:20 ; elapsed = 00:00:21 . Memory (MB): peak = 3927.320 ; gain = 1612.070 ; free physical = 1803 ; free virtual = 51157
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:20 ; elapsed = 00:00:21 . Memory (MB): peak = 3928.133 ; gain = 1620.961 ; free physical = 13647 ; free virtual = 45954
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Timing Optimization
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Timing Optimization : Time (s): cpu = 00:00:20 ; elapsed = 00:00:21 . Memory (MB): peak = 3962.328 ; gain = 1647.078 ; free physical = 1764 ; free virtual = 51118
+Finished Timing Optimization : Time (s): cpu = 00:00:20 ; elapsed = 00:00:21 . Memory (MB): peak = 3963.141 ; gain = 1655.969 ; free physical = 13609 ; free virtual = 45916
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Technology Mapping
@@ -589,7 +589,7 @@ INFO: [Synth 8-5816] Retiming module `bd_soc_usart_wrapper' done
 
 
 ---------------------------------------------------------------------------------
-Finished Technology Mapping : Time (s): cpu = 00:00:21 ; elapsed = 00:00:21 . Memory (MB): peak = 3988.211 ; gain = 1672.961 ; free physical = 1748 ; free virtual = 51102
+Finished Technology Mapping : Time (s): cpu = 00:00:21 ; elapsed = 00:00:21 . Memory (MB): peak = 3989.023 ; gain = 1681.852 ; free physical = 13594 ; free virtual = 45900
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start IO Insertion
@@ -671,37 +671,37 @@ Start Final Netlist Cleanup
 Finished Final Netlist Cleanup
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished IO Insertion : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1593 ; free virtual = 50947
+Finished IO Insertion : Time (s): cpu = 00:00:22 ; elapsed = 00:00:22 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13454 ; free virtual = 45760
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Instances
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Instances : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1593 ; free virtual = 50947
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:22 ; elapsed = 00:00:22 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13454 ; free virtual = 45760
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Rebuilding User Hierarchy
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Ports
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Ports : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Nets
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Nets : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP, Shift Register and Retiming Reporting
@@ -737,13 +737,13 @@ Report Cell Usage:
 |8     |XRAM                                |     1|
 +------+------------------------------------+------+
 ---------------------------------------------------------------------------------
-Finished Writing Synthesis Report : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 ---------------------------------------------------------------------------------
 Synthesis finished with 0 errors, 0 critical warnings and 56258 warnings.
-Synthesis Optimization Runtime : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 4150.023 ; gain = 1636.348 ; free physical = 1585 ; free virtual = 50939
-Synthesis Optimization Complete : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.023 ; gain = 1834.773 ; free physical = 1585 ; free virtual = 50939
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:15 ; elapsed = 00:00:15 . Memory (MB): peak = 4150.836 ; gain = 1646.762 ; free physical = 13446 ; free virtual = 45752
+Synthesis Optimization Complete : Time (s): cpu = 00:00:22 ; elapsed = 00:00:23 . Memory (MB): peak = 4150.836 ; gain = 1843.664 ; free physical = 13446 ; free virtual = 45752
 INFO: [Project 1-571] Translating synthesized netlist
-Netlist sorting complete. Time (s): cpu = 00:00:00.08 ; elapsed = 00:00:00.08 . Memory (MB): peak = 4150.023 ; gain = 0.000 ; free physical = 1693 ; free virtual = 51047
+Netlist sorting complete. Time (s): cpu = 00:00:00.08 ; elapsed = 00:00:00.07 . Memory (MB): peak = 4150.836 ; gain = 0.000 ; free physical = 13621 ; free virtual = 45928
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
 INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
 INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
@@ -752,7 +752,7 @@ INFO: [Project 1-570] Preparing netlist for logic optimization
 INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
 Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.gen/sources_1/common/nsln/bd_soc_usart_wrapper_xpm_constrs.xdc]
 Finished Parsing XDC File [/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/.gen/sources_1/common/nsln/bd_soc_usart_wrapper_xpm_constrs.xdc]
-Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4150.023 ; gain = 0.000 ; free physical = 1696 ; free virtual = 51050
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 4150.836 ; gain = 0.000 ; free physical = 13639 ; free virtual = 45945
 INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
@@ -760,9 +760,9 @@ Synth Design complete | Checksum: ed949853
 INFO: [Common 17-83] Releasing license: Synthesis
 51 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
 synth_design completed successfully
-synth_design: Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 4150.023 ; gain = 2400.461 ; free physical = 1697 ; free virtual = 51050
-INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 3165.440; main = 3165.440; forked = 264.503
-INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4664.789; main = 4135.152; forked = 1016.129
+synth_design: Time (s): cpu = 00:00:29 ; elapsed = 00:00:29 . Memory (MB): peak = 4150.836 ; gain = 2401.320 ; free physical = 13641 ; free virtual = 45947
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 3260.257; main = 3260.257; forked = 292.889
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4665.539; main = 4135.965; forked = 1016.129
 INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1/bd_soc_usart_wrapper.dcp' has been generated.
 INFO: [Vivado 12-24828] Executing command : report_utilization -file bd_soc_usart_wrapper_utilization_synth.rpt -pb bd_soc_usart_wrapper_utilization_synth.pb
-INFO: [Common 17-206] Exiting Vivado at Sun Jul 12 00:15:51 2026...
+INFO: [Common 17-206] Exiting Vivado at Sun Jul 12 09:34:13 2026...

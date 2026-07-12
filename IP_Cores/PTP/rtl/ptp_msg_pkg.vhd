@@ -91,6 +91,39 @@ package ptp_msg_pkg is
   -- motor; correctionField (residence t3-t2) por override 1-step del MAC.
   function pdelay_resp_template return byte_arr;
 
+  -- ================= PLANTILLAS COMO CONSTANTES LITERALES ================
+  -- Generadas desde las funciones de referencia (evaluadas con GHDL) y
+  -- verificadas bit-identicas contra el oraculo ISS por la regresion.
+  -- Motivo: Vivado 2025.2.1 elabora mal constantes inicializadas desde
+  -- funciones que construyen arreglos (plantilla Pdelay quedaba en CEROS
+  -- en silicio). Literales = cero elaboracion = cero riesgo.
+  constant TPL_SYNC_ROM : byte_arr(0 to 57) := (
+    x"01", x"80", x"C2", x"00", x"00", x"0E", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"88", x"F7", x"00", x"02", x"00", x"2C", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00"
+  );
+  constant TPL_REQ_ROM : byte_arr(0 to 67) := (
+    x"01", x"80", x"C2", x"00", x"00", x"0E", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"88", x"F7", x"02", x"02", x"00", x"36", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"05", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00"
+  );
+  constant TPL_RESP_ROM : byte_arr(0 to 67) := (
+    x"01", x"80", x"C2", x"00", x"00", x"0E", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"88", x"F7", x"03", x"02", x"00", x"36", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"05", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
+    x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00"
+  );
+
 end package ptp_msg_pkg;
 
 package body ptp_msg_pkg is
@@ -125,9 +158,14 @@ package body ptp_msg_pkg is
     return t;
   end function;
 
-  -- helper: cabecera Ethernet + PTPv2 comun para Pdelay (68 bytes), con
-  -- messageType y messageLength dados. Campos variables a 0.
-  function pdelay_base(mtype : std_logic_vector(3 downto 0)) return byte_arr is
+  -- NOTA DE SINTESIS: las plantillas se construyen con asignaciones DIRECTAS
+  -- en una sola funcion (estilo sync_template). La version anterior usaba un
+  -- helper anidado (pdelay_base) que devolvia un arreglo no restringido;
+  -- Vivado 2025.2.1 elaboraba mal esa constante y dejaba la plantilla en
+  -- ceros EN SILICIO (GHDL la evaluaba bien): tramas Pdelay con DA=00:...:00,
+  -- descartadas por el filtro MAC. No reintroducir el helper.
+
+  function pdelay_req_template return byte_arr is
     variable t : byte_arr(0 to PDELAY_FRAME_LEN-1) := (others => x"00");
   begin
     -- Ethernet
@@ -135,28 +173,28 @@ package body ptp_msg_pkg is
     t(3) := x"00"; t(4) := x"00"; t(5) := x"0E";
     t(12) := x"88"; t(13) := x"F7";
     -- PTPv2
-    t(OFF_PDU + 0) := x"0" & mtype;                 -- majorSdoId(0)|messageType
+    t(OFF_PDU + 0) := x"0" & MT_PDELAY_REQ;         -- majorSdoId(0)|messageType
     t(OFF_PDU + 1) := PTP_VERSION_B;                -- versionPTP=2
     t(OFF_PDU + 2) := x"00"; t(OFF_PDU + 3) := x"36"; -- messageLength=54 (0x36)
-    -- controlField (32): en 802.1AS peer-delay se usa 0x05 (otros mensajes)
-    t(OFF_PDU + 32) := x"05";
-    -- logMessageInterval (33): Pdelay usa 0x00 en v1
-    t(OFF_PDU + 33) := x"00";
-    return t;
-  end function;
-
-  function pdelay_req_template return byte_arr is
-    variable t : byte_arr(0 to PDELAY_FRAME_LEN-1);
-  begin
-    t := pdelay_base(MT_PDELAY_REQ);
+    t(OFF_PDU + 32) := x"05";                       -- controlField
+    t(OFF_PDU + 33) := x"00";                       -- logMessageInterval
     -- originTimestamp (34..43) y reserved (44..53) = 0
     return t;
   end function;
 
   function pdelay_resp_template return byte_arr is
-    variable t : byte_arr(0 to PDELAY_FRAME_LEN-1);
+    variable t : byte_arr(0 to PDELAY_FRAME_LEN-1) := (others => x"00");
   begin
-    t := pdelay_base(MT_PDELAY_RESP);
+    -- Ethernet
+    t(0) := x"01"; t(1) := x"80"; t(2) := x"C2";
+    t(3) := x"00"; t(4) := x"00"; t(5) := x"0E";
+    t(12) := x"88"; t(13) := x"F7";
+    -- PTPv2
+    t(OFF_PDU + 0) := x"0" & MT_PDELAY_RESP;        -- majorSdoId(0)|messageType
+    t(OFF_PDU + 1) := PTP_VERSION_B;                -- versionPTP=2
+    t(OFF_PDU + 2) := x"00"; t(OFF_PDU + 3) := x"36"; -- messageLength=54 (0x36)
+    t(OFF_PDU + 32) := x"05";                       -- controlField
+    t(OFF_PDU + 33) := x"00";                       -- logMessageInterval
     -- requestReceiptTimestamp (34..43) = t2 (parcheado por el motor)
     -- requestingPortIdentity (44..53) = spid del Req (parcheado por el motor)
     -- correctionField (22..29) = residence t3-t2 (override 1-step del MAC)

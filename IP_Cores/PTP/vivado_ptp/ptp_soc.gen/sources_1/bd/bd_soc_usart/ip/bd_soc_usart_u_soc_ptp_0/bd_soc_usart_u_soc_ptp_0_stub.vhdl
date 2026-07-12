@@ -2,7 +2,7 @@
 -- Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
--- Date        : Sun Jul 12 00:15:17 2026
+-- Date        : Sun Jul 12 09:33:40 2026
 -- Host        : adrian running 64-bit Ubuntu 24.04.4 LTS
 -- Command     : write_vhdl -force -mode synth_stub
 --               /home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.gen/sources_1/bd/bd_soc_usart/ip/bd_soc_usart_u_soc_ptp_0/bd_soc_usart_u_soc_ptp_0_stub.vhdl

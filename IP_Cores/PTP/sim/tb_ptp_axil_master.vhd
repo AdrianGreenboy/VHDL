@@ -180,6 +180,29 @@ begin
     end loop;
     report "A7 OK: segundo Sync completo (tx_inflight se libero)";
 
+    -- ============ A8: peer-delay por la cadena completa (flujo 2 bringup) ==
+    mwr(16#24#, x"0000000F");            -- limpiar STATUS
+    mwr(16#0C#, x"00000002");            -- CMD.start_pdelay
+    tout := 0;
+    loop
+      mrd(16#24#, v);
+      exit when v(2) = '1';              -- mpd_valid
+      tout := tout + 1;
+      if tout >= 20000 then
+        report "A8 FALLA: mpd_valid nunca llego (pdelay atorado)" severity failure;
+      end if;
+    end loop;
+    mrd(16#30#, v);                      -- MPD_LO
+    assert v = x"00000028"
+      report "A8 FALLA: mpd=" & to_hstring(v) & " esperado 0x28" severity failure;
+    mrd(16#44#, v);                      -- dbg_state con sondas RX
+    report "A8 OK: pdelay completo mpd=40ns; dbg_state=0x" & to_hstring(v)
+           & " (firma RX buena: ev_ok=" & std_logic'image(v(31))
+           & " mtype=" & to_hstring(v(27 downto 24))
+           & " ackorch=" & std_logic'image(v(22))
+           & " pdcalc=" & std_logic'image(v(20))
+           & " nmsg=" & to_hstring("00" & v(19 downto 18)) & ")";
+
     report "=== TB_PTP_AXIL_MASTER: cadena lado-core PASS ===";
     done <= true;
     wait;

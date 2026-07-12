@@ -50,6 +50,10 @@ architecture rtl of ptp_top is
   -- filtro RX derivado: multicast gPTP, byte0 en [7:0]
   constant GPTP_MC : std_logic_vector(47 downto 0) := x"0E0000C28001";
   signal dbg_state_sig : std_logic_vector(31 downto 0);
+  signal dbg_rxdst_sig : std_logic_vector(47 downto 0);
+  signal dbg_rxinfo_sig : std_logic_vector(31 downto 0);
+  signal dbg_fptr_sig : std_logic_vector(31 downto 0);
+  signal dbg_ftx_sig : std_logic_vector(31 downto 0);
 begin
 
   u_regs : entity work.ptp_regs
@@ -61,7 +65,7 @@ begin
               send_sync => send_sync, start_pdelay => start_pdelay,
               now_sec => now_sec, now_ns => now_ns, mpd_ns => mpd_ns,
               mpd_valid => mpd_valid, offset_ns => offset_ns, offset_valid => offset_valid,
-              rate_adj => rate_adj, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev, dbg_state => dbg_state_sig);
+              rate_adj => rate_adj, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev, dbg_state => dbg_state_sig, dbg_rxdst => dbg_rxdst_sig, dbg_rxinfo => dbg_rxinfo_sig, dbg_fptr => dbg_fptr_sig, dbg_ftx => dbg_ftx_sig);
 
   u_mac : entity work.ptp_mac
     generic map (SHIFT_P => SHIFT_P, SHIFT_I => SHIFT_I)
@@ -76,6 +80,6 @@ begin
               dbg_rx_mvalid => open, dbg_rx_mtype => open, dbg_rx_seqid => open,
               dbg_t1_ns => open, dbg_t4_ns => open, dbg_pd_corr => open, dbg_pd_calc => open,
               mii_txd => mii_txd, mii_tx_en => mii_tx_en,
-              mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv, dbg_state => dbg_state_sig);
+              mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv, dbg_state => dbg_state_sig, dbg_rxdst => dbg_rxdst_sig, dbg_rxinfo => dbg_rxinfo_sig, dbg_fptr => dbg_fptr_sig, dbg_ftx => dbg_ftx_sig);
 
 end architecture rtl;

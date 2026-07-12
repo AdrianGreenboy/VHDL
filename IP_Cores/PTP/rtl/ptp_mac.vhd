@@ -66,7 +66,11 @@ entity ptp_mac is
     mii_tx_en  : out std_logic;
     mii_rxd    : in  std_logic_vector(3 downto 0);
     mii_rx_dv  : in  std_logic;
-    dbg_state  : out std_logic_vector(31 downto 0)
+    dbg_state  : out std_logic_vector(31 downto 0);
+    dbg_rxdst  : out std_logic_vector(47 downto 0);  -- dst de la ultima trama DESCARTADA
+    dbg_rxinfo : out std_logic_vector(31 downto 0);   -- [27:16] nivel FIFO vivo | [11:0] len del drop
+    dbg_fptr   : out std_logic_vector(31 downto 0);   -- [26:16] wptr | [10:0] rptr (vivos)
+    dbg_ftx    : out std_logic_vector(31 downto 0)    -- [31:24]=0xB0 tag | [7:0] 1er byte a FIFO
   );
 end entity ptp_mac;
 
@@ -143,10 +147,77 @@ architecture rtl of ptp_mac is
   -- lazo esclavo Sync
   signal orch_busy : std_logic;
   signal dbg_tx_st     : std_logic_vector(2 downto 0);
+  -- instrumentacion RX (stickies, solo reset los limpia)
+  signal stk_ev_ok, stk_ev_crc, stk_ev_runt, stk_ev_drop : std_logic := '0';
+  signal stk_mvalid, stk_ack_orch, stk_ack_sync, stk_pd_calc : std_logic := '0';
+  signal stk_mtype : std_logic_vector(3 downto 0) := (others => '0');
+  signal stk_mvcnt : unsigned(1 downto 0) := (others => '0');
+  signal mvalid_d  : std_logic := '0';
+  signal mac_dbg_dst : std_logic_vector(47 downto 0);
+  signal stk_dst   : std_logic_vector(47 downto 0) := (others => '0');
+  signal stk_len   : std_logic_vector(11 downto 0) := (others => '0');
+  signal mac_dbg_nb : std_logic_vector(11 downto 0);
+  signal f_level   : std_logic_vector(11 downto 0);
+  signal f_wptr, f_rptr : std_logic_vector(10 downto 0);
+  signal stk_firstb : std_logic_vector(7 downto 0) := (others => '0');
+  signal stk_b14, stk_b35 : std_logic_vector(7 downto 0) := (others => '0');
   signal dbg_orch_ist  : std_logic_vector(2 downto 0);
   signal dbg_orch_rstt : std_logic_vector(1 downto 0);
 begin
-  dbg_state <= (31 downto 14 => '0') & orch_busy & orch_send & tx_busy & mac_tbusy & frame_ready & tx_inflight & dbg_orch_ist & dbg_orch_rstt & dbg_tx_st;
+  -- [31:28] stickies MAC RX: ok,crc,runt,drop | [27:24] ultimo mtype parseado
+  -- [23] mvalid alguna vez | [22] ack del orch | [21] ack del lazo sync
+  -- [20] pd_calc alguna vez | [19:18] contador de mensajes (2b, satura)
+  -- [17:14] reservado | [13:0] igual que antes (TX/orquestador)
+  dbg_state <= stk_ev_ok & stk_ev_crc & stk_ev_runt & stk_ev_drop
+             & stk_mtype
+             & stk_mvalid & stk_ack_orch & stk_ack_sync & stk_pd_calc
+             & std_logic_vector(stk_mvcnt)
+             & "0000"
+             & orch_busy & orch_send & tx_busy & mac_tbusy & frame_ready & tx_inflight
+             & dbg_orch_ist & dbg_orch_rstt & dbg_tx_st;
+
+  -- stickies de instrumentacion RX
+  rx_probe : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        stk_ev_ok <= '0'; stk_ev_crc <= '0'; stk_ev_runt <= '0'; stk_ev_drop <= '0';
+        stk_mvalid <= '0'; stk_ack_orch <= '0'; stk_ack_sync <= '0'; stk_pd_calc <= '0';
+        stk_mtype <= (others => '0'); stk_mvcnt <= (others => '0'); mvalid_d <= '0';
+      else
+        if mac_ev_ok   = '1' then stk_ev_ok   <= '1'; end if;
+        if mac_ev_crc  = '1' then stk_ev_crc  <= '1'; end if;
+        if mac_ev_runt = '1' then stk_ev_runt <= '1'; end if;
+        -- bytes discriminantes de la trama que entra a la FIFO. En un boot
+        -- limpio (primera trama), f_wptr = indice del byte dentro de la trama.
+        if f_wr = '1' and f_empty = '1' then
+          stk_firstb <= f_din(7 downto 0);          -- byte 0: ROM (bueno 0x01)
+        end if;
+        if f_wr = '1' and unsigned(f_wptr) = 14 then
+          stk_b14 <= f_din(7 downto 0);             -- byte 14: ROM (REQ: 0x02)
+        end if;
+        if f_wr = '1' and unsigned(f_wptr) = 35 then
+          stk_b35 <= f_din(7 downto 0);             -- byte 35: parche clkid (0x11)
+        end if;
+        if mac_ev_drop = '1' then
+          stk_ev_drop <= '1';
+          stk_dst     <= mac_dbg_dst;    -- capturar el DA que fallo el filtro
+          stk_len     <= mac_dbg_nb;     -- y la LONGITUD de esa trama
+        end if;
+        mvalid_d <= rx_mvalid;
+        if rx_mvalid = '1' then
+          stk_mvalid <= '1';
+          stk_mtype  <= rx_mtype;
+        end if;
+        if rx_mvalid = '1' and mvalid_d = '0' then      -- flanco: un mensaje
+          if stk_mvcnt /= "11" then stk_mvcnt <= stk_mvcnt + 1; end if;
+        end if;
+        if rx_mack_orch = '1' then stk_ack_orch <= '1'; end if;
+        if rx_mack_sync = '1' then stk_ack_sync <= '1'; end if;
+        if pd_calc      = '1' then stk_pd_calc  <= '1'; end if;
+      end if;
+    end if;
+  end process;
 
   now_sec <= clk_sec;
   now_ns  <= clk_ns;
@@ -159,6 +230,10 @@ begin
   dbg_t4_ns     <= pd_t4_ns;
   dbg_pd_corr   <= pd_corr;
   dbg_pd_calc   <= pd_calc;
+  dbg_rxdst     <= stk_dst;
+  dbg_rxinfo    <= "0000" & f_level & "0000" & stk_len;
+  dbg_fptr      <= "00000" & f_wptr & "00000" & f_rptr;
+  dbg_ftx       <= x"B1" & stk_b14 & stk_b35 & stk_firstb;
 
   -- ---- reloj + servo ----
   u_clk : entity work.ptp_clock
@@ -236,7 +311,8 @@ begin
     generic map (LOG2_DEPTH => 11, WIDTH => 9)
     port map (clk => clk, aresetn => not rst, clr => '0',
               wr_en => f_wr, wdata => f_din, full => f_full,
-              rdata => f_dout, rd_en => f_rd, empty => f_empty, level => open);
+              rdata => f_dout, rd_en => f_rd, empty => f_empty, level => f_level,
+              dbg_wptr => f_wptr, dbg_rptr => f_rptr);
 
   sf_gate : process(clk)
   begin
@@ -263,6 +339,7 @@ begin
               rx_data => mac_rxd, rx_valid => mac_rvalid, rx_last => mac_rlast,
               rx_ev_ok => mac_ev_ok, rx_ev_crc => mac_ev_crc,
               rx_ev_runt => mac_ev_runt, rx_ev_drop => mac_ev_drop,
+              rx_dbg_dst => mac_dbg_dst, rx_dbg_nb => mac_dbg_nb,
               mii_txd => mii_txd, mii_tx_en => mii_tx_en,
               mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv,
               tx_sfd_pulse => tx_sfd, rx_sfd_pulse => rx_sfd,

@@ -67,7 +67,11 @@ entity ptp_regs is
     rate_adj   : in  std_logic_vector(RATE_W-1 downto 0);
     rx_sync_ev : in  std_logic;                    -- pulso: Sync recibido
     rx_resp_ev : in  std_logic;                    -- pulso: Pdelay_Resp recibido
-    dbg_state  : in  std_logic_vector(31 downto 0)
+    dbg_state  : in  std_logic_vector(31 downto 0);
+    dbg_rxdst  : in  std_logic_vector(47 downto 0);
+    dbg_rxinfo : in  std_logic_vector(31 downto 0);
+    dbg_fptr   : in  std_logic_vector(31 downto 0);
+    dbg_ftx    : in  std_logic_vector(31 downto 0)
   );
 end entity ptp_regs;
 
@@ -111,6 +115,11 @@ architecture rtl of ptp_regs is
   constant A_RATE   : std_logic_vector(5 downto 0) := "001111"; -- 0x3C
   constant A_IRQEN  : std_logic_vector(5 downto 0) := "010000"; -- 0x40
   constant A_DBGST  : std_logic_vector(5 downto 0) := "010001"; -- 0x44
+  constant A_DBGD0  : std_logic_vector(5 downto 0) := "010010"; -- 0x48 dst[31:0]
+  constant A_DBGD1  : std_logic_vector(5 downto 0) := "010011"; -- 0x4C dst[47:32]
+  constant A_DBGD2  : std_logic_vector(5 downto 0) := "010100"; -- 0x50 nivel FIFO | len drop
+  constant A_DBGD3  : std_logic_vector(5 downto 0) := "010101"; -- 0x54 wptr | rptr
+  constant A_DBGD4  : std_logic_vector(5 downto 0) := "010110"; -- 0x58 1er byte a FIFO
 begin
 
   -- salidas de control
@@ -133,7 +142,7 @@ begin
   -- ---- rdata COMBINACIONAL ----
   process(addr, sel, ctrl_r, servo_r, lat_r, clkid_r, port_r, smac_hi_r,
           smac_lo_r, status_r, now_sec, ns_snap, mpd_ns, mpdhi_snap,
-          offset_ns, rate_adj, irqen_r, dbg_state)
+          offset_ns, rate_adj, irqen_r, dbg_state, dbg_rxdst, dbg_rxinfo, dbg_fptr, dbg_ftx)
   begin
     rdata <= (others => '0');
     if sel = '1' then
@@ -155,6 +164,11 @@ begin
         when A_RATE   => rdata <= rate_adj;
         when A_IRQEN  => rdata <= irqen_r;
         when A_DBGST  => rdata <= dbg_state;
+        when A_DBGD0  => rdata <= dbg_rxdst(31 downto 0);
+        when A_DBGD1  => rdata <= x"A5D" & "0000" & dbg_rxdst(47 downto 32);  -- tag: sonda presente
+        when A_DBGD2  => rdata <= dbg_rxinfo;
+        when A_DBGD3  => rdata <= dbg_fptr;
+        when A_DBGD4  => rdata <= dbg_ftx;
         when others   => rdata <= (others => '0');
       end case;
     end if;

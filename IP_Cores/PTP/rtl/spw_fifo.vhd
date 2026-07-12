@@ -24,7 +24,9 @@ entity spw_fifo is
     rdata   : out std_logic_vector(WIDTH - 1 downto 0);
     empty   : out std_logic;
     full    : out std_logic;
-    level   : out std_logic_vector(LOG2_DEPTH downto 0)
+    level   : out std_logic_vector(LOG2_DEPTH downto 0);
+    dbg_wptr : out std_logic_vector(LOG2_DEPTH - 1 downto 0);
+    dbg_rptr : out std_logic_vector(LOG2_DEPTH - 1 downto 0)
   );
 end entity spw_fifo;
 
@@ -50,6 +52,8 @@ begin
   empty <= empty_i;
   full  <= full_i;
   level <= std_logic_vector(cnt);
+  dbg_wptr <= std_logic_vector(wptr);
+  dbg_rptr <= std_logic_vector(rptr);
 
   -- FWFT: la cabeza siempre visible
   rdata <= mem(to_integer(rptr));

@@ -39,9 +39,6 @@ end entity ptp_tx;
 
 architecture rtl of ptp_tx is
 
-  constant TPL_SYNC : byte_arr(0 to SYNC_FRAME_LEN-1)   := sync_template;
-  constant TPL_REQ  : byte_arr(0 to PDELAY_FRAME_LEN-1) := pdelay_req_template;
-  constant TPL_RESP : byte_arr(0 to PDELAY_FRAME_LEN-1) := pdelay_resp_template;
 
   type st_t is (S_IDLE, S_PUSH, S_WAIT_TS, S_DONE);
   signal st : st_t := S_IDLE;
@@ -59,51 +56,22 @@ architecture rtl of ptp_tx is
 
   signal ovr_en_r : std_logic := '0';
   signal ovr_dat_r: std_logic_vector(79 downto 0) := (others => '0');
+  -- ================== TRAMA COMO SHIFT REGISTER ==========================
+  -- NOTA DE SINTESIS (leccion aprendida a fuego): CUATRO formulaciones del
+  -- lookup de plantilla indexado por (sel_r, idx) fueron mal sintetizadas por
+  -- Vivado 2025.2.1 (ROM en ceros; luego indice con bit5 pegado: ROM(i|32),
+  -- medido en silicio dos veces con estructuras RTL distintas). Solucion
+  -- definitiva: NO HAY INDICE. La trama completa se carga en un shift
+  -- register de 544 bits al aceptar el send (plantilla = literal hex, parches
+  -- = slices con indices ESTATICOS) y S_PUSH solo desplaza 8 bits por ciclo.
+  signal shreg : std_logic_vector(0 to 543) := (others => '0');
+  constant FR_SYNC_LIT : std_logic_vector(0 to 543) := x"0180C200000E00000000000088F70002002C0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+  constant FR_REQ_LIT  : std_logic_vector(0 to 543) := x"0180C200000E00000000000088F7020200360000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000";
+  constant FR_RESP_LIT : std_logic_vector(0 to 543) := x"0180C200000E00000000000088F7030200360000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000";
+
   signal ovr_off_r: std_logic_vector(10 downto 0) := (others => '0');
   signal ovr_len_r: std_logic_vector(3 downto 0)  := (others => '0');
 
-  function tpl_byte(s : msg_sel_t; i : integer) return std_logic_vector is
-  begin
-    case s is
-      when SEL_SYNC        => return TPL_SYNC(i);
-      when SEL_PDELAY_REQ  => return TPL_REQ(i);
-      when SEL_PDELAY_RESP => return TPL_RESP(i);
-      when others          => return TPL_SYNC(i);
-    end case;
-  end function;
-
-  function patched_byte(s : msg_sel_t; i : integer;
-                        clkid : std_logic_vector(63 downto 0);
-                        pnum  : std_logic_vector(15 downto 0);
-                        smac  : std_logic_vector(47 downto 0);
-                        seq   : unsigned(15 downto 0);
-                        t2sec : std_logic_vector(SEC_W-1 downto 0);
-                        t2ns  : std_logic_vector(NS_W-1 downto 0);
-                        rpid  : std_logic_vector(79 downto 0))
-    return std_logic_vector is
-    variable b : std_logic_vector(7 downto 0);
-  begin
-    b := tpl_byte(s, i);
-    if i >= OFF_ETH_SRC and i < OFF_ETH_SRC + 6 then
-      b := smac((5-(i-OFF_ETH_SRC))*8+7 downto (5-(i-OFF_ETH_SRC))*8);
-    elsif i >= OFF_SPID and i < OFF_SPID + 8 then
-      b := clkid((7-(i-OFF_SPID))*8+7 downto (7-(i-OFF_SPID))*8);
-    elsif i = OFF_SPID + 8 then b := pnum(15 downto 8);
-    elsif i = OFF_SPID + 9 then b := pnum(7 downto 0);
-    elsif i = OFF_SEQID then     b := std_logic_vector(seq(15 downto 8));
-    elsif i = OFF_SEQID + 1 then b := std_logic_vector(seq(7 downto 0));
-    end if;
-    if s = SEL_PDELAY_RESP then
-      if i >= OFF_REQ_RX_TS and i < OFF_REQ_RX_TS + 6 then
-        b := t2sec((5-(i-OFF_REQ_RX_TS))*8+7 downto (5-(i-OFF_REQ_RX_TS))*8);
-      elsif i >= OFF_REQ_RX_TS + 6 and i < OFF_REQ_RX_TS + 10 then
-        b := t2ns((3-(i-OFF_REQ_RX_TS-6))*8+7 downto (3-(i-OFF_REQ_RX_TS-6))*8);
-      elsif i >= OFF_REQ_PORTID and i < OFF_REQ_PORTID + 10 then
-        b := rpid((9-(i-OFF_REQ_PORTID))*8+7 downto (9-(i-OFF_REQ_PORTID))*8);
-      end if;
-    end if;
-    return b;
-  end function;
 
   function pack_origin_ts(sec : std_logic_vector(SEC_W-1 downto 0);
                           ns  : std_logic_vector(NS_W-1 downto 0))
@@ -156,6 +124,7 @@ architecture rtl of ptp_tx is
 
 begin
 
+
   busy     <= busy_r;
   dbg_st   <= "000" when st = S_IDLE else "001" when st = S_PUSH else "010" when st = S_WAIT_TS else "011";
   done     <= done_r;
@@ -203,6 +172,21 @@ begin
                   ovr_off_r <= std_logic_vector(to_unsigned(OFF_ORIGIN_TS, 11));
                   ovr_len_r <= std_logic_vector(to_unsigned(10, 4));
               end case;
+              -- cargar la trama completa: literal + parches (slices ESTATICOS)
+              case sel is
+                when SEL_PDELAY_REQ  => shreg <= FR_REQ_LIT;
+                when SEL_PDELAY_RESP => shreg <= FR_RESP_LIT;
+                when others          => shreg <= FR_SYNC_LIT;
+              end case;
+              shreg(6*8  to 12*8-1) <= src_mac;                       -- SA
+              shreg(34*8 to 42*8-1) <= clock_id;                      -- clockIdentity
+              shreg(42*8 to 44*8-1) <= port_num;                      -- portNumber
+              shreg(44*8 to 46*8-1) <= std_logic_vector(seq_r);       -- sequenceId
+              if sel = SEL_PDELAY_RESP then
+                shreg(48*8 to 54*8-1) <= req_rx_sec;                  -- t2.sec
+                shreg(54*8 to 58*8-1) <= req_rx_ns;                   -- t2.ns
+                shreg(58*8 to 68*8-1) <= req_portid;                  -- requestingPortId
+              end if;
               st <= S_PUSH;
             end if;
 
@@ -210,14 +194,13 @@ begin
             if fifo_full = '0' then
               fwr_r <= '1';
               if idx = frame_len-1 then
-                fdin_r <= '1' & patched_byte(sel_r, idx, clock_id, port_num,
-                            src_mac, seq_r, req_rx_sec, req_rx_ns, req_portid);
+                fdin_r <= '1' & shreg(0 to 7);
                 st <= S_WAIT_TS;
               else
-                fdin_r <= '0' & patched_byte(sel_r, idx, clock_id, port_num,
-                            src_mac, seq_r, req_rx_sec, req_rx_ns, req_portid);
+                fdin_r <= '0' & shreg(0 to 7);
                 idx <= idx + 1;
               end if;
+              shreg <= shreg(8 to 543) & x"00";   -- siguiente byte a la cabeza
             else
               fwr_r <= '0';
             end if;

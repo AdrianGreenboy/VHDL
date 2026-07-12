@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<Runs Version="1" Minor="0">
+	<Run Id="bd_soc_usart_axi_noc_0_0_synth_1" LaunchDir="/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/bd_soc_usart_axi_noc_0_0_synth_1" FlowId="Vivado_Synthesis" FromStepId="vivado" ToStepId="vivado"/>
+	<Run Id="bd_soc_usart_u_soc_ptp_0_synth_1" LaunchDir="/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/bd_soc_usart_u_soc_ptp_0_synth_1" FlowId="Vivado_Synthesis" FromStepId="vivado" ToStepId="vivado"/>
+	<Run Id="synth_1" LaunchDir="/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/synth_1" FlowId="Vivado_Synthesis" FromStepId="vivado" ToStepId="vivado">
+		<Parent Id="bd_soc_usart_axi_noc_0_0_synth_1"/>
+		<Parent Id="bd_soc_usart_u_soc_ptp_0_synth_1"/>
+	</Run>
+	<Run Id="impl_1" LaunchDir="/home/adrian/vhdl_repo/IP_Cores/PTP/vivado_ptp/ptp_soc.runs/impl_1" FlowId="Vivado_Advanced_Implementation" FromStepId="init_design" ToStepId="write_device_image">
+		<Parent Id="synth_1"/>
+		<Parent Id="bd_soc_usart_axi_noc_0_0_synth_1"/>
+		<Parent Id="bd_soc_usart_u_soc_ptp_0_synth_1"/>
+	</Run>
+	<Parameters>
+		<Parameter Name="runs.monitorLSFJobs" Val="true" Type="bool"/>
+		<Parameter Name="runs.enableClusterConf" Val="true" Type="bool"/>
+		<Parameter Name="general.ignorePathLengthChecks" Val="true" Type="bool"/>
+		<Parameter Name="general.shortenLongPath" Val="true" Type="bool"/>
+		<Parameter Name="general.usePosixSpawnForFork" Val="true" Type="bool"/>
+	</Parameters>
+	<ProductInfo Name="vivado"/>
+</Runs>
+

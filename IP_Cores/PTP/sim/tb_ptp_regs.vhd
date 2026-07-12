@@ -68,7 +68,7 @@ begin
               send_sync => send_sync, start_pdelay => start_pdelay,
               now_sec => now_sec, now_ns => now_ns, mpd_ns => mpd_ns,
               mpd_valid => mpd_valid, offset_ns => offset_ns, offset_valid => offset_valid,
-              rate_adj => rate_adj, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev, dbg_state => (others => '0'));
+              rate_adj => rate_adj, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev, dbg_state => (others => '0'), dbg_rxdst => (others => '0'), dbg_rxinfo => (others => '0'), dbg_fptr => (others => '0'), dbg_ftx => (others => '0'));
 
   stim : process
     procedure step is begin wait until rising_edge(clk); end procedure;

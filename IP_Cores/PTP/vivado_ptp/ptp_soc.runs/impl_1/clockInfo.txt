@@ -1,6 +1,6 @@
 -------------------------------------
 | Tool Version : Vivado v.2025.2.1
-| Date         : Sun Jul 12 00:16:28 2026
+| Date         : Sun Jul 12 09:34:51 2026
 | Host         : adrian
 | Device       : xcve2302-sfva784-1LP-E-S
 -------------------------------------
@@ -33,7 +33,7 @@ Clock 1: bd_soc_usart_i/versal_cips_0/inst/pspmc_0/inst/pl0_ref_clk
 	Clock source region: X1Y1
 	Clock regions with fixed/placed loads: X0Y1 
 	Initial load regions: X0Y1 X1Y1 X1Y2 X2Y1 X2Y2 
-	Number of loads: 4016
+	Number of loads: 4479
 
 
 ***************************************
@@ -86,6 +86,6 @@ VR/Distribution Track: 0
 Clock root: X1Y1
 Clock expansion window: CLOCKREGION_X0Y1:CLOCKREGION_X2Y2
 Clock region(s) of placed loads: X0Y1 X1Y1 X1Y2 X2Y1 X2Y2 
-Number of loads: 5510
+Number of loads: 6052
 
 
