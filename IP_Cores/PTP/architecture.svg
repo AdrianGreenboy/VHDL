@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 860" font-family="monospace">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#455a64"/>
+    </marker>
+  </defs>
+  <style>
+    .box   { fill:#eceff1; stroke:#455a64; stroke-width:1.5; rx:6; }
+    .core  { fill:#e3f2fd; stroke:#1565c0; stroke-width:1.5; }
+    .ptp   { fill:#e8f5e9; stroke:#2e7d32; stroke-width:1.5; }
+    .dbg   { fill:#fff8e1; stroke:#f9a825; stroke-width:1.5; }
+    .ps    { fill:#f3e5f5; stroke:#6a1b9a; stroke-width:1.5; }
+    .t     { fill:#263238; font-size:13px; }
+    .tt    { fill:#263238; font-size:15px; font-weight:bold; }
+    .ts    { fill:#546e7a; font-size:11px; }
+    .w     { stroke:#455a64; stroke-width:1.6; fill:none; marker-end:url(#arr); }
+    .w2    { stroke:#2e7d32; stroke-width:1.6; fill:none; marker-end:url(#arr); }
+    .wl    { stroke:#c62828; stroke-width:1.8; fill:none; marker-end:url(#arr); stroke-dasharray:6 3; }
+  </style>
+
+  <text x="620" y="26" text-anchor="middle" class="tt" font-size="19">IP Core PTP / IEEE 802.1AS — Arquitectura completa (TE0950 / Versal VE2302)</text>
+
+  <!-- ==================== PS ==================== -->
+  <rect x="20" y="50" width="270" height="180" class="ps" rx="8"/>
+  <text x="155" y="72" text-anchor="middle" class="tt">Versal PS (CIPS)</text>
+  <rect x="35" y="85" width="110" height="40" class="box" rx="5"/>
+  <text x="90" y="110" text-anchor="middle" class="t">APU A72</text>
+  <rect x="155" y="85" width="120" height="40" class="box" rx="5"/>
+  <text x="215" y="104" text-anchor="middle" class="t">Linux</text>
+  <text x="215" y="118" text-anchor="middle" class="ts">ptp_verify / dumps</text>
+  <rect x="35" y="140" width="240" height="34" class="box" rx="5"/>
+  <text x="155" y="161" text-anchor="middle" class="t">AXI NoC + SmartConnect</text>
+  <rect x="35" y="184" width="240" height="34" class="box" rx="5"/>
+  <text x="155" y="205" text-anchor="middle" class="t">DDR4 (firmas @0x7000_0000)</text>
+
+  <!-- ==================== SoC RV32IM ==================== -->
+  <rect x="20" y="260" width="270" height="330" class="core" rx="8"/>
+  <text x="155" y="283" text-anchor="middle" class="tt">SoC RV32IM (PL) @0x8000_0000</text>
+  <rect x="35" y="295" width="240" height="44" class="box" rx="5"/>
+  <text x="155" y="313" text-anchor="middle" class="t">Core RV32IM 5 etapas</text>
+  <text x="155" y="329" text-anchor="middle" class="ts">firmware .mem via asm.py</text>
+  <rect x="35" y="350" width="240" height="70" class="box" rx="5"/>
+  <text x="155" y="368" text-anchor="middle" class="t">mem_subsys_dma</text>
+  <text x="155" y="384" text-anchor="middle" class="ts">RAM local | regs DMA @0x4000_0000</text>
+  <text x="155" y="399" text-anchor="middle" class="ts">decode is_ptp: addr[31:28]=0110</text>
+  <text x="155" y="413" text-anchor="middle" class="ts">dma_burst -&gt; NoC -&gt; DDR</text>
+  <rect x="35" y="432" width="240" height="86" class="box" rx="5"/>
+  <text x="155" y="452" text-anchor="middle" class="t">ptp_axil_master</text>
+  <text x="155" y="469" text-anchor="middle" class="ts">FSM: IDLE/WR/BRESP/AR/RDATA</text>
+  <text x="155" y="484" text-anchor="middle" class="ts" fill="#c62828">ready SOLO con rvalid (dato de</text>
+  <text x="155" y="498" text-anchor="middle" class="ts" fill="#c62828">ESTA transaccion, sin corrimiento)</text>
+  <text x="155" y="545" text-anchor="middle" class="ts">AXI4-Lite maestro</text>
+  <line x1="155" y1="339" x2="155" y2="350" class="w"/>
+  <line x1="155" y1="420" x2="155" y2="432" class="w"/>
+  <line x1="220" y1="350" x2="220" y2="260" class="w" transform="translate(0,0)"/>
+  <line x1="155" y1="518" x2="155" y2="560" class="w"/>
+
+  <!-- ==================== ptp_axil ==================== -->
+  <rect x="330" y="470" width="220" height="120" class="ptp" rx="8"/>
+  <text x="440" y="493" text-anchor="middle" class="tt">ptp_axil</text>
+  <text x="440" y="511" text-anchor="middle" class="ts">esclavo AXI4-Lite @0x6000_0000</text>
+  <text x="440" y="527" text-anchor="middle" class="ts">(vista del core RV32IM)</text>
+  <text x="440" y="547" text-anchor="middle" class="ts">rst = not s_axi_aresetn</text>
+  <text x="440" y="563" text-anchor="middle" class="ts">rdata combinacional (lockstep ISS)</text>
+  <line x1="290" y1="530" x2="330" y2="530" class="w"/>
+  <text x="309" y="522" text-anchor="middle" class="ts">AXI-L</text>
+
+  <!-- ==================== ptp_top ==================== -->
+  <rect x="590" y="50" width="630" height="770" fill="#fafafa" stroke="#2e7d32" stroke-width="2" rx="10"/>
+  <text x="905" y="74" text-anchor="middle" class="tt" fill="#2e7d32">ptp_top — IP PTP / 802.1AS</text>
+
+  <!-- ptp_regs -->
+  <rect x="610" y="90" width="270" height="230" class="ptp" rx="6"/>
+  <text x="745" y="110" text-anchor="middle" class="tt">ptp_regs (MMIO)</text>
+  <text x="622" y="130" class="ts">0x00 CONTROL  0x04 SERVO_K</text>
+  <text x="622" y="146" class="ts">0x0C CMD (sync/pdelay, en cola)</text>
+  <text x="622" y="162" class="ts">0x10/14 CLKID  0x18 PORT</text>
+  <text x="622" y="178" class="ts">0x1C/20 SMAC   0x24 STATUS W1C</text>
+  <text x="622" y="194" class="ts">0x28/2C NOW (snapshot atomico)</text>
+  <text x="622" y="210" class="ts">0x30/34 MPD    0x38 OFFSET</text>
+  <text x="622" y="226" class="ts">0x3C RATE      0x40 IRQEN</text>
+  <text x="622" y="248" class="ts" fill="#f9a825">0x44 DBG_STATE (FSMs + sondas RX)</text>
+  <text x="622" y="264" class="ts" fill="#f9a825">0x48/4C dst descartado (tag A5D)</text>
+  <text x="622" y="280" class="ts" fill="#f9a825">0x50 nivel FIFO | len drop</text>
+  <text x="622" y="296" class="ts" fill="#f9a825">0x54 wptr|rptr  0x58 bytes FIFO (B1)</text>
+  <line x1="550" y1="530" x2="610" y2="300" class="w2"/>
+  <text x="560" y="420" class="ts" transform="rotate(-63 560 420)">sel/we/addr/rdata</text>
+
+  <!-- ptp_clock -->
+  <rect x="910" y="90" width="290" height="90" class="ptp" rx="6"/>
+  <text x="1055" y="110" text-anchor="middle" class="tt">ptp_clock + servo PI</text>
+  <text x="1055" y="128" text-anchor="middle" class="ts">sec:48b ns:32b, INC=10ns @100MHz</text>
+  <text x="1055" y="144" text-anchor="middle" class="ts">acumulador de fase sub-ns</text>
+  <text x="1055" y="160" text-anchor="middle" class="ts">salto atomico + rate_adj (esclavo)</text>
+
+  <!-- ptp_tstamp -->
+  <rect x="910" y="195" width="290" height="60" class="ptp" rx="6"/>
+  <text x="1055" y="216" text-anchor="middle" class="tt">ptp_tstamp</text>
+  <text x="1055" y="234" text-anchor="middle" class="ts">captura t1..t4 en el pulso SFD (TX/RX)</text>
+
+  <!-- pdelay fsm -->
+  <rect x="610" y="345" width="270" height="110" class="ptp" rx="6"/>
+  <text x="745" y="366" text-anchor="middle" class="tt">ptp_pdelay_fsm</text>
+  <text x="745" y="384" text-anchor="middle" class="ts">iniciador: I_SEND_REQ..I_CALC</text>
+  <text x="745" y="400" text-anchor="middle" class="ts">respondedor: R_SEND_RESP..</text>
+  <text x="745" y="416" text-anchor="middle" class="ts">+ ptp_pdelay: meanPathDelay =</text>
+  <text x="745" y="432" text-anchor="middle" class="ts">((t4-t1)-(t3-t2))/2</text>
+
+  <!-- ptp_tx -->
+  <rect x="910" y="285" width="290" height="150" class="ptp" rx="6"/>
+  <text x="1055" y="306" text-anchor="middle" class="tt">ptp_tx (motor de trama)</text>
+  <text x="1055" y="326" text-anchor="middle" class="ts" fill="#c62828">SHIFT REGISTER 544b: plantilla</text>
+  <text x="1055" y="341" text-anchor="middle" class="ts" fill="#c62828">literal + parches con slices</text>
+  <text x="1055" y="356" text-anchor="middle" class="ts" fill="#c62828">ESTATICOS (sin lookup indexado:</text>
+  <text x="1055" y="371" text-anchor="middle" class="ts" fill="#c62828">Vivado manglo 4 formulaciones)</text>
+  <text x="1055" y="392" text-anchor="middle" class="ts">Sync 58B / Pdelay 68B</text>
+  <text x="1055" y="408" text-anchor="middle" class="ts">override 1-step: originTS /</text>
+  <text x="1055" y="424" text-anchor="middle" class="ts">correctionField en vuelo</text>
+
+  <!-- fifo + gate -->
+  <rect x="910" y="450" width="290" height="80" class="ptp" rx="6"/>
+  <text x="1055" y="471" text-anchor="middle" class="tt">spw_fifo 2048x9 + gate S&amp;F</text>
+  <text x="1055" y="489" text-anchor="middle" class="ts">FWFT; bit8 = tlast; frame_ready</text>
+  <text x="1055" y="505" text-anchor="middle" class="ts">abre el MAC solo con trama completa</text>
+  <line x1="1055" y1="435" x2="1055" y2="450" class="w2"/>
+
+  <!-- eth_mac -->
+  <rect x="700" y="560" width="500" height="150" class="ptp" rx="6"/>
+  <text x="950" y="582" text-anchor="middle" class="tt">eth_mac (MII 4b @25MHz, mii_ce)</text>
+  <rect x="715" y="595" width="220" height="50" class="box" rx="5"/>
+  <text x="825" y="615" text-anchor="middle" class="t">eth_tx_mii</text>
+  <text x="825" y="631" text-anchor="middle" class="ts">preambulo+SFD, pad 60, FCS</text>
+  <rect x="960" y="595" width="220" height="50" class="box" rx="5"/>
+  <text x="1070" y="615" text-anchor="middle" class="t">eth_rx_mii</text>
+  <text x="1070" y="631" text-anchor="middle" class="ts">CRC + filtro DA (gPTP MC)</text>
+  <text x="950" y="672" text-anchor="middle" class="ts">eventos: ev_ok / ev_crc / ev_runt / ev_drop (filtro tras CRC)</text>
+  <text x="950" y="692" text-anchor="middle" class="ts">loopback='1': txd se realimenta al RX dentro del PL (LOOP_INT)</text>
+  <line x1="1055" y1="530" x2="1055" y2="560" class="w2"/>
+  <path d="M 825 645 L 825 660 L 1070 660 L 1070 645" class="wl"/>
+  <text x="948" y="656" text-anchor="middle" class="ts" fill="#c62828">LOOP_INT</text>
+
+  <!-- ptp_rx -->
+  <rect x="610" y="345" width="0" height="0"/>
+  <rect x="610" y="470" width="270" height="70" class="ptp" rx="6"/>
+  <text x="745" y="492" text-anchor="middle" class="tt">ptp_rx (parser gPTP)</text>
+  <text x="745" y="510" text-anchor="middle" class="ts">mvalid/mtype/seqid/spid + ack</text>
+  <text x="745" y="526" text-anchor="middle" class="ts">-&gt; lazo Sync / orquestador pdelay</text>
+  <line x1="700" y1="595" x2="745" y2="540" class="w2"/>
+  <line x1="745" y1="470" x2="745" y2="455" class="w2"/>
+
+  <!-- MII pads -->
+  <rect x="820" y="740" width="260" height="50" class="box" rx="6"/>
+  <text x="950" y="761" text-anchor="middle" class="t">pads MII (PHY externo)</text>
+  <text x="950" y="777" text-anchor="middle" class="ts">roadmap v1.1 (loopback='0')</text>
+  <line x1="950" y1="710" x2="950" y2="740" class="w2"/>
+
+  <!-- interconnects PS<->SoC -->
+  <line x1="155" y1="230" x2="155" y2="260" class="w"/>
+  <text x="230" y="250" class="ts">carga IMEM / halt / DDR base</text>
+
+  <!-- leyenda -->
+  <rect x="330" y="620" width="220" height="170" class="dbg" rx="8"/>
+  <text x="440" y="643" text-anchor="middle" class="tt">Instrumentacion</text>
+  <text x="342" y="665" class="ts">- dbg_state: FSMs TX/orch +</text>
+  <text x="352" y="680" class="ts">stickies RX (0x44)</text>
+  <text x="342" y="698" class="ts">- DA/len de trama descartada</text>
+  <text x="342" y="714" class="ts">- punteros/nivel de la FIFO</text>
+  <text x="342" y="730" class="ts">- primeros bytes escritos</text>
+  <text x="342" y="752" class="ts">Cazaron 3 bugs de silicio</text>
+  <text x="342" y="768" class="ts">invisibles en simulacion.</text>
+
+  <text x="620" y="845" text-anchor="middle" class="ts">Verificacion: 17 capas GHDL (bloques+mutaciones, bit-identidad vs ISS Python, LOOP_INT, MMIO, SoC RTL-vs-ISS, cadena AXI) + firma en silicio</text>
+</svg>
