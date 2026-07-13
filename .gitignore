@@ -43,3 +43,39 @@ boot.scr
 *.swp
 *~
 .DS_Store
+
+# --- intermedios de simulacion GHDL ---
+work-obj*.cf
+*.o
+*.ghw
+*.vcd
+__pycache__/
+*.pyc
+
+# --- vectores y programas generados ---
+*.mem
+dsp_soc_prog.txt
+dsp_soc_oracle.txt
+
+# --- firmware ensamblado / verificador compilado ---
+*.bin
+dsp_verify
+
+# --- build pesado de Vivado / PetaLinux ---
+*.jou
+*.log
+*.str
+*.dcp
+*.pdi
+*.xsa
+.Xil/
+vivado/*.cache/
+vivado/*.hw/
+vivado/*.ip_user_files/
+vivado/*.runs/
+vivado/*.sim/
+vivado/*.gen/
+
+# --- backups ---
+*~
+*.bak
