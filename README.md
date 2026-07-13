@@ -74,21 +74,18 @@ IP_Cores/<CORE>/
 
 | Core | What it is | Status |
 |---|---|---|
-| **[RV32i](IP_Cores/RV32i/)** | A complete **RV32IM SoC**: 5-stage pipelined RISC-V CPU (hardware multiply/divide, CSRs, CLINT), local RAM, burst **DMA engine** with AXI4 master to DDR, MMIO bus for peripherals, plus its own Python assembler (`asm.py`) and ISS used as the golden oracle by every other core. This is the heart that drives all the bring-ups. | **SILICON PASS** (TE0950) |
+| **[RV32i](IP_Cores/RV32i/)** | A complete **RV32IM SoC**: 5-stage pipelined RISC-V CPU (hardware multiply/divide, CSRs, CLINT), local RAM, burst **DMA engine** with AXI4 master to DDR, MMIO bus for peripherals, plus its own Python assembler (`asm.py`) and ISS used as the golden oracle by every other core. This is the heart that drives all the bring-ups. | **SILICON PASS** — GEMV from LPDDR4 up to 64×64, 100 MHz, WNS +3.2 ns |
 | **[SPW](IP_Cores/SPW/)** | **SpaceWire** link controller (ECSS-E-ST-50-12C): Data-Strobe codec, full ECSS link FSM, credit-based flow control, Time-Codes, 9-bit N-Char FIFOs, internal loopback self-test. The spacecraft onboard network, memory-mapped for an RV32. | **SILICON PASS** — 10/20/25/50 Mbit/s, WNS +2.740 ns |
 | **[PTP](IP_Cores/PTP/)** | **PTP / IEEE 802.1AS** (gPTP) time-sync endpoint: 80-bit PTP clock with PI servo, hardware SFD timestamping, peer-delay measurement in hardware, master/slave Sync loop, and its **own MII Ethernet MAC** with 1-step timestamp override. The time plane of TSN. | **SILICON PASS** — mpd 40 ns, offset 0, WNS +1.171 ns |
 | **[ADCS](IP_Cores/ADCS/)** | **ADCS MPC accelerator**: a projected-gradient QP solver for spacecraft attitude control — dense `70×70` float32 GEMV + gradient + clamp, iterated in hardware, on an **8-lane fused multiply-add datapath** bit-exact to the AMD FPO. Two AXI masters to DDR, an on-chip sequencer (`LOAD_H → solve → STORE_U`), governed by the RV32. The compute plane of an ADCS. | **SILICON PASS** — signature `0x0C4CCCD2` bit-identical sim↔silicon, WNS +2.844 ns |
 | **[DSP](IP_Cores/DSP/)** | **DSP accelerator**: four fixed-point Q1.15 engines behind one MMIO window — **CORDIC** (rotation/vectoring), symmetric linear-phase **FIR**, radix-2 **complex FFT/IFFT** up to N=1024, and **real-input FFT**. The FFT is a **ping-pong dual-bank Block-RAM** design (in-place is not BRAM-implementable); all buffers infer BRAM. Bit-exact to a NumPy oracle across five layers. The signal-processing plane for ADCS/sensor workloads. | **SILICON PASS** — CORDIC & FFT bit-exact on TE0950, 5.57% LUTs, WNS +0.867 ns |
-| **[CAN](IP_Cores/CAN/)** | **CAN 2.0** controller: bit timing, stuffing, CRC, arbitration, error handling, TX/RX buffers over the family MMIO bus. | Silicon-validated on TE0950 |
-| **[M1553](IP_Cores/M1553/)** | **MIL-STD-1553B** bus terminal: Manchester II encoding/decoding, command/status word handling, the classic avionics bus. | See its README for current status |
-| **[USART](IP_Cores/USART/)** | **USART/UART** with the family MMIO interface — also the reference "hello world" of the SoC bring-up flow. | Silicon-validated on TE0950 |
-| **[SPI](IP_Cores/SPI/)** | **SPI master** controller, memory-mapped. | See its README |
-| **[I2C](IP_Cores/I2C/)** | **I2C master** controller, memory-mapped. | See its README |
-| **[I3C](IP_Cores/I3C/)** | **I3C** controller — the modern successor to I2C. | See its README |
-| **[PQC](IP_Cores/PQC/)** | Post-quantum cryptography experiments: **Kyber + Keccak** as a single-file AXI4-Lite IP, and integration work around **Dilithium**. | Research / in progress |
-
-*(If a folder above doesn't exist yet or carries a different name, trust the
-folder tree — this table is the map, the repo is the territory.)*
+| **[CAN](IP_Cores/CAN/)** | **CAN 2.0** controller: bit timing, stuffing, CRC, arbitration, error handling, TX/RX buffers over the family MMIO bus. | **SILICON PASS** — 125k/250k/500k/1M bit/s, WNS +0.603 ns |
+| **[M1553](IP_Cores/M1553/)** | **MIL-STD-1553B** bus terminal: Manchester II encoding/decoding, command/status word handling, the classic avionics bus. | **SILICON PASS** — 8/8 signature vs ISS, WNS +3.110 ns |
+| **[ETH](IP_Cores/ETH/)** | **Ethernet MAC 10/100** over MII: full TX/RX engines with CRC-32, MAC filtering, store-and-forward FIFOs and `LOOP_INT` self-test. The base MAC of the TSN family (PTP builds on it). | **SILICON PASS** — 8/8 signature, WNS +3.133 ns |
+| **[USART](IP_Cores/USART/)** | **USART/UART** with the family MMIO interface — also the reference "hello world" of the SoC bring-up flow. | **SILICON PASS** — 115200/921600/3M/6M baud, WNS +2.801 ns |
+| **[SPI](IP_Cores/SPI/)** | **SPI master** controller (all 4 modes), memory-mapped, with DMA echo self-test. | **SILICON PASS** — SCLK 12.5/25/50 MHz, WNS +2.18 ns |
+| **[IIC](IP_Cores/IIC/)** | **I²C** controller (master **and** slave engines), memory-mapped, with wired-AND `LOOP_INT` self-test. | **SILICON PASS** — 100k/400k/1M, WNS +2.958 ns |
+| **[I3C](IP_Cores/I3C/)** | **MIPI I3C Basic (SDR)** controller **and** target — ENTDAA, private R/W, T-bit seize, IBI with mandatory byte. | **SILICON PASS** — 3.125/6.25/12.5 MHz push-pull, WNS +2.844 ns |
 
 ## Getting started in five minutes
 
