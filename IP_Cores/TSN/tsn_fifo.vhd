@@ -10,6 +10,10 @@
 --   * full considera bytes especulativos (reservan espacio).
 --   * Lectura FWFT: rd_valid=1 => rd_data contiene el byte en cabeza;
 --     rd_en consume. Solo se leen bytes consolidados.
+--   * Lectura RE-LEIBLE (multicast secuencial): los bytes leidos NO liberan
+--     espacio hasta rd_commit. rd_rewind vuelve al inicio de la trama en
+--     drenaje (frontera fr_ptr) para re-leerla hacia otro destino.
+--     rd_commit/rd_rewind nunca coinciden con rd_en (assert en sim).
 --   * spec_count/comm_count expuestos para el wrapper de ingreso.
 
 library ieee;
@@ -33,6 +37,8 @@ entity tsn_fifo is
     rd_en      : in  std_logic;
     rd_data    : out std_logic_vector(7 downto 0);
     rd_valid   : out std_logic;
+    rd_commit  : in  std_logic;   -- libera lo leido (fin de todas las entregas)
+    rd_rewind  : in  std_logic;   -- re-lee desde la frontera liberada
     -- observabilidad
     spec_count : out unsigned(LOG2_DEPTH downto 0);
     comm_count : out unsigned(LOG2_DEPTH downto 0)
@@ -48,20 +54,23 @@ architecture rtl of tsn_fifo is
   attribute ram_style of ram : signal is "block";
 
   -- punteros con bit extra para distinguir lleno/vacio
-  signal wr_ptr, cm_ptr, rd_ptr : unsigned(LOG2_DEPTH downto 0) := (others => '0');
+  -- fr_ptr: frontera liberada (solo avanza en rd_commit); rd_ptr puede
+  -- retroceder a fr_ptr en rd_rewind para re-lectura multicast
+  signal wr_ptr, cm_ptr, rd_ptr, fr_ptr : unsigned(LOG2_DEPTH downto 0) := (others => '0');
 
   signal out_valid : std_logic := '0';
   signal spec_cnt_i, comm_cnt_i : unsigned(LOG2_DEPTH downto 0);
   signal fetch : std_logic;
 begin
-  spec_cnt_i <= wr_ptr - rd_ptr;
+  spec_cnt_i <= wr_ptr - fr_ptr;
   comm_cnt_i <= cm_ptr - rd_ptr;
   spec_count <= spec_cnt_i;
   comm_count <= comm_cnt_i;
   full       <= '1' when spec_cnt_i = to_unsigned(DEPTH, LOG2_DEPTH+1) else '0';
 
   -- prefetch FWFT: cargar salida si esta vacia o se consume, y hay consolidado
-  fetch <= '1' when (out_valid = '0' or rd_en = '1') and comm_cnt_i /= 0 else '0';
+  fetch <= '1' when (out_valid = '0' or rd_en = '1') and comm_cnt_i /= 0
+                and rd_commit = '0' and rd_rewind = '0' else '0';
 
   p_wr : process(clk)
   begin
@@ -92,9 +101,29 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         rd_ptr    <= (others => '0');
+        fr_ptr    <= (others => '0');
         out_valid <= '0';
       else
-        if fetch = '1' then
+        assert not ((rd_commit = '1' or rd_rewind = '1') and rd_en = '1')
+          report "tsn_fifo: rd_commit/rd_rewind simultaneo con rd_en prohibido"
+          severity failure;
+        assert not (rd_commit = '1' and rd_rewind = '1')
+          report "tsn_fifo: rd_commit y rd_rewind simultaneos prohibidos"
+          severity failure;
+        if rd_commit = '1' then
+          -- descontar el prefetch no consumido: el byte en el registro de
+          -- salida pertenece al flujo posterior y debe re-leerse
+          if out_valid = '1' then
+            rd_ptr <= rd_ptr - 1;
+            fr_ptr <= rd_ptr - 1;
+          else
+            fr_ptr <= rd_ptr;
+          end if;
+          out_valid <= '0';
+        elsif rd_rewind = '1' then
+          rd_ptr    <= fr_ptr;
+          out_valid <= '0';
+        elsif fetch = '1' then
           rd_data   <= ram(to_integer(rd_ptr(LOG2_DEPTH-1 downto 0)));
           rd_ptr    <= rd_ptr + 1;
           out_valid <= '1';

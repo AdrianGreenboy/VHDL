@@ -1,0 +1,29 @@
+# Fuentes MII compartidas: se referencian desde ../ETH/rtl/, no se versionan
+# copiadas aqui (copia local solo para el build de Vivado y simulacion GHDL).
+eth_pkg.vhd
+eth_rx_mii.vhd
+eth_tx_mii.vhd
+
+# Proyecto Vivado: regenerable desde vivado/tsn_soc_steps.tcl. Pesado y con
+# rutas absolutas; no se versiona.
+vivado_tsn/
+*.xsa
+*.pdi
+
+# Binario ARM cross-compilado (regenerable de tsn-bringup.c)
+tsn-bringup
+
+# Respaldos y temporales de trabajo
+*.bak
+*.byte_bak
+work-obj08.cf
+*.o
+*.vcd
+
+# Reportes de Vivado
+timing_summary.rpt
+
+# Artefactos de simulacion GHDL
+tb_*_ghdl
+e~*
+!tsn_bringup.mem
