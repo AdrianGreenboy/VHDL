@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <!-- ===== TSN 4x4 switch architecture ===== -->
+  <!-- paleta por bloque funcional: cada etapa un color distinto -->
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrLite" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#8b5cf6"/>
+    </marker>
+    <style>
+      .title  { font-size: 20px; font-weight: 700; fill: #0f172a; }
+      .sub    { font-size: 12px; fill: #64748b; }
+      .blk    { font-size: 12.5px; font-weight: 600; }
+      .sm     { font-size: 10.5px; }
+      .lbl    { font-size: 10px; fill: #475569; }
+      .port   { font-size: 11px; font-weight: 600; fill: #1e293b; }
+      .note   { font-size: 10px; fill: #64748b; font-style: italic; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="560" fill="#ffffff"/>
+
+  <!-- title -->
+  <text x="28" y="34" class="title">SDN-TSN 4x4 Switch &#8212; RV32IM SoC v3</text>
+  <text x="28" y="52" class="sub">store-and-forward &#183; static MAC table &#183; round-robin &#183; per-port counters &#183; MII injector</text>
+
+  <!-- ===== ingress column (4 ports) : teal ===== -->
+  <!-- eth_rx_mii -->
+  <g>
+    <rect x="28" y="78" width="96" height="40" rx="6" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.6"/>
+    <text x="76" y="94" text-anchor="middle" class="blk" fill="#0f766e">eth_rx_mii</text>
+    <text x="76" y="109" text-anchor="middle" class="sm" fill="#0f766e">x4  nibble&#8594;byte</text>
+  </g>
+
+  <!-- ingress + FIFO : green -->
+  <g>
+    <rect x="150" y="70" width="150" height="120" rx="8" fill="#dcfce7" stroke="#22c55e" stroke-width="1.8"/>
+    <text x="225" y="90" text-anchor="middle" class="blk" fill="#15803d">tsn_ingress  x4</text>
+    <text x="225" y="106" text-anchor="middle" class="lbl">FCS check &#183; parse hdr</text>
+    <!-- fifo inside -->
+    <rect x="166" y="118" width="118" height="56" rx="6" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.4"/>
+    <text x="225" y="138" text-anchor="middle" class="blk" fill="#166534">tsn_fifo (SDP)</text>
+    <text x="225" y="153" text-anchor="middle" class="sm" fill="#166534">2 KB BRAM</text>
+    <text x="225" y="166" text-anchor="middle" class="sm" fill="#166534">commit / rewind</text>
+  </g>
+
+  <!-- ===== crossbar : amber ===== -->
+  <g>
+    <rect x="336" y="70" width="150" height="120" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.8"/>
+    <text x="411" y="92" text-anchor="middle" class="blk" fill="#b45309">tsn_xbar</text>
+    <text x="411" y="110" text-anchor="middle" class="lbl">4x4 crossbar</text>
+    <text x="411" y="128" text-anchor="middle" class="sm" fill="#92400e">MAC lookup</text>
+    <text x="411" y="143" text-anchor="middle" class="sm" fill="#92400e">unicast / flood / bcast</text>
+    <text x="411" y="158" text-anchor="middle" class="sm" fill="#92400e">round-robin + input-lock</text>
+    <text x="411" y="175" text-anchor="middle" class="sm" fill="#92400e">per-output arbitration</text>
+  </g>
+
+  <!-- ===== tx adapt : blue ===== -->
+  <g>
+    <rect x="522" y="70" width="140" height="120" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.8"/>
+    <text x="592" y="92" text-anchor="middle" class="blk" fill="#1d4ed8">tsn_tx_adapt  x4</text>
+    <text x="592" y="110" text-anchor="middle" class="lbl">egress adapter</text>
+    <text x="592" y="128" text-anchor="middle" class="sm" fill="#1e40af">byte&#8594;nibble</text>
+    <text x="592" y="143" text-anchor="middle" class="sm" fill="#1e40af">anti-ghost skid</text>
+    <text x="592" y="158" text-anchor="middle" class="sm" fill="#1e40af">MII TX frame</text>
+  </g>
+
+  <!-- mii tx out -->
+  <g>
+    <rect x="676" y="112" width="60" height="40" rx="6" fill="#e0e7ff" stroke="#6366f1" stroke-width="1.4"/>
+    <text x="706" y="129" text-anchor="middle" class="sm" fill="#4338ca">MII TX</text>
+    <text x="706" y="143" text-anchor="middle" class="sm" fill="#4338ca">x4 pins</text>
+  </g>
+
+  <!-- ===== dataflow arrows (ingress -> xbar -> tx) ===== -->
+  <line x1="124" y1="98"  x2="148" y2="110" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="300" y1="130" x2="334" y2="130" stroke="#334155" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="486" y1="130" x2="520" y2="130" stroke="#334155" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="662" y1="130" x2="674" y2="130" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- ===== injector : rose (feeds RX mux) ===== -->
+  <g>
+    <rect x="150" y="228" width="150" height="86" rx="8" fill="#ffe4e6" stroke="#f43f5e" stroke-width="1.8"/>
+    <text x="225" y="248" text-anchor="middle" class="blk" fill="#be123c">tsn_inject</text>
+    <text x="225" y="265" text-anchor="middle" class="lbl">MII frame injector</text>
+    <text x="225" y="282" text-anchor="middle" class="sm" fill="#9f1239">2 KB word-buffer BRAM</text>
+    <text x="225" y="297" text-anchor="middle" class="sm" fill="#9f1239">preamble+SFD+CRC32</text>
+    <text x="225" y="309" text-anchor="middle" class="sm" fill="#9f1239">rx_src="10" &#8594; port RX</text>
+  </g>
+  <!-- injector feeds ingress RX side -->
+  <path d="M225,228 L225,190" stroke="#f43f5e" stroke-width="1.8" fill="none" marker-end="url(#arr)"/>
+  <text x="234" y="212" class="note" fill="#be123c">inject &#8594; RX mux</text>
+
+  <!-- ===== registers / MMIO : violet ===== -->
+  <g>
+    <rect x="336" y="228" width="150" height="86" rx="8" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.8"/>
+    <text x="411" y="248" text-anchor="middle" class="blk" fill="#6d28d9">tsn_regs</text>
+    <text x="411" y="265" text-anchor="middle" class="lbl">MMIO register bank</text>
+    <text x="411" y="282" text-anchor="middle" class="sm" fill="#5b21b6">table &#183; inject &#183; counters</text>
+    <text x="411" y="297" text-anchor="middle" class="sm" fill="#5b21b6">comb. rdata contract</text>
+    <text x="411" y="309" text-anchor="middle" class="sm" fill="#5b21b6">0x100-1FC: Qbv (phase 2)</text>
+  </g>
+  <!-- regs control lines to xbar & inject -->
+  <path d="M336,258 L300,258" stroke="#8b5cf6" stroke-width="1.4" fill="none" marker-end="url(#arrLite)"/>
+  <path d="M411,228 L411,192" stroke="#8b5cf6" stroke-width="1.4" fill="none" marker-end="url(#arrLite)"/>
+
+  <!-- ===== counters block : orange (tap from xbar) ===== -->
+  <g>
+    <rect x="522" y="228" width="140" height="86" rx="8" fill="#ffedd5" stroke="#fb923c" stroke-width="1.8"/>
+    <text x="592" y="248" text-anchor="middle" class="blk" fill="#c2410c">per-port counters</text>
+    <text x="592" y="266" text-anchor="middle" class="sm" fill="#9a3412">RX / TX / OVF</text>
+    <text x="592" y="281" text-anchor="middle" class="sm" fill="#9a3412">FCS / TAG (802.1Q)</text>
+    <text x="592" y="299" text-anchor="middle" class="sm" fill="#9a3412">4 x 5 = 20 counters</text>
+  </g>
+  <path d="M522,258 L486,200" stroke="#fb923c" stroke-width="1.4" fill="none" marker-end="url(#arr)"/>
+
+  <!-- ===== SoC integration bar : slate ===== -->
+  <g>
+    <rect x="28" y="360" width="708" height="72" rx="10" fill="#f1f5f9" stroke="#475569" stroke-width="1.8"/>
+    <text x="46" y="384" class="blk" fill="#334155">tsn_soc  &#8212;  1-cycle dmem slave  @ 0x6000_0000</text>
+    <text x="46" y="404" class="sm" fill="#64748b">generates mii_ce (/4 = 25 MHz) &#183; rx_src="10" (injector) &#183; combinational rdata</text>
+    <text x="46" y="421" class="sm" fill="#64748b">integrated inside mem_subsys_dma (RV32IM core dmem bus) &#8212; no AXI-Lite wrapper</text>
+  </g>
+  <!-- connect blocks down to soc bar -->
+  <line x1="411" y1="314" x2="411" y2="358" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <line x1="225" y1="314" x2="225" y2="358" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <line x1="592" y1="314" x2="592" y2="358" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 3"/>
+
+  <!-- ===== RV32IM / DMA / DDR chain : indigo + gray ===== -->
+  <g>
+    <rect x="28" y="462" width="150" height="66" rx="8" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1.8"/>
+    <text x="103" y="486" text-anchor="middle" class="blk" fill="#3730a3">RV32IM core</text>
+    <text x="103" y="503" text-anchor="middle" class="sm" fill="#3730a3">5-stage pipeline</text>
+    <text x="103" y="518" text-anchor="middle" class="sm" fill="#3730a3">firmware bring-up</text>
+  </g>
+  <g>
+    <rect x="214" y="462" width="150" height="66" rx="8" fill="#cffafe" stroke="#06b6d4" stroke-width="1.8"/>
+    <text x="289" y="486" text-anchor="middle" class="blk" fill="#0e7490">dma_burst</text>
+    <text x="289" y="503" text-anchor="middle" class="sm" fill="#0e7490">AXI4 burst master</text>
+    <text x="289" y="518" text-anchor="middle" class="sm" fill="#0e7490">4 KB boundary split</text>
+  </g>
+  <g>
+    <rect x="400" y="462" width="160" height="66" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.8"/>
+    <text x="480" y="486" text-anchor="middle" class="blk" fill="#374151">DDR reserved</text>
+    <text x="480" y="503" text-anchor="middle" class="sm" fill="#374151">0x7000_0000 (no-map)</text>
+    <text x="480" y="518" text-anchor="middle" class="sm" fill="#374151">signature + sentinel</text>
+  </g>
+  <g>
+    <rect x="596" y="462" width="140" height="66" rx="8" fill="#fae8ff" stroke="#c026d3" stroke-width="1.8"/>
+    <text x="666" y="486" text-anchor="middle" class="blk" fill="#a21caf">PS (A72)</text>
+    <text x="666" y="503" text-anchor="middle" class="sm" fill="#a21caf">doorbell IRQ</text>
+    <text x="666" y="518" text-anchor="middle" class="sm" fill="#a21caf">reads &amp; verifies</text>
+  </g>
+
+  <!-- chain arrows -->
+  <line x1="103" y1="432" x2="103" y2="460" stroke="#334155" stroke-width="1.4" marker-end="url(#arr)"/>
+  <line x1="178" y1="495" x2="212" y2="495" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="364" y1="495" x2="398" y2="495" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+  <line x1="560" y1="495" x2="594" y2="495" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- signature footer -->
+  <text x="732" y="548" text-anchor="end" class="note">silicon PASS &#183; TE0950 (Versal xcve2302) &#183; ISS SIG 64476b7f</text>
+</svg>
