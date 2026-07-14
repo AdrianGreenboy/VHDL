@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg    { fill: #f0eaf7; }
+      .box   { fill: #ffffff; stroke: #6b4fa0; stroke-width: 1.5; }
+      .node  { fill: #e6dcf3; stroke: #6b4fa0; stroke-width: 1.5; }
+      .hdr   { fill: #6b4fa0; }
+      .lyr   { fill: #d9c9ee; stroke: #6b4fa0; stroke-width: 1.2; }
+      .ttl   { fill: #3a2a5a; font-size: 15px; font-weight: 700; }
+      .lbl   { fill: #3a2a5a; font-size: 11px; }
+      .lblw  { fill: #ffffff; font-size: 12px; font-weight: 700; }
+      .sub   { fill: #6b4fa0; font-size: 9.5px; }
+      .pipe  { stroke: #6b4fa0; stroke-width: 2; fill: none; }
+      .arr   { stroke: #6b4fa0; stroke-width: 1.4; fill: none; marker-end: url(#ah); }
+    </style>
+    <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#6b4fa0"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="760" height="560" rx="8"/>
+  <text class="ttl" x="24" y="34">PCIe soft IP v1 — RV32IM SoC (Trenz TE0950 / Versal xcve2302)</text>
+  <text class="sub" x="24" y="52">x1 lane · 8-bit PIPE · Gen1 logical · dual EP/RC · LOOP_INT validation · MIT</text>
+
+  <!-- RV32 bus -->
+  <rect class="hdr" x="24" y="70" width="712" height="30" rx="4"/>
+  <text class="lblw" x="380" y="90" text-anchor="middle">RV32IM SoC — dmem bus (AXI-Lite @ 0x80000000) · DMA doorbell @ DDR 0x70000000</text>
+
+  <!-- Two MMIO peripherals: RC and EP -->
+  <!-- RC column -->
+  <rect class="box" x="24" y="120" width="340" height="380" rx="6"/>
+  <text class="ttl" x="194" y="142" text-anchor="middle" font-size="13">pcie_mmio  (is_rc = true)  —  Root Complex</text>
+
+  <!-- EP column -->
+  <rect class="box" x="396" y="120" width="340" height="380" rx="6"/>
+  <text class="ttl" x="566" y="142" text-anchor="middle" font-size="13">pcie_mmio  (is_rc = false)  —  Endpoint</text>
+
+  <!-- MMIO register bank RC -->
+  <rect class="node" x="40" y="156" width="308" height="40" rx="4"/>
+  <text class="lbl" x="194" y="173" text-anchor="middle" font-weight="700">MMIO register bank + TX/RX byte FIFOs</text>
+  <text class="sub" x="194" y="188" text-anchor="middle">CONTROL·STATUS·IRQ·TX_DATA·RX_DATA·BAR0·MSI·DBG_STATE</text>
+
+  <!-- node RC -->
+  <rect class="node" x="40" y="206" width="308" height="284" rx="4"/>
+  <text class="lbl" x="194" y="224" text-anchor="middle" font-weight="700">pcie_node</text>
+
+  <!-- layers inside RC node -->
+  <rect class="lyr" x="56" y="234" width="276" height="34" rx="3"/>
+  <text class="lbl" x="194" y="255" text-anchor="middle">TL — pcie_tl_ep (MWr/MRd/Cpl/CfgRd0/CfgWr0/MSI)</text>
+
+  <rect class="lyr" x="56" y="276" width="130" height="60" rx="3"/>
+  <text class="lbl" x="121" y="300" text-anchor="middle">DLL TX</text>
+  <text class="sub" x="121" y="316" text-anchor="middle">seq12·LCRC32</text>
+  <text class="sub" x="121" y="328" text-anchor="middle">replay·credits</text>
+
+  <rect class="lyr" x="202" y="276" width="130" height="60" rx="3"/>
+  <text class="lbl" x="267" y="300" text-anchor="middle">DLL RX</text>
+  <text class="sub" x="267" y="316" text-anchor="middle">ACK/NAK·CRC16</text>
+  <text class="sub" x="267" y="328" text-anchor="middle">rx_adapt</text>
+
+  <rect class="lyr" x="56" y="344" width="276" height="30" rx="3"/>
+  <text class="lbl" x="194" y="363" text-anchor="middle">LTSSM — Detect→Polling→Config→L0 · Recovery · Loopback</text>
+
+  <rect class="lyr" x="56" y="382" width="130" height="44" rx="3"/>
+  <text class="lbl" x="121" y="401" text-anchor="middle">framer</text>
+  <text class="sub" x="121" y="415" text-anchor="middle">STP/END·SKP·gap</text>
+
+  <rect class="lyr" x="202" y="382" width="130" height="44" rx="3"/>
+  <text class="lbl" x="267" y="401" text-anchor="middle">deframer</text>
+  <text class="sub" x="267" y="415" text-anchor="middle">token decode</text>
+
+  <rect class="lyr" x="56" y="434" width="276" height="44" rx="3"/>
+  <text class="lbl" x="194" y="453" text-anchor="middle">PHY — scrambler (LFSR) + 8b/10b + running disparity</text>
+  <text class="sub" x="194" y="469" text-anchor="middle">8-bit PIPE (pt_sym/pt_k · pr_sym/pr_k)</text>
+
+  <!-- layers inside EP node (mirror) -->
+  <rect class="node" x="412" y="156" width="308" height="40" rx="4"/>
+  <text class="lbl" x="566" y="173" text-anchor="middle" font-weight="700">MMIO register bank + TX/RX byte FIFOs</text>
+  <text class="sub" x="566" y="188" text-anchor="middle">config space Type 0 · BAR0 (BRAM) · MSI cap</text>
+
+  <rect class="node" x="412" y="206" width="308" height="284" rx="4"/>
+  <text class="lbl" x="566" y="224" text-anchor="middle" font-weight="700">pcie_node</text>
+
+  <rect class="lyr" x="428" y="234" width="276" height="34" rx="3"/>
+  <text class="lbl" x="566" y="255" text-anchor="middle">TL — pcie_tl_ep (completer · BAR0 decode · CplD · MSI)</text>
+
+  <rect class="lyr" x="428" y="276" width="130" height="60" rx="3"/>
+  <text class="lbl" x="493" y="300" text-anchor="middle">DLL TX</text>
+  <text class="sub" x="493" y="316" text-anchor="middle">seq12·LCRC32</text>
+  <text class="sub" x="493" y="328" text-anchor="middle">replay·credits</text>
+
+  <rect class="lyr" x="574" y="276" width="130" height="60" rx="3"/>
+  <text class="lbl" x="639" y="300" text-anchor="middle">DLL RX</text>
+  <text class="sub" x="639" y="316" text-anchor="middle">ACK/NAK·CRC16</text>
+  <text class="sub" x="639" y="328" text-anchor="middle">rx_adapt</text>
+
+  <rect class="lyr" x="428" y="344" width="276" height="30" rx="3"/>
+  <text class="lbl" x="566" y="363" text-anchor="middle">LTSSM — Detect→Polling→Config→L0 · Recovery · Loopback</text>
+
+  <rect class="lyr" x="428" y="382" width="130" height="44" rx="3"/>
+  <text class="lbl" x="493" y="401" text-anchor="middle">framer</text>
+  <text class="sub" x="493" y="415" text-anchor="middle">STP/END·SKP·gap</text>
+
+  <rect class="lyr" x="574" y="382" width="130" height="44" rx="3"/>
+  <text class="lbl" x="639" y="401" text-anchor="middle">deframer</text>
+  <text class="sub" x="639" y="415" text-anchor="middle">token decode</text>
+
+  <rect class="lyr" x="428" y="434" width="276" height="44" rx="3"/>
+  <text class="lbl" x="566" y="453" text-anchor="middle">PHY — scrambler (LFSR) + 8b/10b + running disparity</text>
+  <text class="sub" x="566" y="469" text-anchor="middle">8-bit PIPE (pt_sym/pt_k · pr_sym/pr_k)</text>
+
+  <!-- dmem arrows -->
+  <path class="arr" d="M194,100 L194,156"/>
+  <path class="arr" d="M566,100 L566,156"/>
+
+  <!-- PIPE loopback between the two PHYs -->
+  <path class="pipe" d="M332,456 C360,456 368,456 396,456"/>
+  <path class="pipe" d="M332,468 C360,468 368,468 396,468"/>
+  <text class="sub" x="364" y="450" text-anchor="middle">PIPE</text>
+  <text class="sub" x="364" y="486" text-anchor="middle">LOOP_INT</text>
+
+  <!-- footer -->
+  <rect class="hdr" x="24" y="516" width="712" height="28" rx="4"/>
+  <text class="lblw" x="380" y="534" text-anchor="middle" font-size="11">Verification: 5 layers · deterministic bit-identical end-timestamps · Python ISS oracle (Layer 4) · GHDL 4.1.0 --std=08</text>
+</svg>
