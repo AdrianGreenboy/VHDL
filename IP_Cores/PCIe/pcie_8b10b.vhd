@@ -69,14 +69,17 @@ end entity;
 
 architecture rtl of pcie_8b10b_dec is
 
-  type dec_entry_t is record
-    vn, vp : std_logic;      -- valido entrando con RD- / RD+
-    isk    : std_logic;
-    data   : byte_t;
-    rdn    : std_logic;      -- RD resultante si se entro con RD-
-    rdp    : std_logic;      -- RD resultante si se entro con RD+
-  end record;
-  type lut_t is array (0 to 1023) of dec_entry_t;
+  -- LUT PLANA (BRAM-friendly): cada codigo de 10 bits mapea a un vector de 13
+  -- bits empaquetado, en vez de un record. Esto permite que Vivado la infiera
+  -- como ROM en block RAM (records con lectura combinacional entrelazada NO se
+  -- empacan y saturan las LUTs). Layout del vector:
+  --   bit 12 = vn   (valido entrando con RD-)
+  --   bit 11 = vp   (valido entrando con RD+)
+  --   bit 10 = isk  (simbolo K)
+  --   bit  9 = rdn  (RD resultante si se entro con RD-)
+  --   bit  8 = rdp  (RD resultante si se entro con RD+)
+  --   bits 7..0 = data
+  type lut_t is array (0 to 1023) of std_logic_vector(12 downto 0);
 
   -- Imagen completa del encoder: 256 D + 12 K, ambas RD de entrada.
   function f_build_lut return lut_t is
@@ -90,40 +93,54 @@ architecture rtl of pcie_8b10b_dec is
                            -- K28.4, K28.6, K28.7 completan el set legal
   begin
     for i in 0 to 1023 loop
-      l(i) := ('0', '0', '0', x"00", '0', '0');
+      l(i) := (others => '0');
     end loop;
     for i in 0 to 255 loop
       b := std_logic_vector(to_unsigned(i, 8));
       for rdi in 0 to 1 loop
         r := f_enc(b, '0', std_logic'val(rdi + 2)); -- '0'/'1'
         idx := to_integer(unsigned(r.code));
-        l(idx).data := b;
-        l(idx).isk  := '0';
-        if rdi = 0 then l(idx).vn := '1'; l(idx).rdn := r.rd;
-        else            l(idx).vp := '1'; l(idx).rdp := r.rd; end if;
+        l(idx)(7 downto 0) := b;       -- data
+        l(idx)(10)         := '0';     -- isk
+        if rdi = 0 then
+          l(idx)(12) := '1';           -- vn
+          l(idx)(9)  := r.rd;          -- rdn
+        else
+          l(idx)(11) := '1';           -- vp
+          l(idx)(8)  := r.rd;          -- rdp
+        end if;
       end loop;
     end loop;
     for ki in KV'range loop
       for rdi in 0 to 1 loop
         r := f_enc(KV(ki), '1', std_logic'val(rdi + 2));
         idx := to_integer(unsigned(r.code));
-        l(idx).data := KV(ki);
-        l(idx).isk  := '1';
-        if rdi = 0 then l(idx).vn := '1'; l(idx).rdn := r.rd;
-        else            l(idx).vp := '1'; l(idx).rdp := r.rd; end if;
+        l(idx)(7 downto 0) := KV(ki);  -- data
+        l(idx)(10)         := '1';     -- isk
+        if rdi = 0 then
+          l(idx)(12) := '1';           -- vn
+          l(idx)(9)  := r.rd;          -- rdn
+        else
+          l(idx)(11) := '1';           -- vp
+          l(idx)(8)  := r.rd;          -- rdp
+        end if;
       end loop;
     end loop;
     return l;
   end function;
 
   constant LUT : lut_t := f_build_lut;
+  attribute rom_style : string;
+  attribute rom_style of LUT : constant is "block";
 
   signal rd_q : std_logic := '0';
 
 begin
 
   process(clk)
-    variable e : dec_entry_t;
+    variable e   : std_logic_vector(12 downto 0);
+    variable evn, evp, eisk, erdn, erdp : std_logic;
+    variable edata : byte_t;
   begin
     if rising_edge(clk) then
       if rst = '1' then
@@ -133,22 +150,28 @@ begin
         code_err <= '0';
         disp_err <= '0';
       elsif en = '1' then
-        e := LUT(to_integer(unsigned(din)));
+        e     := LUT(to_integer(unsigned(din)));
+        evn   := e(12);
+        evp   := e(11);
+        eisk  := e(10);
+        erdn  := e(9);
+        erdp  := e(8);
+        edata := e(7 downto 0);
         code_err <= '0';
         disp_err <= '0';
-        dout     <= e.data;
-        kout     <= e.isk;
-        if e.vn = '0' and e.vp = '0' then
+        dout     <= edata;
+        kout     <= eisk;
+        if evn = '0' and evp = '0' then
           code_err <= '1';
           kout     <= '0';
-        elsif rd_q = '0' and e.vn = '1' then
-          rd_q <= e.rdn;
-        elsif rd_q = '1' and e.vp = '1' then
-          rd_q <= e.rdp;
+        elsif rd_q = '0' and evn = '1' then
+          rd_q <= erdn;
+        elsif rd_q = '1' and evp = '1' then
+          rd_q <= erdp;
         else
           -- Valido solo para la otra RD: error de disparidad + resync
           disp_err <= '1';
-          if e.vn = '1' then rd_q <= e.rdn; else rd_q <= e.rdp; end if;
+          if evn = '1' then rd_q <= erdn; else rd_q <= erdp; end if;
         end if;
       end if;
     end if;

@@ -100,7 +100,15 @@ architecture rtl of pcie_dll_tx is
   function seq_lo(s : seq_t) return byte_t is
   begin return std_logic_vector(s(7 downto 0)); end function;
   function sdist(a, b : seq_t) return integer is
-  begin return (to_integer(a) - to_integer(b)) mod 4096; end function;
+    -- Distancia modular de numeros de secuencia de 12 bits. Se calcula como
+    -- resta en unsigned de 12 bits (envuelve naturalmente a 2^12), lo que
+    -- equivale a (a-b) mod 4096 pero sin lógica de division/mod con signo:
+    -- el 'mod' original saturaba la sintesis al replicarse en bucles.
+    variable d : unsigned(11 downto 0);
+  begin
+    d := a - b;                 -- resta modular 12-bit (wrap-around implicito)
+    return to_integer(d);
+  end function;
 begin
 
   -- inflight se DERIVA de slot_used para evitar la colision incremento/
@@ -212,7 +220,8 @@ begin
                 slot_len(wr_slot)  <= cur_len;
                 slot_used(wr_slot) <= '1';
                 wr_ptr  <= cur_base + cur_len;
-                wr_slot <= (wr_slot + 1) mod REPLAY_SLOTS;
+                if wr_slot = REPLAY_SLOTS-1 then wr_slot <= 0;
+                else wr_slot <= wr_slot + 1; end if;
                 nseq    <= nseq + 1;
                 st <= T_IDLE;
               else

@@ -61,14 +61,15 @@ architecture rtl of pcie_dll_rx is
   signal good    : unsigned(15 downto 0) := (others => '0');
   signal bad     : unsigned(15 downto 0) := (others => '0');
 
-  -- buffer de payload para reentrega (solo si bueno). Para v1 emitimos el
-  -- payload "provisional" hacia TL con un valid retardado que se confirma solo
-  -- si el CRC es correcto: usamos un pequeno FIFO de MAX bytes.
-  constant PBUF : integer := 64;
-  type pbuf_t is array (0 to PBUF-1) of byte_t;
-  signal pb   : pbuf_t := (others => (others=>'0'));
-  signal plen : integer range 0 to PBUF := 0;
-  signal po   : integer range 0 to PBUF := 0;
+  -- Pipeline de retardo de 4 bytes: conforme llegan bytes en R_PAY, el byte
+  -- "de hace 4" es payload confirmado y se acumula al CRC incrementalmente
+  -- (UN f_crc32_byte por ciclo). Los 4 bytes que quedan en el pipeline al
+  -- llegar in_last son el LCRC recibido. Esto reemplaza al buffer de 64 bytes
+  -- + bucle de 64 CRCs encadenados combinacionalmente en R_CHECK, que
+  -- generaba ~600 niveles de logica XOR y saturaba la sintesis.
+  type dly_t is array (0 to 3) of byte_t;
+  signal dly    : dly_t := (others => (others=>'0'));
+  signal dcount : integer range 0 to 4 := 0;
 
   signal seqhi : byte_t := (others=>'0');
 begin
@@ -89,7 +90,7 @@ begin
       if rst = '1' then
         st <= R_IDLE; next_rx <= (others=>'0'); crc <= LCRC_SEED;
         ci <= 0; good <= (others=>'0'); bad <= (others=>'0');
-        plen <= 0; po <= 0;
+        dcount <= 0;
         tl_valid <= '0'; tl_last <= '0';
         ak_req <= '0'; ak_is_nak <= '0'; ak_seq <= (others=>'0');
       else
@@ -101,7 +102,7 @@ begin
             if in_valid = '1' and in_start = '1' then
               seqhi <= in_data;
               crc <= f_crc32_byte(LCRC_SEED, in_data);
-              plen <= 0;
+              dcount <= 0;
               st <= R_SEQLO;
             end if;
 
@@ -115,17 +116,19 @@ begin
 
           when R_PAY =>
             if in_valid = '1' then
-              -- Los ultimos 4 bytes antes de last son el LCRC. Detectamos el
-              -- LCRC por in_last: acumulamos en un shift de 4 y tratamos el
-              -- resto como payload. Estrategia: buffer de 4 bytes de retardo.
-              -- Simplificacion robusta: como conocemos in_last marca el 4o byte
-              -- de CRC, usamos un pipeline de 4. Aqui: si faltan >4 para last,
-              -- es payload. Implementamos con contador desde last no disponible;
-              -- por eso usamos R_CRC explicito basado en un delay de 4 bytes.
-              -- --> Implementacion por retardo de 4:
-              -- almacenamos en pb y solo confirmamos payload cuando entran mas.
-              pb(plen) <= in_data;
-              plen <= plen + 1;
+              -- Pipeline de retardo de 4 bytes: los primeros 4 bytes solo
+              -- llenan el pipeline; a partir del 5o, el byte mas viejo
+              -- (dly(0)) es payload confirmado y se acumula al CRC (un solo
+              -- f_crc32_byte por ciclo). Al llegar in_last, los 4 bytes que
+              -- quedan en el pipeline son el LCRC recibido.
+              if dcount < 4 then
+                dly(dcount) <= in_data;
+                dcount <= dcount + 1;
+              else
+                crc <= f_crc32_byte(crc, dly(0));
+                dly(0) <= dly(1); dly(1) <= dly(2); dly(2) <= dly(3);
+                dly(3) <= in_data;
+              end if;
               if in_last = '1' then
                 st <= R_CHECK;
               end if;
@@ -135,20 +138,14 @@ begin
             null;
         end case;
 
-        -- ------- R_CHECK: separar payload de los 4 bytes de LCRC -------
+        -- ------- R_CHECK: el CRC ya acumulo el payload (via pipeline) -------
         if st = R_CHECK then
           good_tlp := false;
-          c := crc;                 -- ya incluye seq_hi/seq_lo
-          n := plen - 4;            -- bytes de payload
-          for i in 0 to PBUF-1 loop
-            if i < n then
-              c := f_crc32_byte(c, pb(i));
-            end if;
-          end loop;
-          c := f_lcrc_final(c);
-          -- LCRC recibido en orden de transmision: pb(n)=lcrc0 ... pb(n+3)=lcrc3
-          -- f_lcrc_final devuelve r(7:0)=lcrc0 ... r(31:24)=lcrc3
-          rxc := pb(n+3) & pb(n+2) & pb(n+1) & pb(n);
+          -- crc ya incluye seq_hi/seq_lo + payload (bytes retardados). Los 4
+          -- bytes del pipeline son el LCRC recibido en orden de transmision:
+          -- dly(0)=lcrc0 ... dly(3)=lcrc3.
+          c := f_lcrc_final(crc);
+          rxc := dly(3) & dly(2) & dly(1) & dly(0);
           if c = rxc then good_tlp := true; end if;
 
           seq_i := to_integer(cur_seq);

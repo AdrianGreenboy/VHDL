@@ -86,6 +86,7 @@ IP_Cores/<CORE>/
 | **[SPI](IP_Cores/SPI/)** | **SPI master** controller (all 4 modes), memory-mapped, with DMA echo self-test. | **SILICON PASS** — SCLK 12.5/25/50 MHz, WNS +2.18 ns |
 | **[IIC](IP_Cores/IIC/)** | **I²C** controller (master **and** slave engines), memory-mapped, with wired-AND `LOOP_INT` self-test. | **SILICON PASS** — 100k/400k/1M, WNS +2.958 ns |
 | **[I3C](IP_Cores/I3C/)** | **MIPI I3C Basic (SDR)** controller **and** target — ENTDAA, private R/W, T-bit seize, IBI with mandatory byte. | **SILICON PASS** — 3.125/6.25/12.5 MHz push-pull, WNS +2.844 ns |
+| **[PCIe](IP_Cores/PCIe/)** | **PCI Express** soft stack (fully in fabric, no hard block, no GTYP): scrambler + real **8b/10b**, ordered-set framing, full **LTSSM** (Detect→Polling→Config→L0, Recovery/HotReset), **DLL** with 12-bit seq / LCRC-32 / replay buffer / ACK-NAK, and a **TL** with MWr/MRd/CplD/config-space/MSI. Validated by cross-wiring a **Root Complex + Endpoint** over an internal PIPE loopback (`LOOP_INT`) and driving real TLPs from the RV32. | **SILICON PASS** — link trains to **L0**, MWr/MRd/CplD signature bit-identical sim↔silicon, WNS +0.683 ns |
 
 ## Getting started in five minutes
 

@@ -1,273 +1,365 @@
 # PCIe Soft IP (v1) — RV32IM SoC on Trenz TE0950 / AMD Versal xcve2302
 
-A protocol-complete, fully soft **PCI Express** stack in VHDL-2008, built as a
+A protocol-complete, fully **soft** PCI Express stack in VHDL-2008, built as a
 tutorial-quality open-source IP core for a custom RV32IM SoC. The stack spans
 the physical coding sublayer up through the transaction layer and a
-memory-mapped register interface, and is validated end-to-end by wiring two
-instances (Root Complex + Endpoint) PIPE-to-PIPE in internal loopback.
+memory-mapped register interface, and is validated **end-to-end in silicon** by
+wiring two instances (Root Complex + Endpoint) PIPE-to-PIPE in internal loopback
+on real hardware.
+
+> **Status: silicon-validated (PASS) on Trenz TE0950 / AMD Versal xcve2302.**
+> The link trains to **L0** and the stack executes real TLP transactions
+> (MWr, MRd, CplD) between an on-chip Root Complex and Endpoint.
 
 Part of a silicon-validated family of MIT-licensed IP cores (USART, SPI, IIC,
 I3C, CAN, SpaceWire, MIL-STD-1553B, Ethernet MAC, PTP, DSP, ADCS, SDN-TSN).
 
-- **Target:** AMD Versal xcve2302-sfva784-1LP-e-S (Trenz TE0950)
-- **Toolchain:** GHDL 4.1.0 `--std=08`, Vivado / PetaLinux 2025.2.1
-- **License:** MIT
+![PCIe soft IP architecture](architecture.svg)
 
 ---
 
-## 1. Why a fully soft stack
+## 1. Prerequisites
 
-The xcve2302 has a hardened PL PCIE4 block and GTYP transceivers, but the TE0950
-board exposes **no PCIe edge connector**, so hard-block silicon validation is
-physically impossible on this board. The chosen approach is a fully soft,
-protocol-complete stack validated through an **internal PIPE loopback**
-(LOOP_INT): two nodes are instantiated, one configured as Root Complex and one
-as Endpoint, and their 8-bit PIPE interfaces are cross-wired. No new pins are
-required. This is consistent with the rest of the IP family, which favours
-self-contained, simulation-anchored validation.
+**Hardware**
 
----
+- Trenz **TE0950** board with an AMD **Versal xcve2302-sfva784-1LP-e-S**.
+- A microSD card (the only file-transfer path to the board; no inbound SSH).
+- A USB-serial console (picocom @ `115200 8N1`).
 
-## 2. Architecture
+**Software / toolchain**
 
-![PCIe soft IP architecture](pcie_arch.svg)
+- **GHDL 4.1.0** with `--std=08` (all simulation).
+- **Vivado / PetaLinux 2025.2.1** (`settings64.sh` / `settings.sh` sourced).
+- An `aarch64-linux-gnu-gcc` cross-compiler (for the PS-side verifier).
+- The RV32IM SoC sources and the mini-assembler `asm.py` from this repository.
 
-The stack is organised as conventional PCIe layers, each a separate VHDL entity:
+**Knowledge**
 
-- **PHY** — `pcie_scrambler` (LFSR X¹⁶+X⁵+X⁴+X³+1), `pcie_8b10b` (real 8b/10b
-  with running-disparity tracking), presented over an 8-bit PIPE.
-- **Framing** — `pcie_framer` / `pcie_deframer` insert and recover STP/SDP/END/EDB
-  ordered sets and SKP.
-- **LTSSM** — `pcie_ltssm` runs Detect → Polling → Config → L0, plus Recovery,
-  Hot Reset and Loopback; `pcie_ts_gen` produces the TS1/TS2 training sequences.
-- **DLL** — `pcie_dll_tx` / `pcie_dll_rx` provide 12-bit sequence numbers, a
-  32-bit LCRC, a replay buffer, and ACK/NAK DLLPs with CRC-16.
-- **TL** — `pcie_tl_ep` implements MWr/MRd (3DW/4DW), Cpl/CplD, CfgRd0/CfgWr0,
-  a Type-0 config space, and MSI generation.
-- **Adapter** — `pcie_rx_adapt` turns deframer tokens into the byte streams the
-  DLL RX and TL expect; `pcie_tlp_frame` couples the TL output to the DLL TX
-  with a one-slot AXI skid buffer and backpressure.
-- **Node** — `pcie_node` wires one full lane together; `pcie_mmio` wraps a node
-  with a register bank and TX/RX byte FIFOs so the RV32 can drive it over the
-  dmem bus.
+- Basic PCIe layering (PHY / DLL / TL) and the LTSSM state flow.
+- Familiarity with the RV32IM SoC bring-up flow used by the rest of the family
+  (dmem-mapped peripherals, DMA doorbell to DDR, BOOT.BIN packaging).
 
 ---
 
-## 3. Frozen v1 scope
+## 2. What this core is for
 
-Scope was frozen before any RTL was written:
+This IP core provides a **complete, synthesizable PCIe protocol stack** that runs
+entirely in FPGA fabric — no hard PCIE block, no transceivers, no board edge
+connector. It is useful when you need to:
 
-- Dual EP/RC role, switchable by a register generic
-- Single lane (x1), 8-bit PIPE with real 8b/10b and running disparity
-- Gen1 logical framing; LFSR scrambler with K-symbol bypass
-- Full LTSSM (Detect → L0, Recovery, Hot Reset, Loopback)
-- DLL: 12-bit sequence numbers, LCRC-32, DLLP ACK/NAK with CRC-16, replay
-  buffer, flow-control credit types for P/NP/Cpl
-- TL: MWr/MRd 3DW/4DW, Cpl/CplD, CfgRd0/CfgWr0, Msg, ECRC, MSI
-- Validation in LOOP_INT: RC enumerates the EP, programs BAR0, runs an MWr/MRd
-  burst, triggers MSI, and validates through a DMA doorbell to DDR `0x70000000`
+- **Study or teach** the PCIe stack end-to-end with readable VHDL: every layer
+  (scrambler, 8b/10b, framing, LTSSM, DLL with LCRC/replay, TL with TLPs) is a
+  separate, self-contained entity.
+- **Prototype PCIe logic** (enumeration, BAR programming, memory read/write,
+  completions, MSI) on a board that has **no physical PCIe connector**, by
+  cross-wiring a Root Complex and an Endpoint over an internal PIPE loopback
+  (`LOOP_INT`).
+- **Drive PCIe transactions from a soft CPU** — the RV32IM issues MWr/MRd through
+  a simple memory-mapped register bank, exactly as firmware would talk to a real
+  controller.
+- **Serve as a reference** for how to take a large combinational-heavy protocol
+  stack all the way through synthesis, implementation, timing closure and
+  silicon bring-up on Versal.
 
-Deferred to later revisions: x2/x4 lanes, 128b/130b Gen3 encoding, and a real
-GTYP physical connection.
-
----
-
-## 4. Register map (MMIO)
-
-Base address `0x80000000` (AXI-Lite, M_AXI_LPD, 64 KB window). Offsets are byte
-offsets; `rdata` is combinational.
-
-| Offset | Name | Notes |
-|-------:|------|-------|
-| 0x00 | CONTROL | bit0 start · bit1 hot-reset · bit2 msi · bit3 enable |
-| 0x04 | STATUS | bit0 link_up · bits[7:4] LTSSM state |
-| 0x08 | IRQ_STAT | W1C · bit0 cpl_rx · bit1 msi_tx |
-| 0x0C | IRQ_EN | interrupt enable mask |
-| 0x10 | TX_DATA | write byte[7:0]; bit8 = last byte of TLP |
-| 0x14 | TX_CTRL | TX control / status |
-| 0x18 | RX_DATA | read byte[7:0] from RX FIFO (auto-advances) |
-| 0x1C | RX_CTRL | bit0 rx_empty · bits[15:8] level |
-| 0x20 | BAR0_LAST | last DW written to the EP's BAR0 |
-| 0x24 | MWR_CNT | memory-write count (completer) |
-| 0x28 | MRD_CNT | memory-read count (completer) |
-| 0x2C | GOOD_RX | good TLPs received |
-| 0x30 | MSI_ADDR | MSI address mirror |
-| 0x34 | MSI_DATA | MSI data mirror |
-| 0x38 | FC_STAT | flow-control credit status |
-| 0x44 | DBG_STATE | debug state (silicon bring-up) |
+The xcve2302 *does* have a hardened PL PCIE4 block and GTYP transceivers, but the
+TE0950 exposes **no PCIe edge connector**, so hard-block silicon validation is
+physically impossible on this board. A fully soft, loopback-validated stack is
+the pragmatic, self-contained alternative — and it doubles as documentation.
 
 ---
 
-## 5. Verification methodology
+## 3. How to use this core
 
-Verification is non-negotiable and layered. Each layer has a **deterministic,
-bit-identical end-timestamp** as its pass criterion, so a run on the developer's
-machine and a run in a clean container must match to the femtosecond.
+### 3.1 Instantiation model
 
-1. **Layer 1a** — TX engine vs an independent event-driven model.
-2. **Layer 1b** — RX engine vs a bit-bang model with injected corruptions.
-3. **Layer 1c** — RTL vs RTL, full duplex, plus a Phase-0 anti-common-mode test
-   (partner powered off: the link must time out, closing the blind spot where
-   two identical instances sharing a defect would still interoperate).
-4. **Layer 2** — MMIO register bank vs a dmem BFM, with combinational `rdata`
-   enforced.
-5. **Layer 4** — full SoC with real RV32 firmware plus a Python ISS oracle,
-   signature dumped by DMA doorbell to DDR.
+The unit of reuse is `pcie_node` (one full lane). `pcie_mmio` wraps a node with
+a register bank and TX/RX byte FIFOs so a CPU can drive it over a dmem bus. For
+the LOOP_INT bring-up, `pcie_soc_mmio` instantiates **two** `pcie_mmio` blocks —
+one Root Complex, one Endpoint — and cross-wires their 8-bit PIPE interfaces
+(TX→RX both ways). The pair is decoded by `addr(8)`: `0` = RC, `1` = EP.
 
-The Layer 4 oracle (`pcie_iss.py`) is written **before** the testbench; the
-firmware is checked against it, then the RTL is compared against the same
-signature. Mutations are expected to fail at each layer.
+In the SoC, the pair lives in the dmem region `is_pcie = 0x8` (base
+`0x8000_0000`; the EP bank at `0x8000_0100`). The RV32 firmware programs both
+banks, trains the link, issues TLPs, and reads back the counters.
+
+### 3.2 Register map (per bank, byte offsets)
+
+| Offset | Name       | Access | Meaning                                  |
+|-------:|------------|:------:|------------------------------------------|
+| `0x00` | CONTROL    | rw     | bit0 = start, bit3 = enable (`0x9` = both) |
+| `0x04` | STATUS     | ro     | bit0 = link_up; bits[7:4] = LTSSM state  |
+| `0x10` | TX_DATA    | wo     | byte into TX FIFO; bit8 = last of TLP     |
+| `0x18` | RX_DATA    | ro     | pop one byte from RX FIFO (auto-advance)  |
+| `0x1C` | RX_CTRL    | ro     | bits[15:8] = RX FIFO level                |
+| `0x20` | BAR0_LAST  | ro     | last DW written to BAR0 (on the EP)       |
+| `0x24` | MWR_CNT    | ro     | count of MWr received (on the EP)         |
+
+> **Key rule:** MWr is *sent* by the RC and *received* by the EP. Read
+> `MWR_CNT` and `BAR0_LAST` from the **EP bank** (`0x8000_0120/0124`), not the
+> RC. A completion (CplD) flows the other way, so the RC reads it back.
+
+### 3.3 Bring-up signature
+
+The firmware dumps a 5-word signature (plus an end marker) to DDR via the DMA
+doorbell. A PASS is an exact match against the ISS oracle:
+
+| DDR word | Field      | Expected     |
+|---------:|------------|--------------|
+| `[0]`    | link_up    | `0x00000001` |
+| `[1]`    | mwr_cnt    | `0x00000004` |
+| `[2]`    | bar0_last  | `0x44444444` |
+| `[3]`    | cpld_b0    | `0x0000004A` |
+| `[4]`    | mrd_data   | `0x33333333` |
+| `[5]`    | marker     | `0x0C0FFEE0` |
 
 ---
 
-## 6. Build and simulate
+## 4. Linux (bash) commands
 
-Each build step is a single self-contained bash script that writes its sources,
-re-analyses the full hierarchy in one `ghdl -a` invocation (with a clean cache),
-and runs, printing exactly one deterministic pass line.
+### 4.1 Simulate the whole stack (GHDL)
 
 ```bash
-cd ~/pcie_ip
-bash pcie_paso1_8b10b.sh    # PHY codec
-bash pcie_paso2_phy.sh      # scrambler + framing
-bash pcie_paso3_ltssm.sh    # LTSSM + deframer
-bash pcie_paso4_dll.sh      # data link layer
-bash pcie_paso5_tl.sh       # transaction layer
-bash pcie_paso6_loop.sh     # LOOP_INT integration
-bash pcie_paso7_mmio.sh     # MMIO register interface
-bash pcie_paso8_soc.sh      # Layer 4: SoC + firmware + ISS oracle
+cd ~/rv32i
+rm -f work-obj08.cf
+ghdl -a --std=08 \
+  pcie_8b10b_pkg.vhd pcie_phy_pkg.vhd pcie_ltssm_pkg.vhd pcie_dll_pkg.vhd \
+  pcie_tl_pkg.vhd pcie_mmio_pkg.vhd \
+  pcie_8b10b.vhd pcie_scrambler.vhd pcie_framer.vhd pcie_deframer.vhd \
+  pcie_ltssm.vhd pcie_ts_gen.vhd pcie_dll_tx.vhd pcie_dll_rx.vhd \
+  pcie_tl_ep.vhd pcie_rx_adapt.vhd pcie_tlp_frame.vhd byte_fifo.vhd \
+  pcie_node.vhd pcie_mmio.vhd pcie_soc_mmio.vhd
+
+# run one layer (each has a deterministic, bit-identical end-timestamp)
+ghdl -a --std=08 tb_loop.vhd && ghdl -e --std=08 tb_loop
+ghdl -r --std=08 tb_loop --stop-time=30ms   # expect: PASS @ 5805000000 fs
 ```
 
-Run the steps in order; several share source files and each overwrites with a
-timestamped `.bak` backup.
+### 4.2 Assemble the bring-up firmware
+
+```bash
+# asm.py REQUIRES two arguments (input.s output.mem). With one it silently
+# assembles its built-in example instead — always pass both.
+python3 ~/rv32i/asm.py ~/vhdl_repo/IP_Cores/PCIe/pcie_fw.s /tmp/pcie_fw.mem
+wc -l /tmp/pcie_fw.mem     # 143 instructions
+```
+
+### 4.3 Isolated synthesis (the technique that found the hang)
+
+```bash
+# synthesize one module at a time with a hard timeout; the one that times out
+# is the culprit. This bisection is the definitive way to localize a synth hang.
+cd ~/pcie_iso_test
+for top in pcie_dll_rx pcie_tl_ep pcie_ltssm pcie_mmio pcie_node; do
+  cp synth_one_base.tcl /tmp/s1.tcl
+  echo "synth_design -top $top -part xcve2302-sfva784-1LP-e-S -mode out_of_context" >> /tmp/s1.tcl
+  timeout 120 vivado -mode batch -nolog -nojournal -source /tmp/s1.tcl > /tmp/log_$top.txt 2>&1
+  rc=$?
+  [ $rc -eq 0 ] && echo "$top: OK" || { [ $rc -eq 124 ] && echo "$top: *** HANG ***" || echo "$top: fail rc=$rc"; }
+done
+```
+
+### 4.4 PetaLinux repackage + PS-side verifier
+
+```bash
+cd ~/plnx_te0950_pcie
+source ~/Petalinux/settings.sh
+petalinux-config --get-hw-description=/home/adrian/pcie_soc_vivado/pcie_soc.xsa --silentconfig
+petalinux-build
+petalinux-package --boot --u-boot --force        # -> images/linux/BOOT.BIN
+
+aarch64-linux-gnu-gcc -O2 -static pcie_verify.c -o pcie_verify
+```
+
+### 4.5 On the board (serial console)
+
+```bash
+mkdir -p /mnt/sd
+mount /dev/mmcblk1p2 /mnt/sd            # SD rootfs partition
+cp /mnt/sd/root/pcie_verify /mnt/sd/root/pcie_fw.mem /tmp/
+chmod +x /tmp/pcie_verify
+cd /tmp
+./pcie_verify pcie_fw.mem               # loads IMEM, starts RV32, checks DDR
+
+# live peek at the trained link state (values arrive via DMA to DDR)
+devmem 0x70000000 32                    # STATUS RC : 0x31 = link_up=1, LTSSM=3 (L0)
+```
 
 ---
 
-## 7. Signatures
+## 5. Vivado (Tcl) commands
 
-The canonical pass criterion for each layer is a bit-identical simulation
-end-timestamp:
+```tcl
+# --- synthesis + implementation to a device image, one project ---
+open_project $env(HOME)/pcie_soc_vivado/pcie_soc_bd/pcie_soc.xpr
+reset_run synth_1
+reset_target all  [get_files bd_soc_usart.bd]
+generate_target all [get_files bd_soc_usart.bd]
+launch_runs synth_1 -jobs 16
+wait_on_run synth_1
+launch_runs impl_1 -to_step write_device_image -jobs 16
+wait_on_run impl_1
 
-| Testbench | Layer | Signature |
-|-----------|-------|-----------|
-| tb_8b10b | PHY codec | `762085000000 fs` |
-| tb_phy | scrambler + framing | `403005000000 fs` |
-| tb_train | LTSSM + deframer | `127785000000 fs` |
-| tb_dll | data link layer | `33015000000 fs` |
-| tb_tl | transaction layer | `2565000000 fs` |
-| tb_loop | LOOP_INT integration | `5805000000 fs` |
-| tb_mmio | MMIO interface | `5275000000 fs` |
-| tb_soc | SoC + firmware (Layer 4) | `9635000000 fs` |
+# --- check timing closure ---
+open_run impl_1
+report_timing_summary -file timing.rpt      ;# WNS must be >= 0
 
-The Layer 4 signature covers seven functional words: link_up, mwr_cnt,
-bar0_last, CplD byte0, mrd_data, MSI address, and MSI data — all bit-identical
-to the ISS oracle.
+# --- export the fixed hardware platform (XSA) for PetaLinux ---
+write_hw_platform -fixed -force $env(HOME)/pcie_soc_vivado/pcie_soc.xsa
+```
 
----
-
-## 8. Layer 4 — SoC integration
-
-The Layer 4 harness is three pieces that validate one another:
-
-- **`pcie_iss.py`** — an instruction-set-style oracle that models the MMIO bank
-  plus the RC/EP pair and produces the expected signature.
-- **`pcie_fw.s`** — RV32I bring-up firmware (no `la`/`lbu`/`.byte`, no `jalr`,
-  32-bit constants via `lui`+`addi`) that trains the link, issues an MWr/MRd
-  burst, and dumps the signature to DDR `0x70000000` via the doorbell pattern.
-- **`tb_soc.vhd`** — instantiates two `pcie_mmio` (RC + EP) over PIPE, with a
-  dmem BFM replaying the firmware's accesses, and compares the hardware
-  signature against the oracle.
+> **Tcl gotchas that bit us:** `~` is **not** expanded in Vivado Tcl — always use
+> `$env(HOME)`. Paste **one command at a time**; multi-line heredocs silently
+> drop leading characters. If a run gets stuck as "Queued 0%" or a ghost OOC run
+> refuses to die, close Vivado completely and delete the run directory on disk.
 
 ---
 
-## 9. Verified data points
+## 6. Lessons learned
 
-The following are checked bit-for-bit at Layer 4:
-
-- `link_up = 1` after training driven from CONTROL.start
-- `mwr_cnt = 4` after a 4-DW MWr3 burst to BAR0
-- `bar0_last = 0x44444444`
-- CplD byte0 `= 0x4A` from an MRd3
-- `mrd_data = 0x33333333`
-- MSI address `= 0xFEED0000`, MSI data `= 0x0000CAFE`
-
----
-
-## 10. RTL bugs caught in simulation
-
-Three real RTL defects were found and fixed by simulation before any silicon
-bring-up:
-
-- **Double CplD from a spurious internal NAK.** Each node's RX generates ACK/NAK
-  for its local reliability loop. In LOOP_INT a spurious NAK (from an LCRC
-  mismatch on the reconstructed stream) triggered a replay of the completion
-  from the replay buffer, producing a duplicate CplD. Since v1 does not carry
-  ACK/NAK as DLLPs between nodes, the internal-loop NAK is masked — only ACKs
-  propagate, for replay-buffer purge. The real replay mechanism remains verified
-  in isolation at the DLL layer.
-- **Registered output duplicated bytes.** The TL EP presented `tx_data` from a
-  registered signal, so on pointer advance the new byte appeared one cycle late
-  and the DLL consumed the stale byte again. Made combinational (the family's
-  canonical `rdata`/output rule).
-- **Integer overflow in BAR decode.** `to_integer(unsigned(addr))/4` overflowed
-  VHDL's `integer` for any address with bit 31 set (e.g. the MSI target
-  `0xFEED0000`). Replaced with a high-bit range check on the address bits
-  directly, which is also the correct way to decode a BAR window.
+- **Bisection beats guessing.** A synthesis hang has no error message. Synthesizing
+  each module in isolation with a `timeout` pinned the culprit (`pcie_dll_rx`) in
+  minutes after hours of blind parameter-tuning.
+- **Simulation passing ≠ synthesizable at scale.** All eight sim layers passed
+  bit-identically while the design still hung in synthesis. Combinational depth
+  and table shape matter enormously once the logic is actually instantiated
+  (here, ×2 for RC+EP).
+- **Verify a patch reached the file that the tool reads.** The first silicon run
+  was wasted because the `is_pcie` region patch never landed in the real
+  `mem_subsys_dma.vhd`; a one-line `grep` would have caught it before a full
+  synth/impl/boot cycle.
+- **The testbench is only as good as its model.** `tb_soc` used a BFM that talked
+  to the PCIe blocks directly, so it never exercised the real SoC memory map. The
+  firmware's assumptions about DDR writes and counter banks were therefore never
+  checked in simulation — and both were wrong on hardware.
+- **On this SoC, the RV32 cannot `sw` straight to DDR.** Region `0x7` is not
+  decoded; writes vanish silently. Use the **DMA doorbell** (write to local RAM,
+  program the DMA at `0x4000_0000`, dir = local→DDR).
+- **Keep the pass criterion bit-exact.** Every layer has a deterministic
+  end-timestamp; a single differing femtosecond flags a regression instantly. All
+  three RTL fixes were accepted only after reproducing every signature.
 
 ---
 
-## 11. Known limitations (v1)
+## 7. Bugs we hit (so you don't have to)
 
-Two behaviours are characterised precisely and deferred to v1.1 rather than
-patched under time pressure:
+**Synthesis hangs (the design would not finish synth with the PCIe connected):**
 
-- **Back-to-back TLPs.** Two TLPs transmitted with no inter-frame gap lose the
-  two sequence-number bytes of the second TLP, due to a race in the
-  DLL-TX ↔ framer handshake. A defensive inter-frame gap has been added to the
-  framer (conformant with PCIe framing), and bring-up firmware spaces its TLPs;
-  a full fix in the DLL-TX handshake is planned for v1.1.
-- **Per-bank interrupt status.** The `cpl_rx` sticky bit lives in the receiving
-  node's bank and `msi_tx` in the emitting node's bank, whereas the ISS oracle
-  models a unified peripheral. This is a modelling mismatch, not a datapath
-  fault; the seven functional signature words are validated, and the two sticky
-  bits are checked per bank.
+1. **8b/10b decode LUT as a record → LUTs, not BRAM.** A 1024-entry
+   `array of record` read combinationally will not pack into block RAM
+   (`WARNING [Synth 8-6040]`). Repacked into a flat `std_logic_vector(12 downto 0)`
+   per code with `rom_style="block"`; the four 8b/10b tables now infer as BRAM.
+2. **`mod 4096` with signed operands.** `sdist` used
+   `(to_integer(a)-to_integer(b)) mod 4096`. Even though 4096 is a power of two,
+   the signed subtraction prevents reduction to a mask, so Vivado built real
+   dividers — replicated inside unrolled loops ×2 nodes. Rewritten as a 12-bit
+   `unsigned` subtraction (natural wrap).
+3. **A 64-deep combinational CRC chain (the main culprit).** `pcie_dll_rx`
+   recomputed the LCRC over a 64-byte buffer with
+   `for i in 0..63 loop c := f_crc32_byte(c, pb(i))`, i.e. ~600 levels of XOR in
+   one cycle, ×2 instances. Replaced by a **4-byte delay pipeline** that folds one
+   payload byte into the CRC per cycle; the four bytes left in the pipeline at
+   `in_last` are the received LCRC. Same cycle count, same signatures.
 
----
+**Bring-up bugs (hardware would not report a passing signature):**
 
-## 12. Technical debt (documented)
+4. **PCIe not wired to the bus.** The `is_pcie` decode + `u_pcie` instance +
+   rdata/ready mux branch were missing from `mem_subsys_dma.vhd`; the firmware
+   read a floating bus (`0xFFFFFFFF`). Fix: add the region and re-synthesize.
+5. **Firmware wrote the signature with `sw` to `0x7000_0000`.** That region isn't
+   decoded on the real SoC, so writes were dropped. Fix: accumulate in local RAM,
+   then DMA local→DDR (the family's doorbell pattern).
+6. **Reading counters from the wrong bank.** The firmware polled `MWR_CNT` on the
+   RC, but the **EP** receives the MWr and increments it. `wait_mwr` spun forever.
+   Fix: read `MWR_CNT`/`BAR0_LAST` from the EP bank (`0x8000_0120/0124`).
 
-Flow-control credit types are defined; the InitFC/UpdateFC state machine is
-pending. ACK/NAK is an internal per-node loop in v1 (not a DLLP between nodes).
-CplD assumes a single DW. These are intentional v1 boundaries, listed here so
-the scope is unambiguous.
-
----
-
-## 13. File manifest
-
-Packages: `pcie_8b10b_pkg`, `pcie_phy_pkg`, `pcie_ltssm_pkg`, `pcie_dll_pkg`,
-`pcie_tl_pkg`, `pcie_mmio_pkg`.
-
-RTL: `pcie_8b10b`, `pcie_scrambler`, `pcie_framer`, `pcie_deframer`,
-`pcie_ltssm`, `pcie_ts_gen`, `pcie_dll_tx`, `pcie_dll_rx`, `pcie_tl_ep`,
-`pcie_rx_adapt`, `pcie_tlp_frame`, `byte_fifo`, `pcie_node`, `pcie_mmio`.
-
-Verification: `tb_8b10b`, `tb_phy`, `tb_train`, `tb_dll`, `tb_tl`, `tb_loop`,
-`tb_mmio`, `tb_soc`, plus `pcie_iss.py` (Layer 4 oracle) and `pcie_fw.s`
-(RV32I bring-up firmware).
+**Assorted traps:** `asm.py` needs *two* arguments or it assembles its built-in
+example; `~` is not expanded in Vivado Tcl; the `image.ub` rootfs is an initramfs
+in RAM (`root=/dev/ram0`), so files staged on the SD ext4 partition must be
+mounted (`/dev/mmcblk1p2`) and copied to `/tmp` after each boot.
 
 ---
 
-## 14. Roadmap
+## 8. Verification methodology
 
-- Silicon bring-up on the TE0950 (BOOT.BIN repackage via PetaLinux; scripted NoC
-  Tcl to route the PL AXI master to real DDR; DMA doorbell to physical DDR).
-- v1.1: fix the DLL-TX ↔ framer sequence-number race for true back-to-back TLPs;
-  unify the interrupt-status model.
-- v2: x2/x4 lanes, 128b/130b Gen3 encoding, and a real GTYP physical connection.
+Scope was frozen before any RTL was written. Validation is layered, each layer
+with a deterministic, bit-identical end-timestamp as its pass criterion:
+
+| Layer | Testbench      | Signature (fs)        |
+|:-----:|----------------|-----------------------|
+| 8b/10b | `tb_8b10b`    | `762085000000`        |
+| PHY    | `tb_phy`      | `403005000000`        |
+| Train  | `tb_train`    | `127785000000`        |
+| DLL    | `tb_dll`      | `33015000000`         |
+| TL     | `tb_tl`       | `2565000000`          |
+| Loop   | `tb_loop`     | `5805000000`          |
+| MMIO   | `tb_mmio`     | `5275000000`          |
+| SoC    | `tb_soc`      | `9635000000`          |
+| SoC-MMIO | `tb_soc_mmio` | `5945000000`        |
+
+Mutations are expected to break each layer; the Python ISS oracle is written
+before the RTL for the SoC layer; firmware is checked against a small RV32IM
+interpreter before silicon. Silicon (Layer 5) always repackages `BOOT.BIN` via
+PetaLinux — never hot-loads a PDI (the Versal PLM rejects it with `0x03024001`).
+
+---
+
+## 9. File manifest
+
+| File | Role |
+|------|------|
+| `pcie_8b10b_pkg.vhd` / `pcie_8b10b.vhd` | 8b/10b codec (flat LUT → BRAM) |
+| `pcie_scrambler.vhd` | LFSR scrambler with K-symbol bypass |
+| `pcie_framer.vhd` / `pcie_deframer.vhd` | ordered-set framing |
+| `pcie_ltssm.vhd` / `pcie_ts_gen.vhd` | LTSSM + TS1/TS2 generator |
+| `pcie_dll_tx.vhd` / `pcie_dll_rx.vhd` | DLL (LCRC-32, replay, ACK/NAK) |
+| `pcie_tl_ep.vhd` / `pcie_tlp_frame.vhd` | transaction layer + framing skid |
+| `pcie_rx_adapt.vhd` | deframer-token → byte-stream adapter |
+| `pcie_node.vhd` / `pcie_mmio.vhd` / `pcie_soc_mmio.vhd` | node / MMIO / RC+EP pair |
+| `pcie_fw.s` | RV32 bring-up firmware (DMA doorbell) |
+| `pcie_verify.c` | PS-side loader + signature checker |
+| `architecture.svg` | layered architecture diagram |
+
+---
+
+## 10. Known limitations (v1)
+
+- **x1 lane, Gen1 logical framing, 8-bit PIPE.** No x2/x4, no 128b/130b Gen3.
+- **LOOP_INT only.** Validated over an internal PIPE loopback; no GTYP physical
+  connection (the board has no PCIe connector).
+- **Back-to-back TLPs** leave a small inter-frame gap in v1 (characterized;
+  benign for the bring-up). A full fix is scheduled for v1.1.
+- The **IRQ path** is modeled as two banks in the ISS; a unified model lands in
+  v1.1.
+
+---
+
+## 11. Future work / roadmap
+
+- **v1.1:** close the back-to-back TLP sequence race; unify the IRQ model.
+- **v2:** x2/x4 lanes; 128b/130b Gen3 encoding; eventual **GTYP physical**
+  connection on a board that exposes a PCIe connector.
+- Package the stack as a drop-in AXI-Lite/AXI-Stream IP for reuse outside this
+  specific SoC.
 
 ---
 
 ## License
 
-MIT.
+**MIT License.** Copyright (c) 2026.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
