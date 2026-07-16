@@ -1,0 +1,16 @@
+# Proyecto Vivado: regenerable desde vivado/adc_soc_steps.tcl. Pesado y con
+# rutas absolutas; no se versiona.
+vivado_adc/
+*.xsa
+*.pdi
+# Binario ARM cross-compilado (regenerable de adc-bringup.c)
+adc-bringup
+# Respaldos y temporales de trabajo
+*.bak
+work-obj08.cf
+*.o
+*.vcd
+# Artefactos de simulacion GHDL
+tb_*_ghdl
+e~*
+!adc_bringup.mem
