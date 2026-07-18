@@ -46,7 +46,13 @@ entity rv32ima_core is
     st_fetch_o   : out std_logic;  -- '1' cuando el core esta en S_FETCH
     st_mem_o     : out std_logic;  -- '1' cuando el core esta en S_MEM
     st_store_o   : out std_logic;  -- '1' cuando el core esta en S_STORE
-    dbg_regs_o   : out std_logic_vector(1023 downto 0)  -- banco x0..x31 aplanado
+    dbg_regs_o   : out std_logic_vector(1023 downto 0);  -- banco x0..x31 aplanado
+    -- pulso de 1 ciclo: el core tomo una interrupcion en este limite de
+    -- instruccion. Aditivo; sirve para lockstep guiado y observabilidad.
+    irq_taken_o  : out std_logic;
+    -- PC de la instruccion interrumpida (el que se guarda en mepc). Junto
+    -- con irq_taken_o identifica el evento sin ambiguedad.
+    irq_pc_o     : out std_logic_vector(31 downto 0)
   );
 end entity rv32ima_core;
 
@@ -91,6 +97,14 @@ architecture rtl of rv32ima_core is
   signal tvec_pc     : std_logic_vector(31 downto 0);
   signal epc_pc      : std_logic_vector(31 downto 0);
   signal irq_take    : std_logic;
+  -- Tras disparar un trap de interrupcion, irq_take sigue alto hasta que el
+  -- modulo procesa trap_en (puede tardar varios ciclos si el adaptador tiene
+  -- el core congelado). Sin este bloqueo, S_FETCH volveria a tomar la MISMA
+  -- interrupcion con pc_r ya apuntando al handler, y mepc se sobrescribiria
+  -- con la direccion del propio handler -> mret retorna al handler = bucle.
+  signal irq_pend_r  : std_logic := '0';
+  signal irq_taken_r : std_logic := '0';
+  signal irq_pc_r    : std_logic_vector(31 downto 0) := (others => '0');
   signal irq_cause   : std_logic_vector(31 downto 0);
 
   signal pc_r   : unsigned(31 downto 0) := (others => '0');
@@ -140,6 +154,9 @@ begin
   csr_addr   <= ir_r(31 downto 20);
   csr_funct3 <= f3;
 
+
+  irq_taken_o <= irq_taken_r;
+  irq_pc_o    <= irq_pc_r;
 
   dbg_gen : for i in 0 to 31 generate
     dbg_regs_o(i*32+31 downto i*32) <= x_r(i);
@@ -265,6 +282,8 @@ begin
       csr_en    <= '0';
       trap_en   <= '0';
       mret_en   <= '0';
+      irq_pend_r <= '0';
+      irq_taken_r <= '0';
     elsif rising_edge(clk_i) then
      if core_clk_en_i = '1' then
       core_we_r <= '0';
@@ -273,12 +292,35 @@ begin
       csr_en    <= '0';
       trap_en   <= '0';
       mret_en   <= '0';
+      irq_taken_r <= '0';
+      -- el modulo ya consumio el trap cuando irq_take vuelve a '0'
+      -- (el trap entry pone mstatus.MIE=0, lo que baja irq_take)
+      if irq_take = '0' then
+        irq_pend_r <= '0';
+      end if;
 
       case state_r is
         when S_FETCH =>
-          ir_r  <= imem_data_i;      -- lectura combinacional del imem
-          npc_r <= pc_r + 4;
-          state_r <= S_EXEC;
+          -- Punto de chequeo de interrupciones: limite de instruccion, con
+          -- el estado arquitectural completo. Si hay una interrupcion
+          -- pendiente y habilitada (irq_take ya incluye mstatus.MIE y
+          -- mie.MTIE/MSIE), NO ejecutamos esta instruccion: guardamos su PC
+          -- en mepc para que el mret la reintente, y saltamos al handler.
+          if irq_take = '1' and irq_pend_r = '0' then
+            trap_en    <= '1';
+            trap_cause <= irq_cause;      -- bit 31 alto = interrupcion
+            trap_pc    <= std_logic_vector(pc_r);  -- IRQ_MEPC
+            trap_tval  <= (others => '0');
+            pc_r       <= unsigned(tvec_pc);
+            irq_pend_r <= '1';            -- no reevaluar hasta consumir
+            irq_taken_r <= '1';           -- evento observable
+            irq_pc_r    <= std_logic_vector(pc_r);
+            state_r    <= S_FETCH;        -- refetch desde el handler
+          else
+            ir_r  <= imem_data_i;      -- lectura combinacional del imem
+            npc_r <= pc_r + 4;
+            state_r <= S_EXEC;
+          end if;
 
         when S_EXEC =>
           -- ALU y decision de salto; para load/store se pasa a S_MEM
