@@ -24,7 +24,11 @@ entity rv32ima_core is
   port (
     clk_i        : in  std_logic;
     aresetn_i    : in  std_logic;
-    core_clk_en_i: in  std_logic;  -- '1' = avanza; '0' = congela (espera NoC)
+    core_clk_en_i: in  std_logic;
+    -- handshake real de memoria para el modulo AMO: pulso de 1 ciclo del
+    -- adaptador indicando que dmem_rdata_i es valido. Default '1' = capa
+    -- de latencia cero (memoria combinacional sin adaptador).
+    mem_data_done_i : in std_logic := '1';  -- '1' = avanza; '0' = congela (espera NoC)
     -- puerto de instrucciones (imem externo, lectura combinacional)
     imem_addr_o  : out std_logic_vector(31 downto 0);
     imem_data_i  : in  std_logic_vector(31 downto 0);
@@ -94,8 +98,19 @@ architecture rtl of rv32ima_core is
 begin
 
   st_fetch_o <= '1' when state_r = S_FETCH else '0';
-  st_mem_o   <= '1' when state_r = S_MEM else '0';
-  st_store_o <= '1' when state_r = S_STORE else '0';
+
+  -- Opcion B: durante S_AMO, las fases del modulo AMO se traducen a los
+  -- estados de acceso a dato que el adaptador ya sabe servir. Asi el
+  -- adaptador ve accesos ordinarios (lectura / escritura) y no necesita
+  -- conocer la FSM interna del AMO ni el estado S_AMO.
+  --   AMO leyendo  (m_req=1, m_we=0) -> se presenta como S_MEM   (load)
+  --   AMO escribiendo (m_req=1, m_we=1) -> se presenta como S_STORE (store)
+  st_mem_o   <= '1' when state_r = S_MEM
+                else '1' when (state_r = S_AMO and amo_m_req = '1' and amo_m_we = '0')
+                else '0';
+  st_store_o <= '1' when state_r = S_STORE
+                else '1' when (state_r = S_AMO and amo_m_req = '1' and amo_m_we = '1')
+                else '0';
 
   -- banco de registros aplanado para traza de lockstep (x0 en [31:0], x1 en [63:32], ...)
   dbg_gen : for i in 0 to 31 generate
@@ -122,7 +137,7 @@ begin
       m_addr    => amo_m_addr,
       m_wdata   => amo_m_wdata,
       m_rdata   => dmem_rdata_i,   -- comparte el bus de lectura del core
-      m_ready   => '1'             -- latencia cero en esta capa de integracion
+      m_ready   => mem_data_done_i  -- handshake real (o '1' por default)
     );
 
   opc <= ir_r(6 downto 0);

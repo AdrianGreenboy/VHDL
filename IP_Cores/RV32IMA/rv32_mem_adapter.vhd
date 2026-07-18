@@ -84,7 +84,10 @@ entity rv32_mem_adapter is
     mmio_addr  : out std_logic_vector(31 downto 0);
     mmio_wdata : out std_logic_vector(31 downto 0);
     mmio_rdata : in  std_logic_vector(31 downto 0);
-    mmio_ready : in  std_logic
+    mmio_ready : in  std_logic;
+    -- pulso de 1 ciclo: el acceso a DATO se completo y dmem_rdata es valido.
+    -- Lo usa el modulo AMO del core IMA como m_ready (handshake real).
+    data_done  : out std_logic
   );
 end entity;
 
@@ -147,6 +150,7 @@ architecture rtl of rv32_mem_adapter is
 begin
 
   core_clk_en <= en_r;
+  data_done   <= d_done;
   imem_data   <= f_data_r;
   dmem_rdata  <= d_data_r;
 
