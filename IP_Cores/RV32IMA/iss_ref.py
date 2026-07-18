@@ -17,6 +17,7 @@ def run(mem_words, max_steps=200):
     pc = 0x80000000
     res_valid = False  # reserva lr/sc
     res_addr = 0
+    uart_out = []      # bytes emitidos por el UART
     trace = []
     for step in range(max_steps):
         instr = load(pc)
@@ -80,7 +81,15 @@ def run(mem_words, max_steps=200):
             npc=u32(pc+imm) if take else npc
         elif op==0x03:  # LOAD
             imm=s32((instr>>20)|(0xFFFFF000 if instr&0x80000000 else 0))
-            a=u32(x[rs1]+imm); v=load(a)
+            a=u32(x[rs1]+imm)
+            if (a & ~3)==0x10000004:  # palabra que contiene el LSR (byte 5)
+                v=0x60 << 8            # LSR en el lane 1 (byte 0x...05)
+            elif a==0x10000000:    # RBR sin dato disponible
+                v=0
+            elif (a>>16)==0x1110:  # syscon: lecturas devuelven 0
+                v=0
+            else:
+                v=load(a)
             vb=(v>>((a&3)*8))&0xFF          # byte alineado
             vh=(v>>((a&2)*8))&0xFFFF        # half alineado
             if f3==2: wr(rd,v)
@@ -92,7 +101,9 @@ def run(mem_words, max_steps=200):
             imm=((instr>>25)<<5)|((instr>>7)&0x1F)
             if imm&0x800: imm-=0x1000
             a=u32(x[rs1]+imm)
-            if a==0x11100000:  # syscon
+            if a==0x10000000:  # UART THR: emitir caracter
+                uart_out.append(x[rs2] & 0xFF)
+            elif a==0x11100000:  # syscon
                 if x[rs2]==0x5555: break  # POWEROFF
             else:
                 res_valid = False  # P3: store normal rompe la reserva lr/sc
@@ -132,14 +143,16 @@ def run(mem_words, max_steps=200):
         else:
             break  # instruccion no manejada -> parar
         pc=npc
-    return trace, RAM
+    return trace, RAM, uart_out
 
 if __name__=="__main__":
     words=[int(l.strip(),16) for l in open(sys.argv[1]) if l.strip()]
-    trace,RAM=run(words)
+    trace,RAM,uart=run(words)
     print(f"# {len(trace)} pasos ejecutados")
     for pc,instr,regs in trace:
         print(f"PC={pc:08x} I={instr:08x} "+" ".join(f"x{i}={regs[i]:08x}" for i in [1,2,3,5,6,22,24,26,28,30]))
+    if uart:
+        print("# Salida UART: " + repr("".join(chr(c) for c in uart)))
     print("# Memoria final relevante:")
     for a in [0x80000200,0x80000210,0x80000220]:
         print(f"  [{a:08x}] = {RAM.get(a,0):08x}")
