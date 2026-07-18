@@ -15,6 +15,7 @@ use ieee.numeric_std.all;
 entity rv32_csr_trap is
   port (
     clk         : in  std_logic;
+    clk_en      : in  std_logic := '1';  -- gating: '0' congela (espera NoC)
     rstn        : in  std_logic;  -- reset asincrono activo bajo
     -- interfaz de instruccion CSR (etapa execute)
     csr_en      : in  std_logic;
@@ -150,6 +151,7 @@ begin
       r_mtval    <= (others => '0');
       r_mcycle   <= (others => '0');
     elsif rising_edge(clk) then
+     if clk_en = '1' then
       r_mcycle <= r_mcycle + 1;
       if trap_en = '1' then
         r_mepc     <= trap_pc(31 downto 1); -- MUT5
@@ -177,6 +179,7 @@ begin
           when others => null; -- misa y mip: WARL, se ignoran
         end case;
       end if;
+     end if;  -- clk_en
     end if;
   end process;
 

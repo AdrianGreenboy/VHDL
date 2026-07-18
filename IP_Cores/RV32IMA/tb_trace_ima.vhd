@@ -60,7 +60,12 @@ begin
 
   -- memoria combinacional latencia-cero (semantica pura del core)
   idata <= mem(idx(iaddr)) when iaddr(31)='1' else (others=>'0');
-  rdata <= mem(idx(daddr)) when daddr(31)='1' else (others=>'0');
+  -- modelo minimo del LSR del UART (0x10000004..7): THRE y TEMT siempre
+  -- listos, en el lane 1 de su palabra. Necesario para que los programas
+  -- que esperan THRE no giren en vacio en este arnes de traza.
+  rdata <= x"00006000" when (daddr and x"FFFFFFFC") = x"10000004"
+      else mem(idx(daddr)) when daddr(31)='1'
+      else (others=>'0');
 
   process(clk)
   begin

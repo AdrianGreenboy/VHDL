@@ -18,6 +18,9 @@ def run(mem_words, max_steps=200):
     res_valid = False  # reserva lr/sc
     res_addr = 0
     uart_out = []      # bytes emitidos por el UART
+    # CSRs M-mode (subconjunto del modulo rv32_csr_trap)
+    csr = {0x300:0, 0x304:0, 0x305:0, 0x340:0, 0x341:0, 0x342:0, 0x343:0}
+    mst_mie, mst_mpie = 0, 0
     trace = []
     for step in range(max_steps):
         instr = load(pc)
@@ -140,6 +143,46 @@ def run(mem_words, max_steps=200):
         elif op==0x67:  # JALR
             imm=s32((instr>>20)|(0xFFFFF000 if instr&0x80000000 else 0))
             t=npc; npc=u32((x[rs1]+imm)&~1); wr(rd,t)
+        elif op==0x73:  # SYSTEM: ecall/ebreak/mret y CSR
+            f12=(instr>>20)&0xFFF
+            if f3==0:
+                if f12==0x000:      # ECALL -> trap cause 11
+                    csr[0x341]=pc          # mepc
+                    csr[0x342]=11          # mcause
+                    csr[0x343]=0           # mtval
+                    mst_mpie=mst_mie; mst_mie=0
+                    npc=csr[0x305]&0xFFFFFFFC   # mtvec (direct)
+                elif f12==0x001:    # EBREAK -> trap cause 3
+                    csr[0x341]=pc; csr[0x342]=3; csr[0x343]=0
+                    mst_mpie=mst_mie; mst_mie=0
+                    npc=csr[0x305]&0xFFFFFFFC
+                elif f12==0x302:    # MRET
+                    mst_mie=mst_mpie; mst_mpie=1
+                    npc=csr[0x341]&0xFFFFFFFE   # mepc
+                # otros (wfi, etc): nop
+            else:
+                addr_csr=f12
+                # valor fuente: registro o inmediato
+                srcv = ((instr>>15)&0x1F) if (f3&4) else x[rs1]
+                # lectura del CSR
+                if addr_csr==0x300:
+                    old=(mst_mpie<<7)|(mst_mie<<3)|(3<<11)  # MPP=11
+                elif addr_csr in csr:
+                    old=csr[addr_csr]
+                else:
+                    old=0
+                # escritura segun funct3
+                wr = True if (f3&3)==1 else (srcv!=0)
+                if wr:
+                    if (f3&3)==1:   new=srcv                 # csrrw/wi
+                    elif (f3&3)==2: new=old|srcv             # csrrs/si
+                    else:           new=old&u32(~srcv)       # csrrc/ci
+                    if addr_csr==0x300:
+                        mst_mpie=(new>>7)&1; mst_mie=(new>>3)&1
+                    elif addr_csr in csr:
+                        csr[addr_csr]=u32(new)
+                wr_rd=rd
+                if wr_rd!=0: x[wr_rd]=u32(old)
         else:
             break  # instruccion no manejada -> parar
         pc=npc

@@ -28,7 +28,10 @@ entity rv32ima_core is
     -- handshake real de memoria para el modulo AMO: pulso de 1 ciclo del
     -- adaptador indicando que dmem_rdata_i es valido. Default '1' = capa
     -- de latencia cero (memoria combinacional sin adaptador).
-    mem_data_done_i : in std_logic := '1';  -- '1' = avanza; '0' = congela (espera NoC)
+    mem_data_done_i : in std_logic := '1';
+    -- lineas de interrupcion del CLINT (se usan en 6a-2; en 6a-1 quedan a 0)
+    mtip_i       : in  std_logic := '0';
+    msip_i       : in  std_logic := '0';  -- '1' = avanza; '0' = congela (espera NoC)
     -- puerto de instrucciones (imem externo, lectura combinacional)
     imem_addr_o  : out std_logic_vector(31 downto 0);
     imem_data_i  : in  std_logic_vector(31 downto 0);
@@ -72,6 +75,24 @@ architecture rtl of rv32ima_core is
   signal core_re_r : std_logic := '0';
   signal amo_seen_busy : std_logic := '0';  -- vio el AMO arrancar (para deteccion robusta)
 
+  -- === integracion CSR + traps (Paso 6a-1) ===
+  signal csr_en      : std_logic := '0';
+  signal csr_wr      : std_logic := '0';
+  signal csr_funct3  : std_logic_vector(2 downto 0);
+  signal csr_addr    : std_logic_vector(11 downto 0);
+  signal csr_wdata   : std_logic_vector(31 downto 0) := (others => '0');
+  signal csr_rdata   : std_logic_vector(31 downto 0);
+  signal csr_illegal : std_logic;
+  signal trap_en     : std_logic := '0';
+  signal trap_cause  : std_logic_vector(31 downto 0) := (others => '0');
+  signal trap_pc     : std_logic_vector(31 downto 0) := (others => '0');
+  signal trap_tval   : std_logic_vector(31 downto 0) := (others => '0');
+  signal mret_en     : std_logic := '0';
+  signal tvec_pc     : std_logic_vector(31 downto 0);
+  signal epc_pc      : std_logic_vector(31 downto 0);
+  signal irq_take    : std_logic;
+  signal irq_cause   : std_logic_vector(31 downto 0);
+
   signal pc_r   : unsigned(31 downto 0) := (others => '0');
   signal ir_r   : std_logic_vector(31 downto 0) := (others => '0');
   signal alu_r  : std_logic_vector(31 downto 0) := (others => '0');
@@ -113,11 +134,44 @@ begin
                 else '0';
 
   -- banco de registros aplanado para traza de lockstep (x0 en [31:0], x1 en [63:32], ...)
+  -- direccion y funct3 del CSR: COMBINACIONALES desde el registro de
+  -- instruccion. Si fueran registrados, csr_rdata presentaria el CSR de
+  -- la instruccion ANTERIOR y rd recibiria un valor desfasado.
+  csr_addr   <= ir_r(31 downto 20);
+  csr_funct3 <= f3;
+
+
   dbg_gen : for i in 0 to 31 generate
     dbg_regs_o(i*32+31 downto i*32) <= x_r(i);
   end generate;
 
   imem_addr_o <= std_logic_vector(pc_r);
+
+  -- === instancia del modulo de CSR y traps (gated como el AMO) ===
+  u_csr : entity work.rv32_csr_trap
+    port map (
+      clk         => clk_i,
+      clk_en      => core_clk_en_i,
+      rstn        => aresetn_i,
+      csr_en      => csr_en,
+      csr_wr      => csr_wr,
+      csr_funct3  => csr_funct3,
+      csr_addr    => csr_addr,
+      csr_wdata   => csr_wdata,
+      csr_rdata   => csr_rdata,
+      csr_illegal => csr_illegal,
+      trap_en     => trap_en,
+      trap_cause  => trap_cause,
+      trap_pc     => trap_pc,
+      trap_tval   => trap_tval,
+      mret_en     => mret_en,
+      tvec_pc     => tvec_pc,
+      epc_pc      => epc_pc,
+      mtip        => mtip_i,
+      msip        => msip_i,
+      irq_take    => irq_take,
+      irq_cause   => irq_cause
+    );
 
   -- === instancia del modulo de extension A (corre en reloj pleno) ===
   u_amo : entity work.rv32_amo_unit
@@ -208,10 +262,17 @@ begin
       halt_o  <= '0';
       core_we_r <= '0';
       core_re_r <= '0';
+      csr_en    <= '0';
+      trap_en   <= '0';
+      mret_en   <= '0';
     elsif rising_edge(clk_i) then
      if core_clk_en_i = '1' then
       core_we_r <= '0';
       core_re_r <= '0';
+      -- pulsos de un ciclo hacia el modulo de CSR/traps
+      csr_en    <= '0';
+      trap_en   <= '0';
+      mret_en   <= '0';
 
       case state_r is
         when S_FETCH =>
@@ -338,9 +399,56 @@ begin
               alu_r <= std_logic_vector(npc_r);
               pc_r  <= unsigned(a_v + immI) and not to_unsigned(1,32);
               state_r <= S_WB;
-            when "1110011" =>  -- ECALL
-              halt_o <= '1';
-              state_r <= S_HALT;
+            when "1110011" =>  -- SYSTEM: ecall/ebreak/mret y CSR
+              if f3 = "000" then
+                -- ecall / ebreak / mret, distinguidos por ir[31:20]
+                case ir_r(31 downto 20) is
+                  when x"000" =>  -- ECALL -> trap, cause=11 (M-mode)
+                    trap_en    <= '1';
+                    trap_cause <= x"0000000B";
+                    trap_pc    <= std_logic_vector(pc_r);
+                    trap_tval  <= (others => '0');
+                    pc_r       <= unsigned(tvec_pc);
+                    state_r    <= S_FETCH;
+                  when x"001" =>  -- EBREAK -> trap, cause=3
+                    trap_en    <= '1';
+                    trap_cause <= x"00000003";
+                    trap_pc    <= std_logic_vector(pc_r);
+                    trap_tval  <= (others => '0');
+                    pc_r       <= unsigned(tvec_pc);
+                    state_r    <= S_FETCH;
+                  when x"302" =>  -- MRET -> restaurar PC desde mepc
+                    mret_en <= '1';
+                    pc_r    <= unsigned(epc_pc);
+                    state_r <= S_FETCH;
+                  when others =>
+                    -- wfi (0x105) y otros: tratar como nop
+                    state_r <= S_FETCH;
+                    pc_r    <= npc_r;
+                end case;
+              else
+                -- instruccion CSR: rd recibe el valor LEIDO (antes de
+                -- escribir), que es la semantica RISC-V.
+                csr_en     <= '1';
+                -- csr_addr y csr_funct3 son combinacionales (ver arriba)
+                -- csrrw/csrrwi siempre escriben; csrrs/c/si/ci solo si
+                -- el operando fuente no es cero.
+                if f3 = "001" or f3 = "101" then
+                  csr_wr <= '1';
+                elsif rs1 /= 0 then
+                  csr_wr <= '1';
+                else
+                  csr_wr <= '0';
+                end if;
+                -- variantes con inmediato (f3[2]='1') usan uimm=rs1
+                if f3(2) = '1' then
+                  csr_wdata <= std_logic_vector(resize(unsigned(ir_r(19 downto 15)), 32));
+                else
+                  csr_wdata <= std_logic_vector(a_v);
+                end if;
+                alu_r   <= csr_rdata;
+                state_r <= S_WB;
+              end if;
             when "0101111" =>  -- AMO (extension A)
               -- arrancar el modulo AMO: funct5=ir[31:27], addr=rs1, src=rs2
               amo_funct5 <= ir_r(31 downto 27);
