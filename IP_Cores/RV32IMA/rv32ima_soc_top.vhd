@@ -120,10 +120,13 @@ architecture rtl of rv32ima_soc_top is
   constant FD : natural := 2**UART_FIFO_LOG2;
   type t_fifo is array (0 to FD-1) of std_logic_vector(7 downto 0);
   signal fifo_r  : t_fifo;
+  attribute ram_style : string;
+  attribute ram_style of fifo_r : signal is "block";
   signal wr_ptr  : unsigned(UART_FIFO_LOG2-1 downto 0) := (others => '0');
   signal rd_ptr  : unsigned(UART_FIFO_LOG2-1 downto 0) := (others => '0');
   signal fifo_lvl: unsigned(UART_FIFO_LOG2 downto 0) := (others => '0');
   signal fifo_out: std_logic_vector(7 downto 0) := (others => '0');
+  signal fifo_hi : std_logic;
 
   -- telemetria
   signal retired_r : unsigned(63 downto 0) := (others => '0');
@@ -141,6 +144,7 @@ architecture rtl of rv32ima_soc_top is
   signal rvalid_r : std_logic := '0';
   signal rdata_r  : std_logic_vector(31 downto 0) := (others => '0');
   signal rd_consume : std_logic := '0';
+  signal fifo_rd_pend : std_logic := '0';
 begin
 
   -- =========================================================
@@ -274,7 +278,16 @@ begin
       end if;
     end if;
   end process;
-  fifo_out <= fifo_r(to_integer(rd_ptr));
+  -- lectura SINCRONA del FIFO: mantiene el molde SDP que la sintesis
+  -- mapea a BRAM. Con lectura asincrona serian ~32k flip-flops.
+  fifo_rd_proc : process(aclk)
+  begin
+    if rising_edge(aclk) then
+      fifo_out <= fifo_r(to_integer(rd_ptr));
+    end if;
+  end process;
+  fifo_hi  <= '1' when fifo_lvl >= to_unsigned((FD*3)/4, fifo_lvl'length)
+              else '0';
 
   -- =========================================================
   -- telemetria: retiros, PC, eventos
@@ -331,6 +344,7 @@ begin
         arready_r  <= '0';
         rvalid_r   <= '0';
         rd_consume <= '0';
+        fifo_rd_pend <= '0';
         rx_dr      <= '0';
         aw_hs      <= '0';
         w_hs       <= '0';
@@ -380,19 +394,19 @@ begin
             when x"00" =>
               rdata_r <= (31 downto 1 => '0') & core_en_r;
             when x"04" =>
-              rdata_r <= (31 downto 4 => '0') &
-                         (fifo_lvl(UART_FIFO_LOG2) or
-                          (fifo_lvl(UART_FIFO_LOG2-1) and
-                           fifo_lvl(UART_FIFO_LOG2-2))) &
+              -- bit 3: el FIFO esta al 75% o mas (aviso de que el PS
+              -- debe drenar; por encima del 100% los bytes se descartan)
+              rdata_r <= (31 downto 4 => '0') & fifo_hi &
                          reboot_r & poweroff_r & halted_r;
             when x"08" =>
               rdata_r <= std_logic_vector(retired_r(31 downto 0));
             when x"0C" =>
               rdata_r <= std_logic_vector(retired_r(63 downto 32));
             when x"10" =>
+              -- el dato se captura en la fase rvalid (ver abajo): aqui
+              -- solo se marca que esta lectura viene del FIFO
               if fifo_lvl > 0 then
-                rdata_r    <= x"0000_01" & fifo_out;
-                rd_consume <= '1';
+                fifo_rd_pend <= '1';
               else
                 rdata_r <= (others => '0');
               end if;
@@ -406,6 +420,12 @@ begin
         elsif arready_r = '1' then
           arready_r <= '0';
           rvalid_r  <= '1';
+          if fifo_rd_pend = '1' then
+            -- fifo_out ya es valido en este ciclo
+            rdata_r      <= x"0000_01" & fifo_out;
+            rd_consume   <= '1';
+            fifo_rd_pend <= '0';
+          end if;
         elsif rvalid_r = '1' and s_rready = '1' then
           rvalid_r <= '0';
         end if;
