@@ -21,6 +21,7 @@ use ieee.numeric_std.all;
 entity rv32_amo_unit is
   port (
     clk       : in  std_logic;
+    clk_en    : in  std_logic := '1';  -- gating: '0' congela la FSM (espera NoC)
     rstn      : in  std_logic;
     -- interfaz de instruccion
     start     : in  std_logic;  -- pulso 1 ciclo, solo con busy=0
@@ -120,6 +121,7 @@ begin
       r_res_valid <= '0';
       r_res_addr <= (others => '0');
     elsif rising_edge(clk) then
+     if clk_en = '1' then
       r_done <= '0';
       if res_clear = '1' then
         r_res_valid <= '0';
@@ -173,6 +175,7 @@ begin
           st <= ST_IDLE;
 
       end case;
+     end if;  -- clk_en
     end if;
   end process;
 
