@@ -25,6 +25,10 @@ entity rv32_csr_trap is
     csr_wdata   : in  std_logic_vector(31 downto 0);
     csr_rdata   : out std_logic_vector(31 downto 0);
     csr_illegal : out std_logic;
+    -- privilegio actual (M=11, U=00): el core lo usa para la causa del ecall
+    priv_o      : out std_logic_vector(1 downto 0);
+    -- pulso de 1 ciclo: wfi ejecutado -> mstatus.MIE <= 1 (paridad emulador)
+    wfi_en      : in  std_logic := '0';
     -- entrada de trap (excepcion o interrupcion tomada)
     trap_en     : in  std_logic;
     trap_cause  : in  std_logic_vector(31 downto 0);
@@ -46,8 +50,13 @@ architecture rtl of rv32_csr_trap is
 
   constant MISA_VAL : std_logic_vector(31 downto 0) := x"40001101"; -- RV32IMA
 
-  signal r_mst_mie  : std_logic;                      -- mstatus.MIE
-  signal r_mst_mpie : std_logic;                      -- mstatus.MPIE
+  -- mstatus como registro PLANO de 32 bits (paridad con mini-rv32ima: lo
+  -- escrito se lee tal cual; el trap entry y el mret lo reescriben entero
+  -- con formulas fijas). MIE=bit 3, MPIE=bit 7, MPP=bits 12:11.
+  signal r_mstatus  : std_logic_vector(31 downto 0);
+  -- privilegio actual: M="11", U="00". El kernel baja a U con mret (MPP)
+  -- y cualquier trap regresa a M.
+  signal r_priv     : std_logic_vector(1 downto 0);
   signal r_mie_mtie : std_logic;                      -- mie.MTIE
   signal r_mie_msie : std_logic;                      -- mie.MSIE
   signal r_mtvec    : std_logic_vector(31 downto 2);  -- modo direct
@@ -78,7 +87,7 @@ begin
   -- ---------------------------------------------------------
   -- Lectura combinacional y decodificacion de legalidad
   -- ---------------------------------------------------------
-  process(csr_addr, r_mst_mie, r_mst_mpie, r_mie_mtie, r_mie_msie,
+  process(csr_addr, r_mstatus, r_mie_mtie, r_mie_msie,
           r_mtvec, r_mscratch, r_mepc, r_mcause, r_mtval, r_mcycle,
           mtip, msip)
     variable v : std_logic_vector(31 downto 0);
@@ -87,10 +96,8 @@ begin
     s_known   <= '1';
     s_ro_hard <= '0';
     case csr_addr is
-      when x"300" =>  -- mstatus: MPP=11 fijo, MPIE, MIE
-        v(12 downto 11) := "11";
-        v(7) := r_mst_mpie;
-        v(3) := r_mst_mie;
+      when x"300" =>  -- mstatus plano (lo escrito se lee tal cual)
+        v := r_mstatus;
       when x"301" =>  -- misa (WARL, escrituras ignoradas)
         v := MISA_VAL;
       when x"304" =>  -- mie
@@ -122,11 +129,12 @@ begin
   s_illegal   <= csr_en and ((not s_known) or (csr_wr and s_ro_hard));
   csr_rdata   <= s_rdata;
   csr_illegal <= s_illegal;
+  priv_o      <= r_priv;
 
   -- ---------------------------------------------------------
   -- Interrupciones (prioridad: MSI sobre MTI)
   -- ---------------------------------------------------------
-  irq_take  <= r_mst_mie and ((r_mie_msie and msip) or (r_mie_mtie and mtip));
+  irq_take  <= r_mstatus(3) and ((r_mie_msie and msip) or (r_mie_mtie and mtip));
   irq_cause <= x"80000003" when (r_mie_msie and msip) = '1' else
                x"80000007"; -- MUT3
 
@@ -140,8 +148,8 @@ begin
     variable wv : std_logic_vector(31 downto 0);
   begin
     if rstn = '0' then
-      r_mst_mie  <= '0';
-      r_mst_mpie <= '0';
+      r_mstatus  <= (others => '0');
+      r_priv     <= "11";              -- arranque en M-mode
       r_mie_mtie <= '0';
       r_mie_msie <= '0';
       r_mtvec    <= (others => '0');
@@ -157,17 +165,27 @@ begin
         r_mepc     <= trap_pc(31 downto 1); -- MUT5
         r_mcause   <= trap_cause;
         r_mtval    <= trap_tval;
-        r_mst_mpie <= r_mst_mie;
-        r_mst_mie  <= '0'; -- MUT1
+        -- formula exacta de mini-rv32ima: mstatus se REESCRIBE entero:
+        -- MPIE <- MIE, MPP <- privilegio actual, resto a 0 (MIE queda 0)
+        r_mstatus              <= (others => '0');
+        r_mstatus(7)           <= r_mstatus(3); -- MUT1
+        r_mstatus(12 downto 11) <= r_priv;      -- MUT_MPP
+        r_priv                 <= "11";         -- todo trap entra a M
       elsif mret_en = '1' then
-        r_mst_mie  <= r_mst_mpie; -- MUT2
-        r_mst_mpie <= '1';
+        -- formula exacta: MIE <- MPIE, MPP <- priv actual, MPIE <- 1,
+        -- resto a 0; el privilegio pasa a ser el MPP guardado.
+        r_mstatus               <= (others => '0');
+        r_mstatus(3)            <= r_mstatus(7); -- MUT2
+        r_mstatus(7)            <= '1';
+        r_mstatus(12 downto 11) <= r_priv;
+        r_priv                  <= r_mstatus(12 downto 11);
+      elsif wfi_en = '1' then
+        r_mstatus(3) <= '1';   -- paridad mini-rv32ima: wfi habilita MIE
       elsif (csr_en = '1') and (csr_wr = '1') and (s_illegal = '0') then
         wv := f_wval(csr_funct3, s_rdata, csr_wdata);
         case csr_addr is
           when x"300" =>
-            r_mst_mpie <= wv(7);
-            r_mst_mie  <= wv(3);
+            r_mstatus <= wv;
           when x"304" =>
             r_mie_mtie <= wv(7);
             r_mie_msie <= wv(3);

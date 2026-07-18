@@ -69,7 +69,7 @@ begin
   stim : process
     -- modelo del CLINT
     variable m_msip     : std_logic := '0';
-    variable m_mtimecmp : unsigned(63 downto 0) := (others => '1');
+    variable m_mtimecmp : unsigned(63 downto 0) := (others => '0');
     variable m_mtime    : unsigned(63 downto 0) := (others => '0');
     variable lcg        : unsigned(31 downto 0) := to_unsigned(31415926, 32);
     variable nops       : integer := 0;
@@ -138,7 +138,11 @@ begin
     procedure chk_lines is
       variable exp_mtip : std_logic;
     begin
-      if m_mtime >= m_mtimecmp then exp_mtip := '1'; else exp_mtip := '0'; end if;
+      if (m_mtime > m_mtimecmp) and (m_mtimecmp /= 0) then
+        exp_mtip := '1';
+      else
+        exp_mtip := '0';
+      end if;
       assert mtip = exp_mtip
         report "MTIP discrepa: dut=" & std_logic'image(mtip) severity failure;
       assert msip = m_msip
@@ -291,7 +295,8 @@ begin
     assert irq_take = '0' report "MSI: no deberia reactivarse" severity failure;
 
     -- --- prioridad: ambas activas, MSI gana ---
-    c_write(x"4000", x"00000000");        -- mtimecmp 0 -> mtip=1
+    c_write(x"4000", x"00000001");        -- mtimecmp=1 (mtime ya es mayor) -> mtip=1
+    c_write(x"4004", x"00000000");        -- mtimecmp_hi=0
     c_write(x"0000", x"00000001");        -- msip=1
     csr_w(x"304", x"00000088");           -- MTIE=1, MSIE=1
     csr_w(x"300", x"00000008");           -- MIE=1

@@ -104,6 +104,8 @@ architecture rtl of rv32ima_core is
   -- con la direccion del propio handler -> mret retorna al handler = bucle.
   signal irq_pend_r  : std_logic := '0';
   signal irq_taken_r : std_logic := '0';
+  signal wfi_en      : std_logic := '0';
+  signal csr_priv    : std_logic_vector(1 downto 0);
   signal irq_pc_r    : std_logic_vector(31 downto 0) := (others => '0');
   signal irq_cause   : std_logic_vector(31 downto 0);
 
@@ -177,6 +179,8 @@ begin
       csr_wdata   => csr_wdata,
       csr_rdata   => csr_rdata,
       csr_illegal => csr_illegal,
+      priv_o      => csr_priv,
+      wfi_en      => wfi_en,
       trap_en     => trap_en,
       trap_cause  => trap_cause,
       trap_pc     => trap_pc,
@@ -282,6 +286,7 @@ begin
       csr_en    <= '0';
       trap_en   <= '0';
       mret_en   <= '0';
+      wfi_en    <= '0';
       irq_pend_r <= '0';
       irq_taken_r <= '0';
     elsif rising_edge(clk_i) then
@@ -292,6 +297,7 @@ begin
       csr_en    <= '0';
       trap_en   <= '0';
       mret_en   <= '0';
+      wfi_en    <= '0';
       irq_taken_r <= '0';
       -- el modulo ya consumio el trap cuando irq_take vuelve a '0'
       -- (el trap entry pone mstatus.MIE=0, lo que baja irq_take)
@@ -433,6 +439,11 @@ begin
               end case;
               if take then pc_r <= pc_r + unsigned(immB); else pc_r <= npc_r; end if;
               state_r <= S_FETCH;
+            when "0001111" =>  -- FENCE / FENCE.I: nop en este SoC
+              -- (bus en orden, sin caches, un solo hart); el kernel las
+              -- emite masivamente y deben retirarse sin efecto.
+              pc_r <= npc_r;
+              state_r <= S_FETCH;
             when "1101111" =>  -- JAL
               alu_r <= std_logic_vector(npc_r);
               pc_r  <= pc_r + unsigned(immJ);
@@ -445,26 +456,34 @@ begin
               if f3 = "000" then
                 -- ecall / ebreak / mret, distinguidos por ir[31:20]
                 case ir_r(31 downto 20) is
-                  when x"000" =>  -- ECALL -> trap, cause=11 (M-mode)
+                  when x"000" =>  -- ECALL: causa 8 (U-mode) u 11 (M-mode)
                     trap_en    <= '1';
-                    trap_cause <= x"0000000B";
+                    if csr_priv = "11" then
+                      trap_cause <= x"0000000B";
+                    else
+                      trap_cause <= x"00000008";
+                    end if;
                     trap_pc    <= std_logic_vector(pc_r);
-                    trap_tval  <= (others => '0');
+                    trap_tval  <= std_logic_vector(pc_r);  -- paridad emulador
                     pc_r       <= unsigned(tvec_pc);
                     state_r    <= S_FETCH;
                   when x"001" =>  -- EBREAK -> trap, cause=3
                     trap_en    <= '1';
                     trap_cause <= x"00000003";
                     trap_pc    <= std_logic_vector(pc_r);
-                    trap_tval  <= (others => '0');
+                    trap_tval  <= std_logic_vector(pc_r);  -- paridad emulador
                     pc_r       <= unsigned(tvec_pc);
                     state_r    <= S_FETCH;
                   when x"302" =>  -- MRET -> restaurar PC desde mepc
                     mret_en <= '1';
                     pc_r    <= unsigned(epc_pc);
                     state_r <= S_FETCH;
+                  when x"105" =>  -- WFI: habilita MIE (paridad emulador)
+                    wfi_en  <= '1';
+                    state_r <= S_FETCH;
+                    pc_r    <= npc_r;
                   when others =>
-                    -- wfi (0x105) y otros: tratar como nop
+                    -- otros immediatos de SYSTEM f3=0: nop
                     state_r <= S_FETCH;
                     pc_r    <= npc_r;
                 end case;

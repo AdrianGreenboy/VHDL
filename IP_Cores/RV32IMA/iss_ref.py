@@ -6,29 +6,33 @@ def s32(x): return x-(1<<32) if x&0x80000000 else x
 def u32(x): return x & 0xFFFFFFFF
 
 DBG_IRQ = False
-def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
+def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=None, init_ram=None):
     RAM = {}  # dir byte -> valor (palabras alineadas)
-    for i,w in enumerate(mem_words):
-        RAM[0x80000000 + i*4] = w
+    if init_ram is not None:
+        RAM = init_ram          # RAM pre-poblada (modo boot: imagen + DTB)
+    else:
+        for i,w in enumerate(mem_words):
+            RAM[0x80000000 + i*4] = w
     def load(a):
         return RAM.get(a & ~3, 0)
     def store(a, v):
         RAM[a & ~3] = u32(v)
     x = [0]*32
+    if init_regs:
+        for k,v in init_regs.items(): x[k] = v & 0xFFFFFFFF
     pc = 0x80000000
     res_valid = False  # reserva lr/sc
     res_addr = 0
     uart_out = []      # bytes emitidos por el UART
     # CSRs M-mode (subconjunto del modulo rv32_csr_trap)
     csr = {0x300:0, 0x304:0, 0x305:0, 0x340:0, 0x341:0, 0x342:0, 0x343:0}
-    mst_mie, mst_mpie = 0, 0
+    mstatus = 0          # registro plano de 32 bits (paridad mini-rv32ima)
+    priv = 3             # privilegio actual: M=3, U=0
     mie_mtie, mie_msie = 0, 0
     # Igual que el hardware: la escritura de mstatus/mie se registra en el
     # flanco y la logica de interrupcion (combinacional desde esos
     # registros) solo la ve en la instruccion siguiente. Mantenemos una
     # copia retardada un paso para el evaluador.
-    mie_eff, mtie_eff, msie_eff = 0, 0, 0
-    mask_q = [(0,0,0), (0,0,0)]   # cola de retardo (2 pasos, como el core)
     # Lockstep guiado: irq_events es la lista de indices de instruccion en
     # los que el CORE tomo una interrupcion (traza emitida por el RTL). En
     # ese modo el ISS no modela el instante del disparo -- lo toma de la
@@ -54,9 +58,11 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
     for step in range(max_steps):
         # el CLINT avanza una unidad por instruccion retirada
         mtime = (mtime + 1) & 0xFFFFFFFFFFFFFFFF
-        mtip_line = 1 if mtime >= mtimecmp else 0
+        # paridad mini-rv32ima: dispara solo si mtime > mtimecmp Y match != 0
+        mtip_line = 1 if (mtime > mtimecmp and mtimecmp != 0) else 0
         # chequeo de interrupcion en limite de instruccion (igual que el core:
         # la instruccion NO se ejecuta y mepc apunta a ella para reintentarla)
+        mie_eff = (mstatus >> 3) & 1
         if guided:
             # evento k => la interrupcion se toma en el limite previo a la
             # instruccion k, es decir tras ejecutar k-1 instrucciones
@@ -72,20 +78,20 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                 # registrar el contexto para la verificacion posterior
                 irq_ctx.append({
                     "instr": instr_n, "pc": pc,
-                    "mstatus_mie": mst_mie, "mie_mtie": mie_mtie,
+                    "mstatus_mie": (mstatus>>3)&1, "mie_mtie": mie_mtie,
                     "mie_msie": mie_msie,
                 })
                 ev_i += 1
         else:
-            take_irq = bool(mie_eff and ((msie_eff and msip_line) or (mtie_eff and mtip_line)))
+            take_irq = bool(mie_eff and ((mie_msie and msip_line) or (mie_mtie and mtip_line)))
         if take_irq:
             csr[0x341] = pc
             csr[0x342] = 0x80000003 if (mie_msie and msip_line) else 0x80000007
             csr[0x343] = 0
-            mst_mpie = mst_mie; mst_mie = 0
+            # formula exacta de mini-rv32ima: MPIE<-MIE, MPP<-priv, resto 0
+            mstatus = ((mstatus & 0x08) << 4) | ((priv & 3) << 11)
+            priv = 3
             pc = csr[0x305] & 0xFFFFFFFC
-            mask_q = [(mst_mie, mie_mtie, mie_msie)] * 2
-            mie_eff, mtie_eff, msie_eff = mst_mie, mie_mtie, mie_msie
             continue
         instr_n += 1
         visitas[pc] = visitas.get(pc, 0) + 1
@@ -124,7 +130,9 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                     elif s32(a)==-2**31 and s32(b)==-1: wr(rd,0)
                     else: wr(rd,u32(int(s32(a)-int(s32(a)/s32(b))*s32(b))))
                 elif f3==7: wr(rd, u32(a-(a//b)*b) if b else a)
-                elif f3==1: wr(rd,u32((s32(a)*s32(b))>>32))  # mulh
+                elif f3==1: wr(rd,u32((s32(a)*s32(b))>>32))   # mulh
+                elif f3==2: wr(rd,u32((s32(a)*b)>>32))        # mulhsu
+                elif f3==3: wr(rd,u32((a*b)>>32))             # mulhu
                 else: wr(rd,0)
             else:
                 if f3==0: wr(rd, u32(a-b) if (f7&0x20) else u32(a+b))
@@ -167,8 +175,8 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                 v=0x60 << 8            # LSR en el lane 1 (byte 0x...05)
             elif a==0x10000000:    # RBR sin dato disponible
                 v=0
-            elif (a>>16)==0x1110:  # syscon: lecturas devuelven 0
-                v=0
+            elif 0x10000000 <= a < 0x12000000:
+                v=0   # rango MMIO no implementado: 0 (paridad emulador)
             else:
                 v=load(a)
             vb=(v>>((a&3)*8))&0xFF          # byte alineado
@@ -190,6 +198,8 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                 mtimecmp = (mtimecmp & 0xFFFFFFFF) | (u32(x[rs2])<<32)
             elif a==0x11100000:  # syscon
                 if x[rs2]==0x5555: break  # POWEROFF
+            elif 0x10000000 <= a < 0x12000000:
+                pass  # MMIO no implementado: escritura descartada (paridad)
             else:
                 res_valid = False  # P3: store normal rompe la reserva lr/sc
                 if f3==2: store(a,x[rs2])
@@ -218,6 +228,8 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
             elif f5==0x14: wr(rd,v); store(a,u32(max(s32(v),s32(x[rs2]))))  # amomax
             elif f5==0x18: wr(rd,v); store(a,min(v,x[rs2]))  # amominu
             elif f5==0x1C: wr(rd,v); store(a,max(v,x[rs2]))  # amomaxu
+        elif op==0x0F:  # FENCE / FENCE.I: nop (bus en orden, sin caches)
+            pass
         elif op==0x6F:  # JAL
             imm=((instr>>31)<<20)|(((instr>>12)&0xFF)<<12)|(((instr>>20)&1)<<11)|(((instr>>21)&0x3FF)<<1)
             if imm&0x100000: imm-=0x200000
@@ -228,18 +240,25 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
         elif op==0x73:  # SYSTEM: ecall/ebreak/mret y CSR
             f12=(instr>>20)&0xFFF
             if f3==0:
-                if f12==0x000:      # ECALL -> trap cause 11
+                if f12==0x000:      # ECALL: causa 8 (U) u 11 (M)
                     csr[0x341]=pc          # mepc
-                    csr[0x342]=11          # mcause
-                    csr[0x343]=0           # mtval
-                    mst_mpie=mst_mie; mst_mie=0
+                    csr[0x342]=11 if priv==3 else 8
+                    csr[0x343]=pc          # mtval = pc (paridad emulador)
+                    mstatus=((mstatus & 0x08)<<4)|((priv&3)<<11)
+                    priv=3
                     npc=csr[0x305]&0xFFFFFFFC   # mtvec (direct)
                 elif f12==0x001:    # EBREAK -> trap cause 3
-                    csr[0x341]=pc; csr[0x342]=3; csr[0x343]=0
-                    mst_mpie=mst_mie; mst_mie=0
+                    csr[0x341]=pc; csr[0x342]=3; csr[0x343]=pc
+                    mstatus=((mstatus & 0x08)<<4)|((priv&3)<<11)
+                    priv=3
                     npc=csr[0x305]&0xFFFFFFFC
+                elif f12==0x105:    # WFI: habilita MIE y continua (paridad)
+                    mstatus |= 8
                 elif f12==0x302:    # MRET
-                    mst_mie=mst_mpie; mst_mpie=1
+                    # formula exacta de mini-rv32ima para el mret
+                    old_mpp=(mstatus>>11)&3
+                    mstatus=((mstatus&0x80)>>4)|((priv&3)<<11)|0x80
+                    priv=old_mpp
                     npc=csr[0x341]&0xFFFFFFFE   # mepc
                 # otros (wfi, etc): nop
             else:
@@ -248,9 +267,12 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                 srcv = ((instr>>15)&0x1F) if (f3&4) else x[rs1]
                 # lectura del CSR
                 if addr_csr==0x300:
-                    old=(mst_mpie<<7)|(mst_mie<<3)|(3<<11)  # MPP=11
+                    old=mstatus
                 elif addr_csr==0x304:
                     old=(mie_mtie<<7)|(mie_msie<<3)
+                elif addr_csr==0x344:
+                    # mip: RO por hardware, derivado del CLINT
+                    old=((1 if mtime>=mtimecmp else 0)<<7)|(msip_line<<3)
                 elif addr_csr in csr:
                     old=csr[addr_csr]
                 else:
@@ -262,7 +284,7 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
                     elif (f3&3)==2: new=old|srcv             # csrrs/si
                     else:           new=old&u32(~srcv)       # csrrc/ci
                     if addr_csr==0x300:
-                        mst_mpie=(new>>7)&1; mst_mie=(new>>3)&1
+                        mstatus=u32(new)
                     elif addr_csr==0x304:
                         mie_mtie=(new>>7)&1; mie_msie=(new>>3)&1
                     elif addr_csr in csr:
@@ -275,8 +297,6 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None):
         # la escritura de mstatus/mie tarda 2 instrucciones en ser visible
         # para el evaluador (S_EXEC pulsa csr_en, el modulo escribe en el
         # flanco de S_WB, y el S_FETCH siguiente aun evalua el valor previo)
-        mask_q.append((mst_mie, mie_mtie, mie_msie))
-        mie_eff, mtie_eff, msie_eff = mask_q.pop(0)
     return trace, RAM, uart_out, irq_ctx
 
 if __name__=="__main__":

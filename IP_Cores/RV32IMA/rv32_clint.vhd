@@ -66,14 +66,19 @@ begin
   rdata <= s_rdata;
 
   -- mtip / msip combinacionales
-  mtip <= '1' when (rstn = '1' and r_mtime >= r_mtimecmp) else '0'; -- MUT1
+  -- paridad mini-rv32ima: dispara solo si mtime ES MAYOR que mtimecmp y
+  -- mtimecmp no es cero (cero = timer desarmado, el estado tras el reset)
+  mtip <= '1' when (rstn = '1' and r_mtime > r_mtimecmp
+                    and r_mtimecmp /= to_unsigned(0, 64)) else '0'; -- MUT1
   msip <= r_msip;
 
   process(clk, rstn)
   begin
     if rstn = '0' then
       r_msip     <= '0';
-      r_mtimecmp <= (others => '1'); -- MUT4: reset all-ones evita MTI espurio
+      -- paridad mini-rv32ima: reset a 0 = timer DESARMADO (la condicion de
+      -- disparo exige mtimecmp /= 0, asi que 0 nunca genera MTI espurio)
+      r_mtimecmp <= (others => '0'); -- MUT4
       r_mtime    <= (others => '0');
     elsif rising_edge(clk) then
       if tick = '1' then
