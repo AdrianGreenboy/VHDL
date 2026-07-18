@@ -23,55 +23,59 @@ if dtb[0x13c:0x140] == bytes.fromhex('03ffc000'):
     dtb = dtb[:0x13c] + _s.pack('>I', dtb_off) + dtb[0x140:]
 load_blob(img, 0); load_blob(dtb, dtb_off)
 
-# traza del emulador
-emu = []
+# traza del emulador: generador en streaming (archivos de GB)
 pat = re.compile(r'PC: ([0-9a-f]{8}) \[0x([0-9a-f]{8})\] (.*)')
-for line in open('emu_trace.txt'):
-    # la traza del emulador puede llevar bytes de UART intercalados al
-    # principio de la linea (el kernel imprime por el mismo stdout);
-    # usamos search para tolerarlos
-    m = pat.search(line)
-    if not m: continue
-    regs = [0]+[int(v,16) for v in re.findall(r':([0-9a-f]{8})', m.group(3))][1:]
-    # el volcado es Z,ra,sp,...: Z=x0; capturamos 32 valores
-    vals = [int(v,16) for v in re.findall(r':([0-9a-f]{8})', m.group(3))]
-    emu.append((int(m.group(1),16), int(m.group(2),16), vals))
-print(f"# traza emulador: {len(emu)} pasos")
+def emu_stream():
+    for line in open('emu_trace.txt', errors='replace'):
+        m = pat.search(line)
+        if not m: continue
+        vals = [int(v,16) for v in re.findall(r':([0-9a-f]{8})', m.group(3))]
+        yield (int(m.group(1),16), int(m.group(2),16), vals)
 
-N = min(len(emu), int(sys.argv[1]) if len(sys.argv)>1 else 100000)
+N = int(sys.argv[1]) if len(sys.argv)>1 else 100000
 trace, R, uart, ctx = iss_ref.run([], max_steps=N,
     init_regs={10:0, 11:0x80000000+dtb_off}, init_ram=RAM)
 print(f"# traza ISS: {len(trace)} pasos")
 
+
 diffs = 0
-eoff = 0   # desplazamiento del emulador (lineas duplicadas, p.ej. wfi dormido)
+skipped = 0
 k = 0
-while k < min(len(emu)-eoff, len(trace)):
-    epc, eir, eregs = emu[k+eoff]
+gen = emu_stream()
+pend = None   # linea del emulador pendiente de consumir
+while k < len(trace):
+    if pend is None:
+        try:
+            pend = next(gen)
+        except StopIteration:
+            break
+    epc, eir, eregs = pend
     ipc, iir, iregs = trace[k]
-    mismatch = (epc != ipc) or any(eregs[r] != iregs[r] for r in range(32))
-    if mismatch:
-        # el emulador imprime lineas duplicadas en pasos que no ejecutan
-        # (p.ej. dormido por wfi); probamos realinear saltando duplicados
-        realigned = False
-        for skip in range(1, 4):
-            if k+eoff+skip < len(emu):
-                e2 = emu[k+eoff+skip]
-                if e2[0] == ipc and all(e2[2][r] == iregs[r] for r in range(32)):
-                    eoff += skip
-                    realigned = True
-                    break
-        if realigned:
-            k += 1
-            continue
-        print(f"paso {k}: PC emu={epc:08x} iss={ipc:08x} (ir emu={eir:08x})")
-        for r in range(32):
-            if eregs[r] != iregs[r]:
-                print(f"paso {k} PC={epc:08x}: x{r} emu={eregs[r]:08x} iss={iregs[r]:08x}")
-                if r > 6: break
-        diffs += 1
-        break
+    if (epc != ipc) or any(eregs[r] != iregs[r] for r in range(32)):
+        # lineas duplicadas del emulador (pasos no ejecutados): saltarlas
+        matched = False
+        for _ in range(3):
+            try:
+                pend = next(gen)
+            except StopIteration:
+                pend = None; break
+            skipped += 1
+            e2 = pend
+            if e2[0] == ipc and all(e2[2][r] == iregs[r] for r in range(32)):
+                matched = True
+                break
+        if matched:
+            epc, eir, eregs = pend
+        else:
+            print(f"paso {k}: PC emu={epc:08x} iss={ipc:08x} (ir emu={eir:08x})")
+            for r in range(32):
+                if eregs[r] != iregs[r]:
+                    print(f"paso {k} PC={epc:08x}: x{r} emu={eregs[r]:08x} iss={iregs[r]:08x}")
+                    if r > 6: break
+            diffs += 1
+            break
+    pend = None
     k += 1
 if diffs == 0:
-    print(f">>> ISS == EMULADOR: {k} pasos identicos (desplazamientos tolerados: {eoff})")
+    print(f">>> ISS == EMULADOR: {k} pasos identicos (desplazamientos tolerados: {skipped})")
     print(f"UART ISS: {''.join(chr(c) for c in uart)[:80]!r}")

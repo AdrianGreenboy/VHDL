@@ -6,7 +6,7 @@ def s32(x): return x-(1<<32) if x&0x80000000 else x
 def u32(x): return x & 0xFFFFFFFF
 
 DBG_IRQ = False
-def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=None, init_ram=None):
+def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=None, init_ram=None, trace_from=0):
     RAM = {}  # dir byte -> valor (palabras alineadas)
     if init_ram is not None:
         RAM = init_ram          # RAM pre-poblada (modo boot: imagen + DTB)
@@ -21,8 +21,7 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=N
     if init_regs:
         for k,v in init_regs.items(): x[k] = v & 0xFFFFFFFF
     pc = 0x80000000
-    res_valid = False  # reserva lr/sc
-    res_addr = 0
+    res_addr = 0   # reserva lr/sc: direccion[28:0] (paridad mini-rv32ima)
     uart_out = []      # bytes emitidos por el UART
     # CSRs M-mode (subconjunto del modulo rv32_csr_trap)
     csr = {0x300:0, 0x304:0, 0x305:0, 0x340:0, 0x341:0, 0x342:0, 0x343:0}
@@ -52,12 +51,19 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=N
     visitas = {}   # ejecuciones retiradas por PC (para los eventos guiados)
     instr_n = 0   # instrucciones ejecutadas; el evento k del arnes
                   # significa "tras ejecutar k-1, tomar interrupcion"
-    mtime, mtimecmp = 0, 0xFFFFFFFFFFFFFFFF   # CLINT
+    # Paridad con mini-rv32ima en modo -l: el tiempo se deriva del contador
+    # de ciclos (cyclel), que solo avanza al RETIRAR una instruccion. Los
+    # steps que toman una interrupcion no retiran y no avanzan el timer.
+    # elapsed = cycle - last se aplica al inicio de cada iteracion, asi que
+    # dentro del retiro k el kernel lee mtime = k-1.
+    mtime, mtimecmp = 0, 0   # CLINT
+    cycle_ret, last_cycle = 0, 0
     msip_line = 0
     trace = []
     for step in range(max_steps):
-        # el CLINT avanza una unidad por instruccion retirada
-        mtime = (mtime + 1) & 0xFFFFFFFFFFFFFFFF
+        # el CLINT avanza con el contador de retiros (paridad emulador -l)
+        mtime = (mtime + (cycle_ret - last_cycle)) & 0xFFFFFFFFFFFFFFFF
+        last_cycle = cycle_ret
         # paridad mini-rv32ima: dispara solo si mtime > mtimecmp Y match != 0
         mtip_line = 1 if (mtime > mtimecmp and mtimecmp != 0) else 0
         # chequeo de interrupcion en limite de instruccion (igual que el core:
@@ -94,9 +100,13 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=N
             pc = csr[0x305] & 0xFFFFFFFC
             continue
         instr_n += 1
+        cycle_ret += 1
         visitas[pc] = visitas.get(pc, 0) + 1
         instr = load(pc)
-        trace.append((pc, instr, x[:]))  # estado de ENTRADA
+        # trace_from: no guardar la traza de los pasos previos (los booteos
+        # largos no caben en memoria con 32 registros por paso)
+        if cycle_ret > trace_from:
+            trace.append((pc, instr, x[:]))  # estado de ENTRADA
         op = instr & 0x7F
         rd = (instr>>7)&0x1F; f3=(instr>>12)&7; rs1=(instr>>15)&0x1F
         rs2=(instr>>20)&0x1F; f7=(instr>>25)&0x7F
@@ -201,7 +211,7 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=N
             elif 0x10000000 <= a < 0x12000000:
                 pass  # MMIO no implementado: escritura descartada (paridad)
             else:
-                res_valid = False  # P3: store normal rompe la reserva lr/sc
+                pass  # paridad mini-rv32ima: los stores NO rompen la reserva
                 if f3==2: store(a,x[rs2])
                 elif f3==0:  # SB: byte en el lane a&3
                     sh_n=(a&3)*8; m=0xFF<<sh_n
@@ -211,23 +221,25 @@ def run(mem_words, max_steps=200, irq_events=None, mtime_reads=None, init_regs=N
                     store(a,(load(a)&u32(~m))|((x[rs2]&0xFFFF)<<sh_n))
         elif op==0x2F:  # AMO
             f5=(instr>>27)&0x1F; a=u32(x[rs1]); v=load(a); res=v
-            if f5==0x02:  # lr.w: arma la reserva
-                wr(rd,v); res_valid=True; res_addr=a
-            elif f5==0x03:  # sc.w: exito solo si la reserva es valida y coincide
-                if res_valid and res_addr==a:
-                    wr(rd,0); store(a,x[rs2])
+            b=x[rs2]   # capturar ANTES del write-back (caso rd==rs2)
+            if f5==0x02:  # lr.w (paridad mini-rv32ima)
+                # la reserva es la direccion recortada a 29 bits; nada la
+                # invalida (ni stores ni traps) y persiste tras el sc
+                wr(rd,v); res_addr = a & 0x1FFFFFFF
+            elif f5==0x03:  # sc.w: exito si la direccion coincide
+                if (a & 0x1FFFFFFF) == res_addr:
+                    wr(rd,0); store(a,b)
                 else:
                     wr(rd,1)  # fallo: no escribe
-                res_valid=False
-            elif f5==0x00: wr(rd,v); store(a,u32(v+x[rs2]))  # amoadd
-            elif f5==0x01: wr(rd,v); store(a,x[rs2])  # amoswap
-            elif f5==0x04: wr(rd,v); store(a,v^x[rs2])  # amoxor
-            elif f5==0x08: wr(rd,v); store(a,v|x[rs2])  # amoor
-            elif f5==0x0C: wr(rd,v); store(a,v&x[rs2])  # amoand
-            elif f5==0x10: wr(rd,v); store(a,u32(min(s32(v),s32(x[rs2]))))  # amomin
-            elif f5==0x14: wr(rd,v); store(a,u32(max(s32(v),s32(x[rs2]))))  # amomax
-            elif f5==0x18: wr(rd,v); store(a,min(v,x[rs2]))  # amominu
-            elif f5==0x1C: wr(rd,v); store(a,max(v,x[rs2]))  # amomaxu
+            elif f5==0x00: wr(rd,v); store(a,u32(v+b))  # amoadd
+            elif f5==0x01: wr(rd,v); store(a,b)  # amoswap
+            elif f5==0x04: wr(rd,v); store(a,v^b)  # amoxor
+            elif f5==0x08: wr(rd,v); store(a,v|b)  # amoor
+            elif f5==0x0C: wr(rd,v); store(a,v&b)  # amoand
+            elif f5==0x10: wr(rd,v); store(a,u32(min(s32(v),s32(b))))  # amomin
+            elif f5==0x14: wr(rd,v); store(a,u32(max(s32(v),s32(b))))  # amomax
+            elif f5==0x18: wr(rd,v); store(a,min(v,b))  # amominu
+            elif f5==0x1C: wr(rd,v); store(a,max(v,b))  # amomaxu
         elif op==0x0F:  # FENCE / FENCE.I: nop (bus en orden, sin caches)
             pass
         elif op==0x6F:  # JAL

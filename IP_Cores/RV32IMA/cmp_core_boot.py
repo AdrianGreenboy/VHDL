@@ -29,12 +29,18 @@ for line in open('core_trace.log'):
     regs = [int(x,16) for x in p[2][2:].split(',')] if len(p) > 2 else None
     core.append((int(p[0][3:],16), int(p[1][6:],16), regs))
 
-# saltar el stub: alinear en el primer PC=0x80000000
-k0 = next((k for k,(pc,_,_) in enumerate(core) if pc == 0x80000000), None)
-if k0 is None:
-    print(">>> FALLO: la traza del core nunca llega a 0x80000000"); sys.exit(1)
-core = core[k0:]
-print(f"# core: {len(core)} pasos (stub saltado: {k0})")
+# TRACE_FROM: la traza del core puede empezar en mitad del boot; el ISS
+# ejecuta desde cero y se compara solo la ventana correspondiente.
+TRACE_FROM = int(os.environ.get("TRACE_FROM", "0"))
+if TRACE_FROM == 0:
+    # saltar el stub: alinear en el primer PC=0x80000000
+    k0 = next((k for k,(pc,_,_) in enumerate(core) if pc == 0x80000000), None)
+    if k0 is None:
+        print(">>> FALLO: la traza del core nunca llega a 0x80000000"); sys.exit(1)
+    core = core[k0:]
+    print(f"# core: {len(core)} pasos (stub saltado: {k0})")
+else:
+    print(f"# core: {len(core)} pasos (ventana desde el retiro {TRACE_FROM})")
 
 ev = None
 if os.path.exists("irq_events.log"):
@@ -53,13 +59,17 @@ if os.path.exists("mtime_reads.log"):
     mtl = [l.strip() for l in open("mtime_reads.log") if l.strip()]
     if mtl: mt = [int(x,16) for x in mtl]
 
-steps = len(core) + 8
+# el stub consume 6 retiros antes del kernel: el retiro N del arnes es el
+# paso N-6 del ISS (que arranca directamente en 0x80000000)
+STUB = 6
+skip_iss = max(0, TRACE_FROM - STUB)
+steps = skip_iss + len(core) + 8
 # x5 = residuo del stub de arranque (li x5,0x80000000; jalr x0,0(x5));
 # el ISS arranca con el mismo residuo para el lockstep exacto. (t0 es
 # caller-saved: el kernel lo escribe antes de leerlo.)
 trace, R, uart, ctx = iss_ref.run([], max_steps=steps,
     init_regs={5:0x80000000, 10:0, 11:0x80000000+dtb_off}, init_ram=RAM,
-    irq_events=ev, mtime_reads=mt)
+    irq_events=ev, mtime_reads=mt, trace_from=skip_iss)
 print(f"# ref: {len(trace)} pasos")
 
 diffs = 0

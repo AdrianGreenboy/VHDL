@@ -28,7 +28,8 @@ use std.env.finish;
 
 entity tb_boot is
   generic (
-    MAX_STEPS  : natural := 100000;   -- retiros a trazar
+    MAX_STEPS  : natural := 100000;   -- retiros a EJECUTAR
+    TRACE_FROM : natural := 0;        -- primer retiro que se escribe a la traza
     TRACE_REGS : boolean := true      -- false: solo PC (traza ligera)
   );
 end entity;
@@ -116,6 +117,7 @@ begin
     variable lo, lev, lmt, lu : line;
     variable last_pc : std_logic_vector(31 downto 0) := (others => '1');
     variable steps   : integer := 0;
+    variable retired : integer := 0;
     variable pend_l  : line;
     variable pend_pc : std_logic_vector(31 downto 0) := (others => '0');
     variable pend_valid : boolean := false;
@@ -233,8 +235,18 @@ begin
       -- traza de retiro con buffer de confirmacion
       if stf = '1' and iaddr /= last_pc then
         if pend_valid then
-          writeline(fo, pend_l);
-          steps := steps + 1;
+          -- ventana de traza: los retiros previos a TRACE_FROM se cuentan
+          -- pero no se escriben (booteos profundos generan GB de log)
+          if retired >= TRACE_FROM then
+            writeline(fo, pend_l);
+            steps := steps + 1;
+            if (steps mod 4096) = 0 then
+              flush(fo);
+            end if;
+          else
+            deallocate(pend_l);
+          end if;
+          retired := retired + 1;
         end if;
         write(pend_l, string'("PC="));
         hwrite(pend_l, iaddr);
@@ -258,17 +270,18 @@ begin
         last_pc := iaddr;
       end if;
 
-      exit when poweroff = '1' or halt = '1' or steps >= MAX_STEPS;
+      exit when poweroff = '1' or halt = '1' or retired >= MAX_STEPS;
     end loop;
 
-    if pend_valid then
+    if pend_valid and retired >= TRACE_FROM then
       writeline(fo, pend_l);
       steps := steps + 1;
     end if;
     if uacc > 0 then
       writeline(fu, lu);   -- volcar la linea de UART incompleta
     end if;
-    report "BOOT TRACE: " & integer'image(steps) & " pasos, "
+    report "BOOT TRACE: " & integer'image(retired) & " retiros, "
+           & integer'image(steps) & " trazados, "
            & integer'image(uacc) & " bytes de UART" severity note;
     finish;
   end process;
