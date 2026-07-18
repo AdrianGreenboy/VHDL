@@ -69,6 +69,17 @@ architecture sim of tb_ima_adapter is
     return to_integer(unsigned(a(13 downto 2)));
   end function;
 
+  -- indice en la DDR FISICA del dut: valida la traduccion 0x8xxx->0x7xxx
+  -- en vez de descartarla quedandose con los bits bajos
+  function pidx(a : std_logic_vector(31 downto 0)) return integer is
+    variable ua : unsigned(31 downto 0);
+  begin
+    ua := unsigned(a);
+    if ua < x"70000000" then return -1; end if;
+    if (ua - x"70000000") >= to_unsigned(NW*4, 32) then return -1; end if;
+    return to_integer((ua - x"70000000") srl 2);
+  end function;
+
   signal lcg : unsigned(31 downto 0) := to_unsigned(20260718, 32);
   signal ref_off, dut_off : boolean := false;   -- poweroff detectado
 begin
@@ -163,7 +174,7 @@ begin
         ws := rnd_ws;
         for k in 1 to ws loop wait until rising_edge(clk); end loop;
         arready<='1'; wait until rising_edge(clk); arready<='0';
-        ix := to_integer(unsigned(araddr(13 downto 2)));
+        ix := pidx(araddr);
         if ix>=0 and ix<NW then axi_rdata<=dmem_ddr(ix); else axi_rdata<=(others=>'0'); end if;
         ws := rnd_ws;
         for k in 1 to ws loop wait until rising_edge(clk); end loop;
@@ -175,7 +186,7 @@ begin
         for k in 1 to ws loop wait until rising_edge(clk); end loop;
         awready<='1'; wready<='1'; wait until rising_edge(clk);
         awready<='0'; wready<='0';
-        ix := to_integer(unsigned(awaddr(13 downto 2)));
+        ix := pidx(awaddr);
         if ix>=0 and ix<NW then
           for b in 0 to 3 loop
             if wstrb(b)='1' then

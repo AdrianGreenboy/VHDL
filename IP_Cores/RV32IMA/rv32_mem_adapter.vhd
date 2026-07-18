@@ -156,10 +156,13 @@ begin
 
   -- salidas AXI multiplexadas entre fetch y data (nunca simultaneos)
   m_arvalid <= f_arvalid or d_arvalid;
-  m_araddr  <= f_araddr when f_arvalid = '1' else d_addr;
+  -- d_addr esta en la vista del core; al NoC debe salir la fisica (el
+  -- fetch ya sale traducido desde f_araddr). Sin este xlate los accesos
+  -- a DATO iban al NoC con 0x8xxxxxxx en vez de 0x7xxxxxxx.
+  m_araddr  <= f_araddr when f_arvalid = '1' else xlate(d_addr);
   m_rready  <= f_rready or d_rready;
   m_awvalid <= d_awvalid;
-  m_awaddr  <= d_addr;
+  m_awaddr  <= xlate(d_addr);
   m_wvalid  <= d_wvalid;
   m_wdata   <= d_wdata;
   m_wstrb   <= d_be; -- MUT4
