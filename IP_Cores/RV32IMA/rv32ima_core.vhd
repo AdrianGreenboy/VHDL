@@ -268,6 +268,7 @@ begin
 
   proc : process (clk_i, aresetn_i)
     variable alu_v : signed(31 downto 0);
+    variable mul_p : signed(63 downto 0);
     variable sh    : natural range 0 to 31;
     variable take  : boolean;
     variable ld_v  : std_logic_vector(31 downto 0);
@@ -361,7 +362,14 @@ begin
               if f7 = "0000001" then   -- extension M completa
                 case f3 is
                   when "000" =>  -- MUL (baja)
-                    alu_v := resize(a_v * b_v, 32);
+                    -- OJO: resize() sobre signed PRESERVA EL SIGNO, no
+                    -- trunca. Con producto negativo dejaba el bit 31 a '1'
+                    -- (0xAF * 0xCCCCCCCD daba 0x80000023 en vez de
+                    -- 0x00000023). Hay que cortar el vector explicitamente.
+                    -- Cazado en el boot real del kernel: la rutina de
+                    -- division por constante de printf usa ese reciproco.
+                    mul_p := a_v * b_v;
+                    alu_v := mul_p(31 downto 0);
                   when "001" =>  -- MULH (alta, signed x signed)
                     alu_v := resize(shift_right(a_v * b_v, 32), 32);
                   when "010" =>  -- MULHSU (alta, signed x unsigned)
