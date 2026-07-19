@@ -28,10 +28,15 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <termios.h>
 
 #define DDR_BASE   0x70000000UL
 #define DDR_SIZE   (64UL * 1024 * 1024)
-#define CTRL_BASE  0x80000000UL
+/* En Versal el banco de control de la PL NO puede ir en 0x80000000
+ * (reservado a DDR): M_AXI_FPD solo admite 0xA4000000 [448M],
+ * 0x400000000 [8G] y 0x40000000000 [1T]. Debe coincidir con
+ * CTRL_BASE del Tcl del block design y con el device tree. */
+#define CTRL_BASE  0xA4000000UL
 #define CTRL_SIZE  0x10000UL
 
 /* offsets del banco de control (ver rv32ima_soc_top.vhd) */
@@ -217,6 +222,22 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, on_sigint);
 
+	/* stdin en modo crudo y no bloqueante: cada tecla viaja al core al
+	 * instante (sin esperar Enter) y el bucle nunca se bloquea leyendo.
+	 * Se restaura la configuracion del terminal al salir. */
+	struct termios tio_old, tio_raw;
+	int tty = isatty(STDIN_FILENO);
+	if (tty) {
+		tcgetattr(STDIN_FILENO, &tio_old);
+		tio_raw = tio_old;
+		tio_raw.c_lflag &= ~(ICANON | ECHO);
+		tio_raw.c_cc[VMIN] = 0;
+		tio_raw.c_cc[VTIME] = 0;
+		tcsetattr(STDIN_FILENO, TCSANOW, &tio_raw);
+	}
+	fcntl(STDIN_FILENO, F_SETFL,
+	      fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
+
 	printf("arrancando el core...\n\n");
 	ctrl[REG_CTRL / 4] = CTRL_CORE_EN;
 
@@ -236,6 +257,17 @@ int main(int argc, char **argv)
 		}
 		if (drained)
 			fflush(stdout);
+
+		/* teclado -> core: cada byte va al registro TX, que alimenta
+		 * el FIFO de RX de la UART del kernel invitado */
+		{
+			unsigned char kb[64];
+			ssize_t n = read(STDIN_FILENO, kb, sizeof kb);
+			for (ssize_t i = 0; i < n; i++) {
+				ctrl[REG_UART_TX / 4] = kb[i];
+				drained++;   /* hubo actividad: no dormir */
+			}
+		}
 
 		st = ctrl[REG_STATUS / 4];
 		if (st & (ST_POWEROFF | ST_REBOOT)) {
@@ -268,5 +300,7 @@ int main(int argc, char **argv)
 	       (unsigned long long)retired);
 
 	ctrl[REG_CTRL / 4] = 0;   /* pausar el core al salir */
+	if (tty)
+		tcsetattr(STDIN_FILENO, TCSANOW, &tio_old);
 	return 0;
 }

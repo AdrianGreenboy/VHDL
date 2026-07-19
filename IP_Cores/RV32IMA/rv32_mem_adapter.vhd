@@ -59,6 +59,16 @@ entity rv32_mem_adapter is
     dmem_be    : in  std_logic_vector(3 downto 0);
     dmem_rdata : out std_logic_vector(31 downto 0);
     core_halt  : in  std_logic;
+    -- CORRECCION AXI: rstn de este modulo debe ser el reset del BUS
+    -- (aresetn), que nunca se pulsa en operacion. El reset del CORE llega
+    -- por core_rstn y solo invalida el secuenciador; las maquinas AXI
+    -- terminan limpiamente cualquier transaccion en vuelo. Motivo: AXI
+    -- prohibe retirar arvalid o abandonar una respuesta pendiente; hacerlo
+    -- (como pasaba al resetear todo con el reset software) deja al NoC con
+    -- una respuesta huerfana y el canal se bloquea hasta reiniciar la
+    -- placa (arready=0 permanente, capturado con ILA en silicio).
+    core_run      : in std_logic;  -- '1': el core tiene permiso de marcha
+    core_rstn     : in std_logic;  -- reset del core (invalida el secuenciador)
     core_st_fetch : in std_logic;  -- '1' cuando el core esta en S_FETCH
     core_st_mem   : in std_logic;  -- '1' cuando el core esta en S_MEM
     core_st_store : in std_logic;  -- '1' cuando el core esta en S_STORE
@@ -326,7 +336,15 @@ begin
       case seq is
         when SEQ_EVAL =>
           en_r <= '0';
-          if core_halt = '1' then
+          if core_rstn = '0' then
+            served <= '0';           -- invalidar lo servido: el PC cambio
+          elsif core_run = '0' then
+            null;                    -- core parado: NO lanzar transacciones
+                                     -- (antes el adaptador hacia fetch en
+                                     -- bucle eterno con el core detenido, y
+                                     -- el pulso de reset del driver caia a
+                                     -- mitad de transaccion casi siempre)
+          elsif core_halt = '1' then
             en_r <= '0';  -- detenido
           elsif core_st_fetch = '1' and served = '0' then
             f_addr  <= imem_addr;
@@ -354,25 +372,40 @@ begin
         when SEQ_WAIT_FETCH =>
           en_r <= '0';
           if f_done = '1' then
-            served <= '1';   -- instr lista en imem_data
-            en_r   <= '1';   -- avanzar: el core captura y sale de S_FETCH
-            seq <= SEQ_STEP;
+            if core_rstn = '0' then
+              served <= '0';  -- el core se reseteo en vuelo: descartar
+              seq <= SEQ_EVAL;
+            else
+              served <= '1';   -- instr lista en imem_data
+              en_r   <= '1';   -- avanzar: el core captura y sale de S_FETCH
+              seq <= SEQ_STEP;
+            end if;
           end if;
 
         when SEQ_WAIT_DATA =>
           en_r <= '0';
           if d_done = '1' then
-            served <= '1';
-            en_r   <= '1';   -- avanzar: el core captura y sale de S_MEM
-            seq <= SEQ_STEP;
+            if core_rstn = '0' then
+              served <= '0';
+              seq <= SEQ_EVAL;
+            else
+              served <= '1';
+              en_r   <= '1';   -- avanzar: el core captura y sale de S_MEM
+              seq <= SEQ_STEP;
+            end if;
           end if;
 
         when SEQ_WAIT_STORE =>
           en_r <= '0';
           if d_done = '1' then
-            served <= '1';
-            en_r   <= '1';   -- avanzar: el core sale de S_STORE
-            seq <= SEQ_STEP;
+            if core_rstn = '0' then
+              served <= '0';
+              seq <= SEQ_EVAL;
+            else
+              served <= '1';
+              en_r   <= '1';   -- avanzar: el core sale de S_STORE
+              seq <= SEQ_STEP;
+            end if;
           end if;
 
         when SEQ_STEP =>

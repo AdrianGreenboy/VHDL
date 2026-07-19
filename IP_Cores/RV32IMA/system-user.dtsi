@@ -1,42 +1,54 @@
-/*
- * system-user.dtsi - Paso 7b: reserva de DDR para el SoC HERCOSSNUX
- *
- * Copiar a:
- *   <petalinux-project>/project-spec/meta-user/recipes-bsp/device-tree/files/
- *
- * CAMBIO RESPECTO A LOS IP CORES ANTERIORES: la reserva sube de
- * 16 MB a 64 MB, porque el core RV32IMA modela 64 MB de RAM para
- * el kernel Linux nommu (imagen + DTB + espacio de trabajo).
- *
- * 'no-map' es imprescindible: impide que el kernel del PS mapee
- * la region, de modo que el core de la PL es su unico dueno.
- *
- * CUIDADO con no-map (aprendido en cores previos): glibc aarch64
- * usa DC ZVA y stp de 128 bits en memset/memcpy, que fallan con
- * SIGBUS sobre regiones no-map. Todo acceso desde el PS debe ser
- * un bucle palabra a palabra sobre punteros volatile.
- */
-
+/include/ "system-conf.dtsi"
 / {
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
+    /*
+     * Region de DDR del kernel invitado (Linux 6.1.14 rv32 nommu).
+     *
+     * CAMBIO RESPECTO AL RV32I: 64 MB en vez de 1 MB. El RV32I usaba un
+     * buffer de DMA para telemetria; el RV32IMA ejecuta un kernel Linux
+     * completo, cuya imagen + DTB + espacio de trabajo viven aqui.
+     *
+     * La base 0x70000000 debe coincidir con DDR_BASE_PHYS del generic
+     * del SoC y con el segmento C0_DDR_LOW0 del block design.
+     *
+     * 'no-map' impide que el kernel del PS mapee la region: el core de
+     * la PL es su unico dueno.
+     *
+     * CUIDADO: glibc aarch64 usa DC ZVA y stp de 128 bits en memset y
+     * memcpy, que fallan con SIGBUS sobre no-map. Todo acceso desde el
+     * PS debe ser un bucle palabra a palabra sobre punteros volatile
+     * (ver hercossnux_run.c).
+     */
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+        hercossnux_ddr: buffer@70000000 {
+            no-map;
+            reg = <0x0 0x70000000 0x0 0x04000000>;   /* 64 MB */
+        };
+    };
 
-		hercossnux_ddr: hercossnux_ddr@70000000 {
-			no-map;
-			reg = <0x0 0x70000000 0x0 0x04000000>;  /* 64 MB */
-		};
-	};
+    /*
+     * Banco de control del SoC RV32IMA (esclavo AXI-Lite, 64 KB).
+     *
+     * En 0xA4000000, que es lo que quedo asignado en el block design.
+     * NOTA: el proyecto RV32I anterior usaba la ventana de 1 TB
+     * (0x201_00000000); aqui se usa 0xA4000000 para no reimplementar el
+     * bitstream, que ya cerro timing. Si en el futuro se unifica la
+     * convencion, hay que cambiar AMBOS: este nodo y el block design.
+     *
+     * Se declara como UIO por consistencia con el RV32I, pero el
+     * firmware de bring-up (hercossnux_run) accede por /dev/mem como
+     * root, que no depende de este nodo.
+     */
+    hercossnux_soc: hercossnux_soc@a4000000 {
+        compatible = "generic-uio,ui_pdrv";
+        reg = <0x0 0xa4000000 0x0 0x10000>;
+        memory-region = <&hercossnux_ddr>;
+        status = "okay";
+    };
 
-	/*
-	 * El banco de control del SoC. La consola del kernel invitado
-	 * sale por aqui (registro UART_RX en el offset 0x10), asi que
-	 * no hace falta ningun UART adicional en la PL.
-	 */
-	hercossnux_ctrl: hercossnux_ctrl@80000000 {
-		compatible = "hercossnux,rv32ima-soc";
-		reg = <0x0 0x80000000 0x0 0x00010000>;  /* 64 KB */
-		memory-region = <&hercossnux_ddr>;
-	};
+    chosen {
+        bootargs = "console=ttyAMA0 earlycon=pl011,mmio32,0xFF010000,115200n8 root=/dev/ram0 rw uio_pdrv_genirq.of_id=generic-uio,ui_pdrv";
+    };
 };

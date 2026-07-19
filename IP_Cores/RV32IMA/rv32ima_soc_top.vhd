@@ -183,7 +183,12 @@ begin
                  DDR_BASE_PHYS => DDR_BASE_PHYS,
                  DDR_SIZE_LOG2 => 26)
     port map (
-      clk => aclk, rstn => core_rstn_r,
+      -- CORRECCION AXI: el adaptador vive en el dominio del BUS. Su reset
+      -- es aresetn (nunca se pulsa en operacion); el reset del core entra
+      -- aparte por core_rstn y no mata las maquinas AXI en vuelo.
+      clk => aclk, rstn => aresetn,
+      core_run  => run_r,
+      core_rstn => core_rstn_r,
       core_clk_en => core_clk_en,
       imem_addr => iaddr, imem_data => idata,
       dmem_addr => daddr, dmem_wdata => dwdata, dmem_we => dwe,
