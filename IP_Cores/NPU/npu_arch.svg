@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Helvetica, Arial, sans-serif">
+
+  <!-- HERCOSSNUX NPU - arquitectura
+       Paleta propia del core #17: violeta (datapath), ambar (control),
+       verde azulado (AXI), gris (plataforma) -->
+
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L8,3 z" fill="#4a4a55"/>
+    </marker>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="8" refY="3"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L8,3 z" fill="#ffffff"/>
+    </marker>
+  </defs>
+
+  <rect width="760" height="560" fill="#fbfafd"/>
+
+  <text x="380" y="30" text-anchor="middle" font-size="19" font-weight="bold"
+        fill="#2d2d3a">HERCOSSNUX NPU</text>
+  <text x="380" y="49" text-anchor="middle" font-size="12" fill="#6a6a7a">
+    INT8 CNN inference accelerator - weight-stationary 8x8 systolic array
+  </text>
+
+  <!-- ============ PLATAFORMA (fondo) ============ -->
+  <rect x="20" y="66" width="720" height="122" rx="6"
+        fill="#eeeef2" stroke="#c8c8d4" stroke-width="1"/>
+  <text x="34" y="84" font-size="11" font-weight="bold" fill="#5a5a6a">
+    VERSAL PLATFORM (xcve2302, Trenz TE0950)</text>
+
+  <!-- CIPS -->
+  <rect x="38" y="94" width="140" height="80" rx="5"
+        fill="#d8d8e2" stroke="#9a9aae" stroke-width="1.5"/>
+  <text x="108" y="118" text-anchor="middle" font-size="12" font-weight="bold"
+        fill="#3a3a4a">Arm CIPS</text>
+  <text x="108" y="135" text-anchor="middle" font-size="9.5" fill="#5a5a6a">Linux 6.1 aarch64</text>
+  <text x="108" y="149" text-anchor="middle" font-size="9.5" fill="#5a5a6a">/dev/mem driver</text>
+  <text x="108" y="164" text-anchor="middle" font-size="9.5" fill="#5a5a6a">PL0 = 87.1 MHz</text>
+
+  <!-- NoC -->
+  <rect x="212" y="94" width="118" height="80" rx="5"
+        fill="#d8d8e2" stroke="#9a9aae" stroke-width="1.5"/>
+  <text x="271" y="118" text-anchor="middle" font-size="12" font-weight="bold"
+        fill="#3a3a4a">AXI NoC</text>
+  <text x="271" y="135" text-anchor="middle" font-size="9.5" fill="#5a5a6a">7 slave ports</text>
+  <text x="271" y="149" text-anchor="middle" font-size="9.5" fill="#5a5a6a">S06 = NPU (pl)</text>
+  <text x="271" y="164" text-anchor="middle" font-size="9.5" fill="#5a5a6a">500 MB/s R+W</text>
+
+  <!-- DDR -->
+  <rect x="364" y="94" width="150" height="80" rx="5"
+        fill="#d8d8e2" stroke="#9a9aae" stroke-width="1.5"/>
+  <text x="439" y="115" text-anchor="middle" font-size="12" font-weight="bold"
+        fill="#3a3a4a">DDR4-3200</text>
+  <text x="439" y="132" text-anchor="middle" font-size="9.5" fill="#5a5a6a">buffer @ 0x70000000</text>
+  <text x="439" y="146" text-anchor="middle" font-size="9.5" fill="#5a5a6a">16 MB, no-map</text>
+  <text x="439" y="160" text-anchor="middle" font-size="9" fill="#7a7a8a">W1 B1 W2 B2 W3 B3 IMG RES</text>
+
+  <!-- SmartConnect -->
+  <rect x="548" y="94" width="172" height="80" rx="5"
+        fill="#d8d8e2" stroke="#9a9aae" stroke-width="1.5"/>
+  <text x="634" y="118" text-anchor="middle" font-size="12" font-weight="bold"
+        fill="#3a3a4a">SmartConnect</text>
+  <text x="634" y="135" text-anchor="middle" font-size="9.5" fill="#5a5a6a">M_AXI_LPD to NPU</text>
+  <text x="634" y="152" text-anchor="middle" font-size="9.5" fill="#5a5a6a">regs @ 0x80000000</text>
+  <text x="634" y="166" text-anchor="middle" font-size="9.5" fill="#5a5a6a">64 KB window</text>
+
+  <!-- ============ NPU IP ============ -->
+  <rect x="20" y="204" width="720" height="290" rx="6"
+        fill="#ffffff" stroke="#7c5cbf" stroke-width="2"/>
+  <text x="34" y="223" font-size="12" font-weight="bold" fill="#5c3f9e">
+    npu_axi_top - the IP core</text>
+
+  <!-- AXI master (DMA) -->
+  <rect x="38" y="234" width="150" height="72" rx="5"
+        fill="#d6f0ec" stroke="#3d9c8c" stroke-width="1.5"/>
+  <text x="113" y="255" text-anchor="middle" font-size="11.5" font-weight="bold"
+        fill="#1f6d61">npu_dma</text>
+  <text x="113" y="271" text-anchor="middle" font-size="9.5" fill="#2f7d71">AXI4 master, INCR</text>
+  <text x="113" y="284" text-anchor="middle" font-size="9.5" fill="#2f7d71">64 B bursts, ARLEN 15</text>
+  <text x="113" y="297" text-anchor="middle" font-size="9.5" fill="#2f7d71">RRESP / BRESP checked</text>
+
+  <!-- AXI slave -->
+  <rect x="562" y="234" width="158" height="72" rx="5"
+        fill="#d6f0ec" stroke="#3d9c8c" stroke-width="1.5"/>
+  <text x="641" y="255" text-anchor="middle" font-size="11.5" font-weight="bold"
+        fill="#1f6d61">npu_axi_slave</text>
+  <text x="641" y="271" text-anchor="middle" font-size="9.5" fill="#2f7d71">AXI4 full, IDs, WSTRB</text>
+  <text x="641" y="284" text-anchor="middle" font-size="9.5" fill="#2f7d71">CTRL STATUS ID BASE</text>
+  <text x="641" y="297" text-anchor="middle" font-size="9.5" fill="#2f7d71">ERRCODE, SLVERR</text>
+
+  <!-- FSM doorbell -->
+  <rect x="212" y="234" width="326" height="72" rx="5"
+        fill="#fdeccd" stroke="#d99b2b" stroke-width="1.5"/>
+  <text x="375" y="255" text-anchor="middle" font-size="11.5" font-weight="bold"
+        fill="#8a5f0c">doorbell FSM + byte demux</text>
+  <text x="375" y="272" text-anchor="middle" font-size="9.5" fill="#9a6f1c">
+    load_weights: W1 to B1 to W2 to B2 to W3 to B3 (6 chained DMA reads)</text>
+  <text x="375" y="286" text-anchor="middle" font-size="9.5" fill="#9a6f1c">
+    start: image to inference to result write-back</text>
+  <text x="375" y="299" text-anchor="middle" font-size="9.5" fill="#9a6f1c">
+    int32 biases reassembled little-endian from 4 bytes</text>
+
+  <!-- Datapath: npu_top -->
+  <rect x="38" y="324" width="682" height="152" rx="5"
+        fill="#f0e9fb" stroke="#7c5cbf" stroke-width="1.5"/>
+  <text x="54" y="343" font-size="11" font-weight="bold" fill="#5c3f9e">
+    npu_top - datapath (HXQ8 quantization: ReLU then requantize, SHIFT=31)</text>
+
+  <!-- pipeline blocks -->
+  <rect x="52" y="354" width="92" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="98" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">conv1</text>
+  <text x="98" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">1 to 8 ch</text>
+  <text x="98" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">16x16, 3x3</text>
+
+  <rect x="160" y="354" width="72" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="196" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">pool1</text>
+  <text x="196" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">max 2x2</text>
+  <text x="196" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">to 8x8</text>
+
+  <rect x="248" y="354" width="92" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="294" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">conv2</text>
+  <text x="294" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">8 to 16 ch</text>
+  <text x="294" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">8x8, 3x3</text>
+
+  <rect x="356" y="354" width="72" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="392" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">pool2</text>
+  <text x="392" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">max 2x2</text>
+  <text x="392" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">to 4x4</text>
+
+  <rect x="444" y="354" width="92" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="490" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">FC</text>
+  <text x="490" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">256 to 10</text>
+  <text x="490" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">5-stage pipe</text>
+
+  <rect x="552" y="354" width="92" height="52" rx="4"
+        fill="#ffffff" stroke="#9b7fd4" stroke-width="1.2"/>
+  <text x="598" y="374" text-anchor="middle" font-size="10" font-weight="bold" fill="#4a3080">argmax</text>
+  <text x="598" y="388" text-anchor="middle" font-size="8.5" fill="#6a5090">over int32</text>
+  <text x="598" y="399" text-anchor="middle" font-size="8.5" fill="#6a5090">accumulator</text>
+
+  <!-- flechas del pipeline -->
+  <line x1="144" y1="380" x2="158" y2="380" stroke="#4a4a55" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="232" y1="380" x2="246" y2="380" stroke="#4a4a55" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="340" y1="380" x2="354" y2="380" stroke="#4a4a55" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="428" y1="380" x2="442" y2="380" stroke="#4a4a55" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="536" y1="380" x2="550" y2="380" stroke="#4a4a55" stroke-width="1.4" marker-end="url(#ar)"/>
+
+  <!-- array sistolico -->
+  <rect x="52" y="420" width="286" height="44" rx="4"
+        fill="#e4d9f7" stroke="#7c5cbf" stroke-width="1.4"/>
+  <text x="195" y="438" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a3080">
+    npu_mesh_ws - 8x8 weight-stationary PE array</text>
+  <text x="195" y="453" text-anchor="middle" font-size="9" fill="#6a5090">
+    64 MACs, INT8 x INT8 to INT32, 51 DSP58 inferred</text>
+
+  <rect x="356" y="420" width="176" height="44" rx="4"
+        fill="#e4d9f7" stroke="#7c5cbf" stroke-width="1.4"/>
+  <text x="444" y="438" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a3080">npu_requant</text>
+  <text x="444" y="453" text-anchor="middle" font-size="9" fill="#6a5090">
+    sat8((acc*m + 2^30) &gt;&gt; 31)</text>
+
+  <rect x="550" y="420" width="152" height="44" rx="4"
+        fill="#e4d9f7" stroke="#7c5cbf" stroke-width="1.4"/>
+  <text x="626" y="438" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#4a3080">SDP BRAM banks</text>
+  <text x="626" y="453" text-anchor="middle" font-size="9" fill="#6a5090">
+    1 write, 1 read per cycle</text>
+
+  <!-- ============ conexiones ============ -->
+  <!-- DDR <-> DMA -->
+  <line x1="420" y1="174" x2="420" y2="196" stroke="#3d9c8c" stroke-width="2"/>
+  <line x1="420" y1="196" x2="113" y2="196" stroke="#3d9c8c" stroke-width="2"/>
+  <line x1="113" y1="196" x2="113" y2="232" stroke="#3d9c8c" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="250" y="192" text-anchor="middle" font-size="9" fill="#1f6d61">
+    weights, image, result  (AXI4 master via NoC S06)</text>
+
+  <!-- SmartConnect -> slave -->
+  <line x1="641" y1="174" x2="641" y2="232" stroke="#3d9c8c" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="700" y="200" text-anchor="middle" font-size="9" fill="#1f6d61">registers</text>
+
+  <!-- DMA -> FSM -->
+  <line x1="188" y1="270" x2="210" y2="270" stroke="#4a4a55" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- slave -> FSM -->
+  <line x1="560" y1="270" x2="540" y2="270" stroke="#4a4a55" stroke-width="1.5" marker-end="url(#ar)"/>
+  <!-- FSM -> datapath -->
+  <line x1="375" y1="306" x2="375" y2="322" stroke="#4a4a55" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- ============ pie: resultados ============ -->
+  <rect x="20" y="506" width="720" height="40" rx="5"
+        fill="#f4f2fa" stroke="#c8c0e0" stroke-width="1"/>
+  <text x="34" y="522" font-size="10" font-weight="bold" fill="#4a3080">SILICON</text>
+  <text x="110" y="522" font-size="9.5" fill="#5a5a6a">
+    50 884 LUTs (33.9%) - 51 DSP58 (11%) - 1 BRAM - WNS +0.515 ns @ 87.1 MHz</text>
+  <text x="110" y="537" font-size="9.5" fill="#5a5a6a">
+    0.333 ms per inference - SIG_CLASE = 0x6084FD2A identical from Python oracle to hardware</text>
+
+</svg>

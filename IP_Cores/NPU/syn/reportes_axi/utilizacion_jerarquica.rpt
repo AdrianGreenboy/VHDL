@@ -1,0 +1,38 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date         : Mon Jul 20 22:22:15 2026
+| Host         : adrian running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -hierarchical -file /home/adrian/vhdl_repo/IP_Cores/NPU/syn/reportes_axi/utilizacion_jerarquica.rpt
+| Design       : npu_axi_top
+| Device       : xcve2302-sfva784-1LP-e-S
+| Speed File   : -1LP
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++-----------------+---------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+|     Instance    |     Module    | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs  | RAMB36 | RAMB18 | URAM | DSP Blocks |
++-----------------+---------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+| npu_axi_top     |         (top) |      50884 |      49994 |     890 |    0 | 49887 |      1 |      0 |    0 |         51 |
+|   (npu_axi_top) |         (top) |          6 |          6 |       0 |    0 |   296 |      0 |      0 |    0 |          0 |
+|   u_core        |       npu_top |      49992 |      49102 |     890 |    0 | 48921 |      1 |      0 |    0 |         51 |
+|     u_s2        |  npu_seq_full |      41380 |      40640 |     740 |    0 | 39006 |      1 |      0 |    0 |         27 |
+|       (u_s2)    |  npu_seq_full |      37026 |      36286 |     740 |    0 | 35166 |      1 |      0 |    0 |         27 |
+|       u_array   |     npu_array |       4354 |       4354 |       0 |    0 |  3840 |      0 |      0 |    0 |          0 |
+|     u_s1        | npu_seq_conv1 |       8567 |       8417 |     150 |    0 |  9880 |      0 |      0 |    0 |         24 |
+|       (u_s1)    | npu_seq_conv1 |       7926 |       7776 |     150 |    0 |  8505 |      0 |      0 |    0 |         24 |
+|       u_array   |   npu_array_0 |        641 |        641 |       0 |    0 |  1375 |      0 |      0 |    0 |          0 |
+|   u_dma         |       npu_dma |        649 |        649 |       0 |    0 |   531 |      0 |      0 |    0 |          0 |
+|   u_slv         | npu_axi_slave |        237 |        237 |       0 |    0 |   139 |      0 |      0 |    0 |          0 |
++-----------------+---------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+
+

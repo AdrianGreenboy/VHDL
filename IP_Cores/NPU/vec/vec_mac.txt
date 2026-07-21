@@ -1,0 +1,161 @@
+# MAC vectors N=40 (bias, 9x act, 9x w, acc_esperado)
+00000975
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+58 dd 35 ee c8 9c 06 d9 c9
+ffffbc11
+00000140
+80 80 80 80 80 80 80 80 80
+66 31 a5 f3 00 00 91 c1 3e
+000021c0
+fffffba7
+00 00 00 00 00 00 00 00 00
+c0 00 d7 21 fa e1 e5 0f cb
+fffffba7
+ffffecfc
+96 af c7 15 3b b9 48 69 7b
+3f 2d cd 1c 46 ff 50 36 18
+00001ae7
+fffffe4f
+22 15 4f 2d 5f d1 81 d6 35
+09 e7 e0 e1 cb 1b 02 12 c6
+ffffc58d
+ffffe622
+db 82 ce 4d 8a 8b 89 f5 8f
+4d 5c 6e 7e 03 3f 99 f0 0c
+ffffcb3b
+ffffe51b
+4a 1b 6c 22 55 7f 5a 9e fc
+f9 65 44 39 59 5a cd 20 ff
+00003e07
+fffffdfa
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+58 dd 35 ee c8 9c 06 d9 c9
+ffffb096
+00000975
+80 80 80 80 80 80 80 80 80
+66 31 a5 f3 00 00 91 c1 3e
+000029f5
+00000140
+00 00 00 00 00 00 00 00 00
+c0 00 d7 21 fa e1 e5 0f cb
+00000140
+fffffba7
+10 49 25 24 5c 40 4c b1 6e
+3f 2d cd 1c 46 ff 50 36 18
+0000334b
+ffffecfc
+39 8d 0c 91 6b f2 89 e0 0a
+09 e7 e0 e1 cb 1b 02 12 c6
+ffffe916
+fffffe4f
+75 e1 a9 15 5a 64 92 08 c9
+4d 5c 6e 7e 03 3f 99 f0 0c
+00003e28
+ffffe622
+d9 5f 1d 8d 79 f7 2a 20 ac
+f9 65 44 39 59 5a cd 20 ff
+00001da4
+ffffe51b
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+58 dd 35 ee c8 9c 06 d9 c9
+ffff97b7
+fffffdfa
+80 80 80 80 80 80 80 80 80
+66 31 a5 f3 00 00 91 c1 3e
+00001e7a
+00000975
+00 00 00 00 00 00 00 00 00
+c0 00 d7 21 fa e1 e5 0f cb
+00000975
+00000140
+fc ea da 04 31 d3 ba f7 43
+3f 2d cd 1c 46 ff 50 36 18
+0000007d
+fffffba7
+ec 92 6c 5e 67 40 1f 90 b1
+09 e7 e0 e1 cb 1b 02 12 c6
+ffffe880
+ffffecfc
+7f bf 3b 46 8a 86 de ad 4c
+4d 5c 6e 7e 03 3f 99 f0 0c
+00002ea7
+000000e1
+f3 e2 1a 3e 81 6b 81 11 86
+03 fe f5 02 ee 12 ff 19 05
+0000108e
+ffffff3a
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+09 1a 1b 24 00 da fd eb de
+00000038
+fffffeab
+80 80 80 80 80 80 80 80 80
+fe f8 0c 18 fb e7 03 18 e7
+ffffffab
+00000060
+00 00 00 00 00 00 00 00 00
+10 ff 0a 0c ee ff f3 06 ff
+00000060
+fffffeda
+8f c4 f5 50 1f 3b cc 53 b6
+f9 e6 f5 e6 08 01 f1 2f fc
+00001506
+fffffffb
+04 bb 4e 1c 1e 3b d2 f5 55
+eb de f6 d2 11 13 36 32 06
+fffffd40
+ffffff40
+f6 c2 f0 98 32 5b 06 2d c4
+17 f9 ff fd dc e9 cc 06 03
+fffff141
+ffffffce
+cc 8e a4 66 07 d9 87 01 ea
+17 3a 0b 1e fe db eb d6 d0
+fffffcc6
+00000032
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+13 f1 0a f7 e4 02 df 1d 07
+fffff744
+00000266
+80 80 80 80 80 80 80 80 80
+1e fc 07 3c 37 3d 09 f1 d9
+ffffb066
+00000047
+00 00 00 00 00 00 00 00 00
+ff 04 fb 0b 31 25 00 e2 ce
+00000047
+ffffff96
+10 34 45 bc 3f e0 2f 68 26
+e7 e8 09 01 09 09 2b 0d e4
+0000056b
+ffffff3b
+89 8b 9a 44 8b 59 a1 d5 14
+06 06 23 fb fc e4 f6 10 fc
+ffffe33b
+fffffd75
+dd 1d ab 9e e2 f8 dc 80 b4
+10 f2 f1 07 e1 fb 02 10 0d
+fffff3a2
+fffffe43
+c3 ce 85 de d2 7a 69 5d e7
+e6 00 f7 e4 f6 dd 0e ee 01
+fffffcb9
+fffffd5e
+7f 7f 7f 7f 7f 7f 7f 7f 7f
+f5 20 fb fa e4 de 02 1e 20
+00000352
+000000e1
+80 80 80 80 80 80 80 80 80
+02 d9 fe f5 f7 ed 15 f0 05
+000022e1
+ffffff3a
+00 00 00 00 00 00 00 00 00
+d4 f9 e3 e8 04 28 f6 e6 eb
+ffffff3a
+fffffeab
+76 6a 7e 98 f2 d0 d8 a1 94
+f2 06 13 ee 02 ea 0a 27 39
+ffffe74c
+00000060
+42 cb 5b ad 02 39 1d 3a eb
+fe 1e 0e ed 07 f9 f8 ff db
+0000052f
