@@ -1,0 +1,33 @@
+# ==== artefactos de build - NUNCA versionar ====
+
+# l5/ es todo build de PetaLinux (~26GB): ignorar completo.
+# Si hay fuentes en l5/ que quieras conservar, sácalas antes a otra carpeta.
+l5/
+
+# Vivado: ignorar el proyecto entero (checkpoints, runs), conservar rtl/ y fw/
+soc/vivado/
+
+# PetaLinux / Vivado sueltos por si acaso
+**/build/
+**/images/
+**/.Xil/
+**/*.xsa
+**/*.pdi
+**/*.runs/
+**/*.cache/
+**/*.gen/
+**/*.ip_user_files/
+**/*.hw/
+**/*.sim/
+**/*.jou
+**/*.log
+**/*.dcp
+
+# GHDL
+**/work-obj*.cf
+**/*.ghw
+**/*.vcd
+
+# temporales
+**/*~
+**/*.tmp

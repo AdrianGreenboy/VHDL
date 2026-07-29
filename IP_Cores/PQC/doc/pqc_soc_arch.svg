@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="Helvetica,Arial,sans-serif">
+  <!-- HERCOSSNUX PQC Core 17 - SoC architecture -->
+  <!-- canvas 760x560, per-block palette; PQC identity: violet/indigo -->
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 z" fill="#334155"/>
+    </marker>
+    <marker id="arrW" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 z" fill="#ffffff"/>
+    </marker>
+    <style>
+      .lbl{font-size:12px;fill:#0f172a;font-weight:bold}
+      .sub{font-size:10px;fill:#334155}
+      .tiny{font-size:9px;fill:#475569}
+      .wht{font-size:12px;fill:#ffffff;font-weight:bold}
+      .whts{font-size:10px;fill:#e2e8f0}
+      .addr{font-size:9px;fill:#64748b;font-family:monospace}
+      .title{font-size:16px;fill:#0f172a;font-weight:bold}
+      .flow{font-size:9px;fill:#475569;font-style:italic}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="760" height="560" fill="#f8fafc"/>
+  <text x="24" y="30" class="title">HERCOSSNUX PQC Core 17 - SoC (ML-KEM-768 + ML-DSA-65)</text>
+  <text x="24" y="47" class="sub">RV32IM soft-core drives the PQC peripheral; results flow to DDR by DMA. Trenz TE0950 (AMD Versal xcve2302).</text>
+
+  <!-- ===================== PS (Versal CIPS) ===================== -->
+  <rect x="24" y="66" width="712" height="86" rx="8" fill="#1e293b" stroke="#0f172a" stroke-width="1.5"/>
+  <text x="40" y="86" class="wht">Processor System - Versal CIPS</text>
+  <text x="40" y="101" class="whts">Arm Cortex-A72 running PetaLinux (root)</text>
+  <rect x="470" y="78" width="120" height="30" rx="5" fill="#334155"/>
+  <text x="530" y="97" class="whts" text-anchor="middle">M_AXI_FPD</text>
+  <rect x="600" y="78" width="120" height="30" rx="5" fill="#334155"/>
+  <text x="660" y="97" class="whts" text-anchor="middle">NoC (LPDDR4)</text>
+  <text x="40" y="127" class="whts">pqc-selftest app: load firmware, release core, poll doorbell, check signatures</text>
+  <text x="40" y="142" class="tiny" fill="#94a3b8">KEM=95E07091FA5B3CC4   DSA=F93232F7EA2D1575   (validated in silicon)</text>
+
+  <!-- ===================== SmartConnect + NoC ===================== -->
+  <rect x="470" y="176" width="120" height="34" rx="5" fill="#0e7490" stroke="#155e75"/>
+  <text x="530" y="197" class="wht" text-anchor="middle">SmartConnect</text>
+  <rect x="600" y="176" width="120" height="34" rx="5" fill="#0e7490" stroke="#155e75"/>
+  <text x="660" y="192" class="wht" text-anchor="middle">AXI NoC</text>
+  <text x="660" y="204" class="whts" text-anchor="middle">S06 -&gt; MC_3</text>
+
+  <!-- arrows PS -> SC / NoC -->
+  <line x1="530" y1="108" x2="530" y2="176" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="536" y="140" class="flow">AXI-Lite ctrl</text>
+  <line x1="660" y1="108" x2="660" y2="176" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===================== soc_top_pqc (fused) ===================== -->
+  <rect x="24" y="232" width="712" height="256" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="40" y="254" class="lbl" fill="#4338ca">soc_top_pqc  -  fused SoC (VHDL-2008, MIT)</text>
+
+  <!-- axil_soc -->
+  <rect x="40" y="266" width="150" height="70" rx="6" fill="#c7d2fe" stroke="#6366f1"/>
+  <text x="115" y="285" class="lbl" text-anchor="middle">axil_soc</text>
+  <text x="115" y="300" class="tiny" text-anchor="middle">CONTROL / DDR_BASE</text>
+  <text x="115" y="313" class="tiny" text-anchor="middle">IMEM / DMEM windows</text>
+  <text x="115" y="328" class="addr" text-anchor="middle">0xA4000000</text>
+
+  <!-- cpu_pipeline -->
+  <rect x="210" y="266" width="150" height="70" rx="6" fill="#a5b4fc" stroke="#4f46e5"/>
+  <text x="285" y="285" class="lbl" text-anchor="middle">cpu_pipeline</text>
+  <text x="285" y="300" class="tiny" text-anchor="middle">RV32IM master</text>
+  <text x="285" y="313" class="tiny" text-anchor="middle">runs self-test firmware</text>
+  <text x="285" y="328" class="tiny" text-anchor="middle">(FNV-64 fold)</text>
+
+  <!-- dp_ram IMEM -->
+  <rect x="380" y="266" width="140" height="70" rx="6" fill="#c7d2fe" stroke="#6366f1"/>
+  <text x="450" y="285" class="lbl" text-anchor="middle">dp_ram (IMEM)</text>
+  <text x="450" y="300" class="tiny" text-anchor="middle">DEPTH=1024</text>
+  <text x="450" y="313" class="tiny" text-anchor="middle">PS loads firmware</text>
+  <text x="450" y="328" class="tiny" text-anchor="middle">972 instructions</text>
+
+  <!-- mem_subsys_pqc -->
+  <rect x="540" y="266" width="182" height="70" rx="6" fill="#c7d2fe" stroke="#6366f1"/>
+  <text x="631" y="285" class="lbl" text-anchor="middle">mem_subsys_pqc</text>
+  <text x="631" y="300" class="tiny" text-anchor="middle">local RAM + DMA burst</text>
+  <text x="631" y="313" class="tiny" text-anchor="middle">region decode</text>
+  <text x="631" y="328" class="addr" text-anchor="middle">DDR master -&gt; NoC</text>
+
+  <!-- pqc_mmio -->
+  <rect x="210" y="352" width="230" height="60" rx="6" fill="#8b5cf6" stroke="#6d28d9"/>
+  <text x="325" y="371" class="wht" text-anchor="middle">pqc_mmio  (0xD0000000)</text>
+  <text x="325" y="386" class="whts" text-anchor="middle">CTRL/CMD/STATUS/ADDR/DATA/SIGLEN</text>
+  <text x="325" y="400" class="whts" text-anchor="middle">host_mode - rd_primed - deferred kick</text>
+
+  <!-- pqc_core -->
+  <rect x="210" y="424" width="512" height="54" rx="6" fill="#7c3aed" stroke="#5b21b6"/>
+  <text x="325" y="444" class="wht" text-anchor="middle">pqc_core</text>
+  <rect x="440" y="432" width="130" height="38" rx="4" fill="#6d28d9"/>
+  <text x="505" y="449" class="whts" text-anchor="middle">kem_core_sx</text>
+  <text x="505" y="462" class="whts" text-anchor="middle">ML-KEM-768</text>
+  <rect x="580" y="432" width="130" height="38" rx="4" fill="#6d28d9"/>
+  <text x="645" y="449" class="whts" text-anchor="middle">dsa_core_sx</text>
+  <text x="645" y="462" class="whts" text-anchor="middle">ML-DSA-65</text>
+  <text x="325" y="460" class="whts" text-anchor="middle">shared keccak_sponge</text>
+  <text x="325" y="472" class="tiny" fill="#e9d5ff" text-anchor="middle">(transparent fusion)</text>
+
+  <!-- internal arrows -->
+  <line x1="285" y1="336" x2="285" y2="352" stroke="#4338ca" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="325" y1="412" x2="325" y2="424" stroke="#5b21b6" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="190" y1="301" x2="210" y2="301" stroke="#4338ca" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="360" y1="301" x2="380" y2="301" stroke="#4338ca" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="520" y1="301" x2="540" y2="301" stroke="#4338ca" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- SmartConnect -> axil_soc -->
+  <line x1="530" y1="210" x2="530" y2="222" stroke="#334155" stroke-width="1.5"/>
+  <line x1="530" y1="222" x2="115" y2="222" stroke="#334155" stroke-width="1.5"/>
+  <line x1="115" y1="222" x2="115" y2="266" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- mem_subsys DDR master <-> NoC (data path, bidirectional) -->
+  <line x1="660" y1="210" x2="660" y2="224" stroke="#334155" stroke-width="1.5"/>
+  <line x1="660" y1="224" x2="631" y2="224" stroke="#334155" stroke-width="1.5"/>
+  <line x1="631" y1="224" x2="631" y2="266" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="596" y="240" class="flow">DMA -&gt; DDR</text>
+
+  <!-- footer legend -->
+  <rect x="24" y="502" width="712" height="42" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="40" y="519" class="sub">Data flow: PS loads firmware -&gt; RV32 drives PQC via pqc_mmio -&gt; FNV-64 signatures -&gt; DMA to DDR (0x70000000) -&gt; PS reads &amp; verifies.</text>
+  <text x="40" y="535" class="tiny">FIPS 203 / FIPS 204 - CNSA 2.0.  Clock: PL 40 MHz (impl WNS +3.303 ns).  Silicon-validated on Trenz TE0950.</text>
+</svg>
