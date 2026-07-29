@@ -17,7 +17,7 @@ peripheral+firmware pattern used by the other sixteen cores in this collection.
 > **WNS +3.303 ns**. Verified across five simulation layers from unit sim to
 > hardware, plus a Python KAT oracle.
 
-![Architecture](docs/pqc_soc_arch.svg)
+![Architecture](doc/pqc_soc_arch.svg)
 
 ---
 
