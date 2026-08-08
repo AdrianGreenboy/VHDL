@@ -94,6 +94,47 @@ IP_Cores/<CORE>/
 | **[MIPI](IP_Cores/MIPI/)** | **MIPI CSI-2 RX** (4-lane RAW12 receiver): CSI-2 packet layer with **Hamming ECC** (correct 1 / detect 2-bit) on packet headers, Short/Long packets and **CRC-16** payload validation, real **dual virtual-channel** demux into two BRAM framebuffers, and RAW12 de-packing. A PL-side synthetic **frame generator** (VC0 gradient + VC1 bars) drives the whole pipeline **PHY-less and camera-less** on silicon; the D-PHY is modeled at byte-clock level. Two AXI masters to DDR (family DMA + the MIPI's own) through the NoC, governed by the RV32. The imaging-input plane of the family. | **SILICON PASS** — signature `0xE6898DC5` bit-identical sim↔silicon, WNS +16.76 ns |
 | **[PCS_25G](IP_Cores/PCS_25G/)** | **64B/66B PCS @ 25G**: complete transmit and receive datapath — self-synchronous scrambler (x^58+x^39+1), 64->66 gearbox with its 32/33 framing period, **block synchronisation** at the IEEE 802.3 clause 49 threshold of 64, de-gearbox and descrambler — exercised by a word-parallel **PRBS31** generator and checker with automatic re-lock. A **parallel fabric loopback** closes the link with no GTYP and no external hardware, and single-bit error injection proves detection: one flipped bit becomes exactly **9** errored bits through the self-synchronous descrambler, a number predicted by the Python oracle and reproduced identically in simulation and on silicon. The RV32 acts as a pure control plane over an MMIO bridge. The high-speed serial plane of the family. | **SILICON PASS** — **BER = 0** over 1,823,313 words (116 Mbit), injection -> 9 bits, WNS 0.000 / WHS 0.000 ns @ **390.625 MHz** (25G block rate), clean CDC |
 
+## Version history
+
+### v1.1 — `cpu_pipeline` forwarding-during-stall fix
+
+A silent forwarding hazard was found in the shared RV32 soft core and fixed
+across the family.
+
+**Symptom.** The second of two consecutive `lw` instructions could be lost
+when the first stalled the pipeline on a slow region (a multi-cycle MMIO
+peripheral) **and** the base register was produced by the immediately
+preceding instruction. During the stall the write-back in flight was squashed
+to a bubble (`mem_wb <= MEMWB_NOP`), which killed its forwarding path, so the
+second `lw` computed its address from a stale (zero) base. The access landed
+outside the peripheral window and the destination register took residual data
+— a plausible wrong value with no exception and no error flag.
+
+**Root cause.** Not the memory handshake, as first suspected, but forwarding
+during a stall: the two forwarding sources (`ex_mem`, `mem_wb`) could not cover
+a producer that fell off the write-back stage while a dependent load was held.
+It was isolated by sweeping the producer-to-load distance and tracing the full
+bus address rather than the offset alone (fault window: zero instructions of
+slack).
+
+**Fix.** A persistent write-back history buffer (`wbh_*`) as a third forwarding
+level, surviving stalls of any length. The change is additive — it does not
+touch the stall or write-back logic and preserves the `dmem` bus contract.
+
+**Verification.** A dedicated regression (`tb_lw_hazard_reg`, plus a
+GAP-parametrised sweep `tb_lw_hazard`), no regression across the CPU
+testbenches, Core 19 (PCS_25G) Layer 5 passing **with and without** the former
+firmware mitigation, and **silicon** on the TE0950 (`L5 SILICON PASS`,
+`IRQ_STATUS` read directly, timing still closed at 390.625 MHz, WNS/WHS 0.000).
+The firmware mitigation (`PCS_RD` barrier) was removed and the Core 19 firmware
+returned to a direct read (896 → 612 bytes). Full write-up:
+[`IP_Cores/RV32i/BUG_cpu_pipeline_lw_hazard.md`](IP_Cores/RV32i/BUG_cpu_pipeline_lw_hazard.md).
+
+### v1.0 — initial release
+
+The 19 IP cores listed above, each taken from RTL to **silicon pass** on the
+TE0950 (AMD Versal), driven by the RV32 soft core.
+
 ## Getting started in five minutes
 
 ```bash
