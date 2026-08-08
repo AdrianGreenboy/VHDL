@@ -29,7 +29,8 @@ accelerator with its own **AXI master port and burst DMA**.
 12. [Part D — Running on hardware](#part-d--running-on-hardware)
 13. [How to adapt it to your own workload](#adapt-it)
 14. [Troubleshooting](#troubleshooting)
-15. [License](#license)
+15. [Version history](#version-history)
+16. [License](#license)
 
 ---
 
@@ -576,6 +577,72 @@ The behavioral DDR model (`axi_ddr_sim.vhd`) asserts on 4 KB-crossing bursts, so
 it as a guard.
 
 ---
+
+## Version history <a name="version-history"></a>
+
+### v1.1 — forwarding-during-stall fix
+
+A silent forwarding hazard in the 5-stage pipeline was found and fixed. It is
+worth reading if you are studying the microarchitecture, because the symptom
+pointed one way and the cause lay elsewhere.
+
+**Symptom.** The second of two consecutive `lw` instructions could be lost when
+the first stalled the pipeline on a slow region (a multi-cycle MMIO peripheral,
+`dmem_ready` deferred) **and** the base register of the second load was produced
+by the instruction *immediately* before the first load. The lost access never
+reached the peripheral bus; the destination register took residual data — a
+plausible wrong value, no exception, no error flag.
+
+**Root cause.** Not the memory handshake, as first suspected — the `lw`-`lw`
+handshake with a deferred `dmem_ready` is correct. The fault was **forwarding
+during a stall**. While a load is stalled (`stall_mem = '1'`), the pipeline
+advance executes `mem_wb <= MEMWB_NOP` to bubble the WB stage; that squashes the
+result of the instruction retiring through WB in that cycle, destroying its
+forwarding path. With only two forwarding sources (`ex_mem`, `mem_wb`), a
+producer that fell off the WB stage during the stall could no longer be
+forwarded to a dependent load held in EX/ID, so the load computed its address
+from a stale (zero) base. The fault window is exactly zero instructions of slack
+between the producer of the base and the first (stalling) load; one or more
+instructions of slack and ordinary forwarding covers it.
+
+**Fix.** A persistent **write-back history buffer** (`wbh_we/addr/data`) added as
+a **third forwarding level**, after `ex_mem` and `mem_wb`. It records the last
+retired write-back and survives stalls of any length. The change is additive: it
+does not touch the stall logic or the WB path, and it preserves the `dmem` bus
+contract (combinational `rdata`, valid the same cycle as `ready`). Forwarding
+priority is `ex_mem` (newest) → `mem_wb` → `wbh` (oldest) → register file, so the
+third level only fires when no newer producer is in flight and can never deliver
+a stale value.
+
+**How it was isolated.** Two plausible memory-timing models (registered and
+combinational `dmem_ready`) did **not** reproduce the fault. What pinned it was
+a testbench parametrised by the producer-to-load distance (`GAP`) that traced
+the **full** bus address, not just the offset: `GAP=0` failed with a corrupted
+(zero) base, `GAP≥1` passed.
+
+**Verification.** A dedicated permanent regression `tb_lw_hazard_reg.vhd` (fixed
+at the failing `GAP=0` case, `severity failure`, passing on the fixed core and
+aborting on the pre-fix core) plus a `GAP`-swept `tb_lw_hazard.vhd`; no
+regression across `tb_difftest`, `tb_cpu_pipeline`, `tb_irq_pipeline`,
+`tb_trap_pipeline`; Core 19 (PCS_25G) Layer 5 passing **with and without** the
+former firmware mitigation; and **silicon** on the TE0950 (`L5 SILICON PASS`,
+`IRQ_STATUS` read directly, timing still closed at 390.625 MHz, WNS/WHS 0.000 —
+the CPU is not on the critical path). The Core 19 firmware mitigation (a
+`PCS_RD` read barrier) was removed and the firmware returned to a direct read
+(896 → 612 bytes). Full write-up: [`BUG_cpu_pipeline_lw_hazard.md`](BUG_cpu_pipeline_lw_hazard.md).
+
+**Files touched:** `cpu_pipeline.vhd` (fix), `tb_lw_hazard.vhd` and
+`tb_lw_hazard_reg.vhd` (new regressions).
+
+### v1.0 — initial release
+
+Complete RV32IM SoC taken from the first RTL line to **silicon pass** on the
+TE0950 (AMD Versal): 5-stage pipelined CPU with forwarding, load-use and
+multi-cycle stalls, hardware multiply/divide, CSRs and CLINT, local RAM, a burst
+DMA engine with an AXI4 master to DDR, and an MMIO bus for peripherals — plus the
+Python assembler (`asm.py`) and ISS used as the golden oracle by every other core
+in the family. Validated across five layers (blocks → pipeline → MMIO contract →
+full SoC in lockstep with the ISS → silicon).
 
 ## License <a name="license"></a>
 
