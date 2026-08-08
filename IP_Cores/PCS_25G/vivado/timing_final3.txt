@@ -1,0 +1,900 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version      : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date              : Fri Aug  7 17:44:23 2026
+| Host              : adrian running 64-bit Ubuntu 24.04.4 LTS
+| Command           : report_timing_summary -delay_type max -max_paths 1 -file /home/adrian/vhdl_repo/IP_Cores/PCS_25G/vivado/timing_final3.txt
+| Design            : pcs_soc_bd_wrapper
+| Device            : xcve2302-sfva784
+| Speed File        : -1LP  PRODUCTION 2.04 2025-08-19
+| Design State      : Physopt postRoute
+| Temperature Grade : E
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Timing Summary Report
+
+------------------------------------------------------------------------------------------------
+| Timer Settings
+| --------------
+------------------------------------------------------------------------------------------------
+
+  Enable Multi Corner Analysis               :  Yes
+  Enable Pessimism Removal                   :  Yes
+  Pessimism Removal Resolution               :  Nearest Common Node
+  Enable Input Delay Default Clock           :  No
+  Enable Preset / Clear Arcs                 :  No
+  Disable Flight Delays                      :  No
+  Ignore I/O Paths                           :  No
+  Timing Early Launch at Borrowing Latches   :  No
+  Borrow Time for Max Delay Exceptions       :  Yes
+  Merge Timing Exceptions                    :  Yes
+  Inter-SLR Compensation                     :  Conservative
+
+  Corner  Analyze    Analyze    
+  Name    Max Paths  Min Paths  
+  ------  ---------  ---------  
+  Slow    Yes        Yes        
+  Fast    Yes        Yes        
+
+
+------------------------------------------------------------------------------------------------
+| Report Methodology
+| ------------------
+------------------------------------------------------------------------------------------------
+
+Rule       Severity          Description                                           Violations  
+---------  ----------------  ----------------------------------------------------  ----------  
+TIMING-4   Critical Warning  Invalid primary clock redefinition on a clock tree    1           
+TIMING-27  Critical Warning  Invalid primary clock on hierarchical pin             1           
+AVAL-344   Warning           Design_needs_USER_RAM_AVERAGE_ACTIVITY_set            1           
+TIMING-28  Warning           Auto-derived clock referenced by a timing constraint  2           
+CLKC-75    Advisory          MMCME5 with global clock driver has no LOC            1           
+
+Note: This report is based on the most recent report_methodology run and may not be up-to-date. Run report_methodology on the current design for the latest report.
+
+
+
+check_timing report
+
+Table of Contents
+-----------------
+1. checking no_clock (0)
+2. checking constant_clock (0)
+3. checking pulse_width_clock (0)
+4. checking unconstrained_internal_endpoints (0)
+5. checking no_input_delay (0)
+6. checking no_output_delay (0)
+7. checking multiple_clock (0)
+8. checking generated_clocks (0)
+9. checking loops (0)
+10. checking partial_input_delay (0)
+11. checking partial_output_delay (0)
+12. checking latch_loops (0)
+
+1. checking no_clock (0)
+------------------------
+ There are 0 register/latch pins with no clock.
+
+
+2. checking constant_clock (0)
+------------------------------
+ There are 0 register/latch pins with constant_clock.
+
+
+3. checking pulse_width_clock (0)
+---------------------------------
+ There are 0 register/latch pins which need pulse_width check
+
+
+4. checking unconstrained_internal_endpoints (0)
+------------------------------------------------
+ There are 0 pins that are not constrained for maximum delay.
+
+ There are 0 pins that are not constrained for maximum delay due to constant clock.
+
+
+5. checking no_input_delay (0)
+------------------------------
+ There are 0 input ports with no input delay specified.
+
+ There are 0 input ports with no input delay but user has a false path constraint.
+
+
+6. checking no_output_delay (0)
+-------------------------------
+ There are 0 ports with no output delay specified.
+
+ There are 0 ports with no output delay but user has a false path constraint
+
+ There are 0 ports with no output delay but with a timing clock defined on it or propagating through it
+
+
+7. checking multiple_clock (0)
+------------------------------
+ There are 0 register/latch pins with multiple clocks.
+
+
+8. checking generated_clocks (0)
+--------------------------------
+ There are 0 generated clocks that are not connected to a clock source.
+
+
+9. checking loops (0)
+---------------------
+ There are 0 combinational loops in the design.
+
+
+10. checking partial_input_delay (0)
+------------------------------------
+ There are 0 input ports with partial input delay specified.
+
+
+11. checking partial_output_delay (0)
+-------------------------------------
+ There are 0 ports with partial output delay specified.
+
+
+12. checking latch_loops (0)
+----------------------------
+ There are 0 combinational latch loops in the design through latch input
+
+
+
+------------------------------------------------------------------------------------------------
+| Design Timing Summary
+| ---------------------
+------------------------------------------------------------------------------------------------
+
+    WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+    -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+      0.000        0.000                      0                49250        0.000        0.000                       0                 13512  
+
+
+All user specified timing constraints are met.
+
+
+------------------------------------------------------------------------------------------------
+| Clock Summary
+| -------------
+------------------------------------------------------------------------------------------------
+
+Clock                                   Waveform(ns)           Period(ns)      Frequency(MHz)
+-----                                   ------------           ----------      --------------
+clk_pl_0                                {0.000 12.500}         25.000          40.000          
+ddr4_bank0_sys_clk_clk_p                {0.000 2.500}          5.000           200.000         
+  bank1_clkout0                         {0.000 0.625}          1.250           800.000         
+    pll_clktoxphy[0]                    {0.000 0.156}          0.312           3200.000        
+    pll_clktoxphy[2]                    {0.000 0.156}          0.312           3200.000        
+  bank1_xpll0_fifo_rd_clk               {0.000 0.625}          1.250           800.000         
+  mc_clk_xpll                           {0.000 0.625}          1.250           800.000         
+  pll_clk_xpll                          {0.000 0.156}          0.312           3200.000        
+pcs_soc_bd_i/clk_wizard_0/inst/clk_in1  {0.000 12.500}         25.000          40.000          
+  clkout1_primitive                     {0.000 1.280}          2.560           390.625         
+
+
+------------------------------------------------------------------------------------------------
+| Intra Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+Clock                                       WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints     WPWS(ns)     TPWS(ns)  TPWS Failing Endpoints  TPWS Total Endpoints  
+-----                                       -------      -------  ---------------------  -------------------     --------     --------  ----------------------  --------------------  
+clk_pl_0                                      8.614        0.000                      0                44547       10.500        0.000                       0                 11862  
+ddr4_bank0_sys_clk_clk_p                                                                                            2.109        0.000                       0                     1  
+  bank1_clkout0                                                                                                     0.000        0.000                       0                     3  
+    pll_clktoxphy[0]                                                                                                0.044        0.000                       0                    10  
+    pll_clktoxphy[2]                                                                                                0.044        0.000                       0                     5  
+  bank1_xpll0_fifo_rd_clk                                                                                           0.000        0.000                       0                    22  
+  mc_clk_xpll                                                                                                       0.000        0.000                       0                     1  
+  pll_clk_xpll                                                                                                      0.044        0.000                       0                     9  
+pcs_soc_bd_i/clk_wizard_0/inst/clk_in1                                                                             12.109        0.000                       0                     1  
+  clkout1_primitive                           0.000        0.000                      0                 4109        0.880        0.000                       0                  1598  
+
+
+------------------------------------------------------------------------------------------------
+| Inter Clock Table
+| -----------------
+------------------------------------------------------------------------------------------------
+
+From Clock         To Clock               WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints  
+----------         --------               -------      -------  ---------------------  -------------------  
+clkout1_primitive  clk_pl_0                23.929        0.000                      0                  137  
+clk_pl_0           clkout1_primitive        0.799        0.000                      0                    9  
+
+
+------------------------------------------------------------------------------------------------
+| Other Path Groups Table
+| -----------------------
+------------------------------------------------------------------------------------------------
+
+Path Group         From Clock         To Clock               WNS(ns)      TNS(ns)  TNS Failing Endpoints  TNS Total Endpoints  
+----------         ----------         --------               -------      -------  ---------------------  -------------------  
+**async_default**  clk_pl_0           clk_pl_0                23.112        0.000                      0                  448  
+
+
+------------------------------------------------------------------------------------------------
+| Timing Details
+| --------------
+------------------------------------------------------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clk_pl_0
+  To Clock:  clk_pl_0
+
+Setup :            0  Failing Endpoints,  Worst Slack        8.614ns,  Total Violation        0.000ns
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack       10.500ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             8.614ns  (required time - arrival time)
+  Source:                 pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_from_reg[0]/C
+                            (rising edge-triggered cell FDRE clocked by clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Destination:            pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc_reg[24]/D
+                            (rising edge-triggered cell FDSE clocked by clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Path Group:             clk_pl_0
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            25.000ns  (clk_pl_0 rise@25.000ns - clk_pl_0 rise@0.000ns)
+  Data Path Delay:        16.134ns  (logic 6.794ns (42.109%)  route 9.340ns (57.891%))
+  Logic Levels:           43  (LOOKAHEAD8=16 LUT3=1 LUT4=7 LUT5=4 LUT6=5 LUTCY1=2 LUTCY2=8)
+  Clock Path Skew:        -0.121ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.835ns = ( 26.835 - 25.000 ) 
+    Source Clock Delay      (SCD):    2.181ns
+    Clock Pessimism Removal (CPR):    0.226ns
+  Clock Uncertainty:      0.129ns  (CJ)/2 + PE + PJ
+    Clock Jitter             (CJ):    0.259ns
+    Phase Error              (PE):    0.000ns
+    Phase Jitter             (PJ):    0.000ns
+  Clock Net Delay (Source):      2.040ns (routing 0.261ns, distribution 1.779ns)
+  Clock Net Delay (Destination): 1.763ns (routing 0.238ns, distribution 1.525ns)
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_pl_0 rise edge)
+                                                      0.000     0.000 r  
+    PS9_X0Y0             PS9                          0.000     0.000 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/PMCRCLKCLK[0]
+                         net (fo=1, routed)           0.000     0.000    pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/pmc_pl_ref_clk[0]
+    BUFG_PS_X0Y6         BUFG_PS (Prop_BUFG_PS_I_O)
+                                                      0.141     0.141 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+    X1Y1 (CLOCK_ROOT)    net (fo=11872, routed)       2.040     2.181    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/aclk
+    SLICE_X70Y127        FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_from_reg[0]/C
+  -------------------------------------------------------------------    -------------------
+    SLICE_X70Y127        FDRE (Prop_AFF_SLICEL_C_Q)
+                                                      0.126     2.307 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_from_reg[0]/Q
+                         net (fo=16, routed)          0.392     2.699    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_13__0/I3
+    SLICE_X74Y131        LUTCY2 (Prop_A6LUT_SLICEL_I3_GE)
+                                                      0.129     2.828 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_13__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.046     2.874    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_13__0_n_0
+    SLICE_X74Y131        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_GEA_COUTH)
+                                                      0.347     3.221 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_21__0/COUTH
+                         net (fo=3, routed)           0.001     3.222    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_21__0_n_3
+    SLICE_X74Y132        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_CIN_COUTB)
+                                                      0.075     3.297 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_20__0/COUTB
+                         net (fo=2, routed)           0.011     3.308    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_7__0/I4
+    SLICE_X74Y132        LUTCY2 (Prop_C6LUT_SLICEL_I4_O)
+                                                      0.074     3.382 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_7__0/LUTCY2_INST/O
+                         net (fo=3, routed)           0.024     3.406    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_9__0/I4
+    SLICE_X74Y132        LUTCY1 (Prop_D5LUT_SLICEL_I4_O)
+                                                      0.089     3.495 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_9__0/LUTCY1_INST/O
+                         net (fo=8, routed)           0.380     3.875    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/sdist14_out[11]
+    SLICE_X75Y133        LUT6 (Prop_G6LUT_SLICEM_I2_O)
+                                                      0.041     3.916 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st[1]_i_12__0/O
+                         net (fo=4, routed)           0.199     4.115    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st[1]_i_5__0/I5
+    SLICE_X74Y133        LUT6 (Prop_F6LUT_SLICEL_I5_O)
+                                                      0.042     4.157 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st[1]_i_5__0/LUT6/O
+                         net (fo=43, routed)          0.269     4.426    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_47__0/I2
+    SLICE_X74Y134        LUTCY2 (Prop_A6LUT_SLICEL_I2_GE)
+                                                      0.109     4.535 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_47__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.046     4.581    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_47__0_n_0
+    SLICE_X74Y134        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_GEA_COUTH)
+                                                      0.347     4.928 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_38__0/COUTH
+                         net (fo=3, routed)           0.001     4.929    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_38__0_n_3
+    SLICE_X74Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_CIN_COUTF)
+                                                      0.077     5.006 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_19__0/COUTF
+                         net (fo=1, routed)           0.368     5.374    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st_reg[1]_i_19__0_n_2
+    SLICE_X72Y136        LUT4 (Prop_H6LUT_SLICEL_I3_O)
+                                                      0.042     5.416 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st[1]_i_6__0/O
+                         net (fo=35, routed)          0.459     5.874    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/FSM_sequential_st[1]_i_6__0_n_0
+    SLICE_X75Y134        LUT5 (Prop_F6LUT_SLICEM_I2_O)
+                                                      0.133     6.007 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_252__0/O
+                         net (fo=2, routed)           0.173     6.180    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_216__0/I3
+    SLICE_X75Y135        LUTCY2 (Prop_A6LUT_SLICEM_I3_GE)
+                                                      0.114     6.294 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_216__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.043     6.337    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_216__0_n_0
+    SLICE_X75Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_GEA_COUTH)
+                                                      0.349     6.686 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_143__0/COUTH
+                         net (fo=3, routed)           0.001     6.687    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_143__0_n_3
+    SLICE_X75Y136        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_CIN_COUTF)
+                                                      0.078     6.765 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_36__0/COUTF
+                         net (fo=1, routed)           0.289     7.054    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_36__0_n_2
+    SLICE_X74Y136        LUT4 (Prop_F6LUT_SLICEL_I3_O)
+                                                      0.201     7.255 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_10__0/O
+                         net (fo=22, routed)          0.386     7.641    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_10__0_n_0
+    SLICE_X75Y133        LUT6 (Prop_F6LUT_SLICEM_I4_O)
+                                                      0.185     7.826 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_236__0/O
+                         net (fo=5, routed)           0.332     8.158    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_206__0/I3
+    SLICE_X73Y136        LUTCY2 (Prop_A6LUT_SLICEM_I3_GE)
+                                                      0.114     8.272 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_206__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.043     8.315    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_206__0_n_0
+    SLICE_X73Y136        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_GEA_COUTH)
+                                                      0.349     8.664 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_124__0/COUTH
+                         net (fo=3, routed)           0.002     8.666    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_124__0_n_3
+    SLICE_X73Y137        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_CIN_COUTF)
+                                                      0.078     8.744 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_32__0/COUTF
+                         net (fo=1, routed)           0.329     9.073    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_32__0_n_2
+    SLICE_X71Y136        LUT4 (Prop_F6LUT_SLICEM_I3_O)
+                                                      0.113     9.186 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_9__0/O
+                         net (fo=44, routed)          0.399     9.585    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_177__0/I2
+    SLICE_X73Y134        LUTCY2 (Prop_A6LUT_SLICEM_I2_GE)
+                                                      0.134     9.719 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_177__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.043     9.762    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_177__0_n_0
+    SLICE_X73Y134        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_GEA_COUTH)
+                                                      0.349    10.111 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_87__0/COUTH
+                         net (fo=3, routed)           0.002    10.113    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_87__0_n_3
+    SLICE_X73Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_CIN_COUTF)
+                                                      0.078    10.191 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_23__0/COUTF
+                         net (fo=1, routed)           0.340    10.531    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_23__0_n_2
+    SLICE_X73Y133        LUT4 (Prop_D6LUT_SLICEM_I3_O)
+                                                      0.133    10.664 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_7__0/O
+                         net (fo=18, routed)          0.267    10.932    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_7__0_n_0
+    SLICE_X73Y133        LUT5 (Prop_E6LUT_SLICEM_I3_O)
+                                                      0.182    11.114 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_233__0/O
+                         net (fo=5, routed)           0.376    11.489    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_157__0/I3
+    SLICE_X72Y134        LUTCY1 (Prop_F5LUT_SLICEL_I3_PROP)
+                                                      0.092    11.581 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_157__0/LUTCY1_INST/PROP
+                         net (fo=1, routed)           0.000    11.581    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_157__0_n_3
+    SLICE_X72Y134        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_PROPF_COUTH)
+                                                      0.195    11.776 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_49__0/COUTH
+                         net (fo=3, routed)           0.002    11.778    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_49__0_n_3
+    SLICE_X72Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_CIN_COUTF)
+                                                      0.077    11.855 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_15__0/COUTF
+                         net (fo=1, routed)           0.273    12.128    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_15__0_n_2
+    SLICE_X70Y135        LUT4 (Prop_H6LUT_SLICEL_I3_O)
+                                                      0.114    12.242 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_5__0/O
+                         net (fo=45, routed)          0.245    12.487    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_167__0/I2
+    SLICE_X70Y134        LUTCY2 (Prop_A6LUT_SLICEL_I2_GE)
+                                                      0.129    12.616 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_167__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.046    12.662    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_167__0_n_0
+    SLICE_X70Y134        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_GEA_COUTH)
+                                                      0.347    13.009 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_68__0/COUTH
+                         net (fo=3, routed)           0.001    13.010    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_68__0_n_3
+    SLICE_X70Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEL_CIN_COUTF)
+                                                      0.077    13.087 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_19__0/COUTF
+                         net (fo=1, routed)           0.375    13.462    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_19__0_n_2
+    SLICE_X69Y133        LUT4 (Prop_F6LUT_SLICEM_I3_O)
+                                                      0.185    13.647 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_6__0/O
+                         net (fo=32, routed)          0.473    14.120    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_192__0/I2
+    SLICE_X71Y134        LUTCY2 (Prop_A6LUT_SLICEM_I2_GE)
+                                                      0.185    14.305 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_192__0/LUTCY2_INST/GE
+                         net (fo=1, routed)           0.043    14.348    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_192__0_n_0
+    SLICE_X71Y134        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_GEA_COUTH)
+                                                      0.349    14.697 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_105__0/COUTH
+                         net (fo=3, routed)           0.001    14.698    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_105__0_n_3
+    SLICE_X71Y135        LOOKAHEAD8 (Prop_LOOKAHEAD8_SLICEM_CIN_COUTF)
+                                                      0.078    14.776 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_28__0/COUTF
+                         net (fo=1, routed)           0.356    15.132    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_28__0_n_2
+    SLICE_X71Y133        LUT6 (Prop_H6LUT_SLICEM_I5_O)
+                                                      0.044    15.176 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_8__0/O
+                         net (fo=6, routed)           0.264    15.440    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_base_reg_0_7_0_9_i_8__0_n_0
+    SLICE_X71Y133        LUT3 (Prop_F6LUT_SLICEM_I2_O)
+                                                      0.113    15.553 f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_target[11]_i_8__0/O
+                         net (fo=76, routed)          0.485    16.038    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_target[11]_i_8__0_n_0
+    SLICE_X68Y131        LUT6 (Prop_F6LUT_SLICEL_I5_O)
+                                                      0.134    16.172 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_target[8]_i_5__0/O
+                         net (fo=1, routed)           0.220    16.392    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_target[8]_i_5__0_n_0
+    SLICE_X71Y131        LUT4 (Prop_H6LUT_SLICEM_I3_O)
+                                                      0.185    16.577 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/rpl_target[8]_i_1__0/O
+                         net (fo=14, routed)          0.464    17.041    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/slot_seq[0]_106[8]
+    SLICE_X69Y126        LUT5 (Prop_E6LUT_SLICEM_I4_O)
+                                                      0.197    17.238 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc[24]_i_4__0/O
+                         net (fo=6, routed)           0.483    17.721    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc[24]_i_4__0_n_0
+    SLICE_X70Y124        LUT5 (Prop_D5LUT_SLICEL_I4_O)
+                                                      0.205    17.926 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc[24]_i_1__1/O
+                         net (fo=1, routed)           0.390    18.316    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc[24]
+    SLICE_X71Y124        FDSE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc_reg[24]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_pl_0 rise edge)
+                                                     25.000    25.000 r  
+    PS9_X0Y0             PS9                          0.000    25.000 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/PMCRCLKCLK[0]
+                         net (fo=1, routed)           0.000    25.000    pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/pmc_pl_ref_clk[0]
+    BUFG_PS_X0Y6         BUFG_PS (Prop_BUFG_PS_I_O)
+                                                      0.072    25.072 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+    X1Y1 (CLOCK_ROOT)    net (fo=11872, routed)       1.763    26.835    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/aclk
+    SLICE_X71Y124        FDSE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc_reg[24]/C
+                         clock pessimism              0.226    27.061    
+                         clock uncertainty           -0.129    26.931    
+    SLICE_X71Y124        FDSE (Setup_AFF_SLICEM_C_D)
+                                                     -0.002    26.929    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_ep/u_node/u_dlltx/crc_reg[24]
+  -------------------------------------------------------------------
+                         required time                         26.929    
+                         arrival time                         -18.316    
+  -------------------------------------------------------------------
+                         slack                                  8.614    
+
+
+
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         clk_pl_0
+Waveform(ns):       { 0.000 12.500 }
+Period(ns):         25.000
+Sources:            { pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/PMCRCLKCLK[0] }
+
+Check Type        Corner  Lib Pin          Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location  Pin
+Min Period        n/a     PS9/MAXIGP0ACLK  n/a            4.000         25.000      21.000     PS9_X0Y0  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/MAXIGP0ACLK
+Low Pulse Width   Slow    PS9/MAXIGP0ACLK  n/a            2.000         12.500      10.500     PS9_X0Y0  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/MAXIGP0ACLK
+High Pulse Width  Slow    PS9/MAXIGP0ACLK  n/a            2.000         12.500      10.500     PS9_X0Y0  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/MAXIGP0ACLK
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  ddr4_bank0_sys_clk_clk_p
+  To Clock:  ddr4_bank0_sys_clk_clk_p
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        2.109ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         ddr4_bank0_sys_clk_clk_p
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { ddr4_bank0_sys_clk_clk_p }
+
+Check Type        Corner  Lib Pin     Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     XPLL/CLKIN  n/a            1.250         5.000       3.750      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKIN
+Max Period        n/a     XPLL/CLKIN  n/a            10.000        5.000       5.000      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKIN
+Low Pulse Width   Slow    XPLL/CLKIN  n/a            0.391         2.500       2.109      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKIN
+High Pulse Width  Slow    XPLL/CLKIN  n/a            0.391         2.500       2.109      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKIN
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  bank1_clkout0
+  To Clock:  bank1_clkout0
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.000ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         bank1_clkout0
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUT0 }
+
+Check Type        Corner  Lib Pin     Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     XPLL/CLKIN  n/a            1.250         1.250       0.000      XPLL_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank0/CLKIN
+Max Period        n/a     XPLL/CLKIN  n/a            10.000        1.250       8.750      XPLL_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank0/CLKIN
+Low Pulse Width   Slow    XPLL/CLKIN  n/a            0.391         0.625       0.234      XPLL_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank0/CLKIN
+High Pulse Width  Slow    XPLL/CLKIN  n/a            0.391         0.625       0.234      XPLL_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank0/CLKIN
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  pll_clktoxphy[0]
+  To Clock:  pll_clktoxphy[0]
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.044ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         pll_clktoxphy[0]
+Waveform(ns):       { 0.000 0.156 }
+Period(ns):         0.312
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank0/CLKOUTPHY }
+
+Check Type        Corner  Lib Pin       Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     XPHY/PLL_CLK  n/a            0.268         0.312       0.044      XPHY_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+Low Pulse Width   Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+High Pulse Width  Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  pll_clktoxphy[2]
+  To Clock:  pll_clktoxphy[2]
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.044ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         pll_clktoxphy[2]
+Waveform(ns):       { 0.000 0.156 }
+Period(ns):         0.312
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank2/CLKOUTPHY }
+
+Check Type        Corner  Lib Pin       Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location    Pin
+Min Period        n/a     XPHY/PLL_CLK  n/a            0.268         0.312       0.044      XPHY_X18Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+Low Pulse Width   Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X18Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+High Pulse Width  Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X18Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST2/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  bank1_xpll0_fifo_rd_clk
+  To Clock:  bank1_xpll0_fifo_rd_clk
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.000ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         bank1_xpll0_fifo_rd_clk
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUT2 }
+
+Check Type        Corner  Lib Pin           Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     XPLL/CLKOUT2      n/a            1.250         1.250       0.000      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUT2
+Low Pulse Width   Slow    XPHY/FIFO_RD_CLK  n/a            0.429         0.625       0.196      XPHY_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/NIBBLE[0].UNISIM.I_XPHY/FIFO_RD_CLK
+High Pulse Width  Slow    XPHY/FIFO_RD_CLK  n/a            0.429         0.625       0.196      XPHY_X0Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST0/NIBBLE[0].UNISIM.I_XPHY/FIFO_RD_CLK
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  mc_clk_xpll
+  To Clock:  mc_clk_xpll
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.000ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         mc_clk_xpll
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUT1 }
+
+Check Type  Corner  Lib Pin       Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period  n/a     XPLL/CLKOUT1  n/a            1.250         1.250       0.000      XPLL_X2Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUT1
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  pll_clk_xpll
+  To Clock:  pll_clk_xpll
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.044ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         pll_clk_xpll
+Waveform(ns):       { 0.000 0.156 }
+Period(ns):         0.312
+Sources:            { pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/u_xpll0_bank1/CLKOUTPHY }
+
+Check Type        Corner  Lib Pin       Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     XPHY/PLL_CLK  n/a            0.268         0.312       0.044      XPHY_X9Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+Low Pulse Width   Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X9Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+High Pulse Width  Slow    XPHY/PLL_CLK  n/a            0.107         0.156       0.049      XPHY_X9Y0  pcs_soc_bd_i/axi_noc_0/inst/MC0_ddrc/inst/noc_ddr4_phy/inst/BANK_WRAPPER_INST1/NIBBLE[0].UNISIM.I_XPHY/PLL_CLK
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  pcs_soc_bd_i/clk_wizard_0/inst/clk_in1
+  To Clock:  pcs_soc_bd_i/clk_wizard_0/inst/clk_in1
+
+Setup :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack       12.109ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         pcs_soc_bd_i/clk_wizard_0/inst/clk_in1
+Waveform(ns):       { 0.000 12.500 }
+Period(ns):         25.000
+Sources:            { pcs_soc_bd_i/clk_wizard_0/inst/clk_in1 }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location   Pin
+Min Period        n/a     MMCME5/CLKIN1  n/a            1.470         25.000      23.530     MMCM_X2Y0  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKIN1
+Max Period        n/a     MMCME5/CLKIN1  n/a            100.000       25.000      75.000     MMCM_X2Y0  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKIN1
+Low Pulse Width   Slow    MMCME5/CLKIN1  n/a            0.391         12.500      12.109     MMCM_X2Y0  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKIN1
+High Pulse Width  Slow    MMCME5/CLKIN1  n/a            0.391         12.500      12.109     MMCM_X2Y0  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKIN1
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clkout1_primitive
+  To Clock:  clkout1_primitive
+
+Setup :            0  Failing Endpoints,  Worst Slack        0.000ns,  Total Violation        0.000ns
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+PW    :            0  Failing Endpoints,  Worst Slack        0.880ns,  Total Violation        0.000ns
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             0.000ns  (required time - arrival time)
+  Source:                 pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/loop_word_reg[43]/C
+                            (rising edge-triggered cell FDRE clocked by clkout1_primitive  {rise@0.000ns fall@1.280ns period=2.560ns})
+  Destination:            pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf_reg[85]/D
+                            (rising edge-triggered cell FDRE clocked by clkout1_primitive  {rise@0.000ns fall@1.280ns period=2.560ns})
+  Path Group:             clkout1_primitive
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            2.560ns  (clkout1_primitive rise@2.560ns - clkout1_primitive rise@0.000ns)
+  Data Path Delay:        2.417ns  (logic 0.595ns (24.620%)  route 1.822ns (75.380%))
+  Logic Levels:           6  (LUT3=2 LUT5=3 LUT6=1)
+  Clock Path Skew:        -0.108ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    3.120ns = ( 5.680 - 2.560 ) 
+    Source Clock Delay      (SCD):    3.812ns
+    Clock Pessimism Removal (CPR):    0.584ns
+  Clock Uncertainty:      0.034ns  (CJ)/2 + PE + PJ
+    Clock Jitter             (CJ):    0.067ns
+    Phase Error              (PE):    0.000ns
+    Phase Jitter             (PJ):    0.000ns
+  Clock Net Delay (Source):      2.225ns (routing 0.501ns, distribution 1.724ns)
+  Clock Net Delay (Destination): 1.892ns (routing 0.401ns, distribution 1.491ns)
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clkout1_primitive rise edge)
+                                                      0.000     0.000 r  
+    BUFG_PS_X0Y6         BUFG_PS                      0.000     0.000 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+                         net (fo=11872, routed)       1.038     1.038    pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/clk_in1
+    MMCM_X2Y0            MMCME5 (Prop_MMCM_CLKIN1_CLKOUT0)
+                                                      0.070     1.108 r  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKOUT0
+                         net (fo=1, routed)           0.394     1.502    pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/clkout1_primitive
+    BUFGCE_X2Y4          BUFGCE (Prop_BUFCE_BUFGCE_I_O)
+                                                      0.085     1.587 r  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/BUFG_clkout1_inst/O
+    X1Y1 (CLOCK_ROOT)    net (fo=1596, routed)        2.225     3.812    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/clk_dp
+    SLICE_X88Y54         FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/loop_word_reg[43]/C
+  -------------------------------------------------------------------    -------------------
+    SLICE_X88Y54         FDRE (Prop_BFF2_SLICEL_C_Q)
+                                                      0.127     3.939 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/loop_word_reg[43]/Q
+                         net (fo=3, routed)           0.323     4.262    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/loop_word[43]
+    SLICE_X90Y54         LUT3 (Prop_E6LUT_SLICEL_I0_O)
+                                                      0.067     4.329 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[61]_i_12/O
+                         net (fo=3, routed)           0.247     4.576    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[61]_i_12_n_0
+    SLICE_X90Y54         LUT5 (Prop_F5LUT_SLICEL_I4_O)
+                                                      0.073     4.649 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[61]_i_6/O
+                         net (fo=3, routed)           0.418     5.067    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[61]_i_6_n_0
+    SLICE_X88Y56         LUT3 (Prop_C6LUT_SLICEL_I0_O)
+                                                      0.040     5.107 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[53]_i_5/O
+                         net (fo=3, routed)           0.246     5.352    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[53]_i_5_n_0
+    SLICE_X88Y56         LUT5 (Prop_H6LUT_SLICEL_I4_O)
+                                                      0.119     5.471 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[53]_i_4/O
+                         net (fo=2, routed)           0.265     5.736    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/outb_r[53]_i_4_n_0
+    SLICE_X88Y57         LUT5 (Prop_A6LUT_SLICEL_I0_O)
+                                                      0.129     5.865 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf[85]_i_4__0/O
+                         net (fo=2, routed)           0.247     6.112    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf[85]_i_4__0_n_0
+    SLICE_X88Y57         LUT6 (Prop_C6LUT_SLICEL_I5_O)
+                                                      0.040     6.152 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf[85]_i_1_comp/O
+                         net (fo=1, routed)           0.076     6.228    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf[85]_i_1_n_0
+    SLICE_X88Y57         FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf_reg[85]/D
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clkout1_primitive rise edge)
+                                                      2.560     2.560 r  
+    BUFG_PS_X0Y6         BUFG_PS                      0.000     2.560 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+                         net (fo=11872, routed)       0.872     3.432    pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/clk_in1
+    MMCM_X2Y0            MMCME5 (Prop_MMCM_CLKIN1_CLKOUT0)
+                                                      0.000     3.432 r  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKOUT0
+                         net (fo=1, routed)           0.290     3.722    pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/clkout1_primitive
+    BUFGCE_X2Y4          BUFGCE (Prop_BUFCE_BUFGCE_I_O)
+                                                      0.066     3.788 r  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/BUFG_clkout1_inst/O
+    X1Y1 (CLOCK_ROOT)    net (fo=1596, routed)        1.892     5.680    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/clk_dp
+    SLICE_X88Y57         FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf_reg[85]/C
+                         clock pessimism              0.584     6.264    
+                         clock uncertainty           -0.034     6.230    
+    SLICE_X88Y57         FDRE (Setup_CFF2_SLICEL_C_D)
+                                                     -0.002     6.228    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_sil/u_rx/u_gb/buf_reg[85]
+  -------------------------------------------------------------------
+                         required time                          6.228    
+                         arrival time                          -6.228    
+  -------------------------------------------------------------------
+                         slack                                  0.000    
+
+
+
+
+
+Pulse Width Checks
+--------------------------------------------------------------------------------------
+Clock Name:         clkout1_primitive
+Waveform(ns):       { 0.000 1.280 }
+Period(ns):         2.560
+Sources:            { pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/MMCME5_inst/CLKOUT0 }
+
+Check Type        Corner  Lib Pin   Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location     Pin
+Min Period        n/a     BUFGCE/I  n/a            1.471         2.560       1.089      BUFGCE_X2Y4  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/BUFG_clkout1_inst/I
+Low Pulse Width   Slow    BUFGCE/I  n/a            0.400         1.280       0.880      BUFGCE_X2Y4  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/BUFG_clkout1_inst/I
+High Pulse Width  Slow    BUFGCE/I  n/a            0.400         1.280       0.880      BUFGCE_X2Y4  pcs_soc_bd_i/clk_wizard_0/inst/clock_primitive_inst/BUFG_clkout1_inst/I
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clkout1_primitive
+  To Clock:  clk_pl_0
+
+Setup :            0  Failing Endpoints,  Worst Slack       23.929ns,  Total Violation        0.000ns
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             23.929ns  (required time - arrival time)
+  Source:                 pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_cdc/shadow_rx_reg[4]/C
+                            (rising edge-triggered cell FDRE clocked by clkout1_primitive  {rise@0.000ns fall@1.280ns period=2.560ns})
+  Destination:            pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_bank/sh_rx_blk_reg[4]/D
+                            (rising edge-triggered cell FDRE clocked by clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Path Group:             clk_pl_0
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            25.000ns  (MaxDelay Path 25.000ns)
+  Data Path Delay:        1.069ns  (logic 0.127ns (11.880%)  route 0.942ns (88.120%))
+  Logic Levels:           0  
+  Timing Exception:       MaxDelay Path 25.000ns -datapath_only
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+    SLICE_X86Y32                                      0.000     0.000 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_cdc/shadow_rx_reg[4]/C
+    SLICE_X86Y32         FDRE (Prop_GFF_SLICEL_C_Q)
+                                                      0.127     0.127 r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_cdc/shadow_rx_reg[4]/Q
+                         net (fo=1, routed)           0.942     1.069    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_bank/sh_rx_blk_reg[31]_1[4]
+    SLICE_X86Y30         FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_bank/sh_rx_blk_reg[4]/D
+  -------------------------------------------------------------------    -------------------
+
+                         max delay                   25.000    25.000    
+    SLICE_X86Y30         FDRE (Setup_DFF2_SLICEL_C_D)
+                                                     -0.002    24.998    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_pcs/u_bank/sh_rx_blk_reg[4]
+  -------------------------------------------------------------------
+                         required time                         24.998    
+                         arrival time                          -1.069    
+  -------------------------------------------------------------------
+                         slack                                 23.929    
+
+
+
+
+
+---------------------------------------------------------------------------------------------------
+From Clock:  clk_pl_0
+  To Clock:  clkout1_primitive
+
+Setup :            0  Failing Endpoints,  Worst Slack        0.799ns,  Total Violation        0.000ns
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             0.799ns  (required time - arrival time)
+  Source:                 pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica/C
+                            (rising edge-triggered cell FDRE clocked by clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Destination:            pcs_soc_bd_i/soc_pcs_0/inst/u_soc/rstn_meta_reg/D
+                            (rising edge-triggered cell FDRE clocked by clkout1_primitive  {rise@0.000ns fall@1.280ns period=2.560ns})
+  Path Group:             clkout1_primitive
+  Path Type:              Setup (Max at Slow Process Corner)
+  Requirement:            2.560ns  (MaxDelay Path 2.560ns)
+  Data Path Delay:        1.760ns  (logic 0.126ns (7.160%)  route 1.634ns (92.840%))
+  Logic Levels:           0  
+  Timing Exception:       MaxDelay Path 2.560ns -datapath_only
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+    SLICE_X70Y56                                      0.000     0.000 r  pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica/C
+    SLICE_X70Y56         FDRE (Prop_FFF_SLICEL_C_Q)
+                                                      0.126     0.126 r  pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica/Q
+                         net (fo=88, routed)          1.634     1.760    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/peripheral_aresetn[0]_repN_alias
+    SLICE_X90Y41         FDRE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/rstn_meta_reg/D
+  -------------------------------------------------------------------    -------------------
+
+                         max delay                    2.560     2.560    
+    SLICE_X90Y41         FDRE (Setup_BFF_SLICEL_C_D)
+                                                     -0.001     2.559    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/rstn_meta_reg
+  -------------------------------------------------------------------
+                         required time                          2.559    
+                         arrival time                          -1.760    
+  -------------------------------------------------------------------
+                         slack                                  0.799    
+
+
+
+
+
+---------------------------------------------------------------------------------------------------
+Path Group:  **async_default**
+From Clock:  clk_pl_0
+  To Clock:  clk_pl_0
+
+Setup :            0  Failing Endpoints,  Worst Slack       23.112ns,  Total Violation        0.000ns
+Hold  :           NA  Failing Endpoints,  Worst Slack           NA  ,  Total Violation           NA
+---------------------------------------------------------------------------------------------------
+
+
+Max Delay Paths
+--------------------------------------------------------------------------------------
+Slack (MET) :             23.112ns  (required time - arrival time)
+  Source:                 pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica_12/C
+                            (rising edge-triggered cell FDRE clocked by clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Destination:            pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/wptr_reg[3]/CLR
+                            (recovery check against rising-edge clock clk_pl_0  {rise@0.000ns fall@12.500ns period=25.000ns})
+  Path Group:             **async_default**
+  Path Type:              Recovery (Max at Slow Process Corner)
+  Requirement:            25.000ns  (clk_pl_0 rise@25.000ns - clk_pl_0 rise@0.000ns)
+  Data Path Delay:        1.452ns  (logic 0.126ns (8.676%)  route 1.326ns (91.324%))
+  Logic Levels:           0  
+  Clock Path Skew:        -0.159ns (DCD - SCD + CPR)
+    Destination Clock Delay (DCD):    1.849ns = ( 26.849 - 25.000 ) 
+    Source Clock Delay      (SCD):    2.160ns
+    Clock Pessimism Removal (CPR):    0.152ns
+  Clock Uncertainty:      0.129ns  (CJ)/2 + PE + PJ
+    Clock Jitter             (CJ):    0.259ns
+    Phase Error              (PE):    0.000ns
+    Phase Jitter             (PJ):    0.000ns
+  Clock Net Delay (Source):      2.019ns (routing 0.261ns, distribution 1.758ns)
+  Clock Net Delay (Destination): 1.777ns (routing 0.238ns, distribution 1.539ns)
+
+    Location             Delay type                Incr(ns)  Path(ns)    Netlist Resource(s)
+  -------------------------------------------------------------------    -------------------
+                         (clock clk_pl_0 rise edge)
+                                                      0.000     0.000 r  
+    PS9_X0Y0             PS9                          0.000     0.000 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/PMCRCLKCLK[0]
+                         net (fo=1, routed)           0.000     0.000    pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/pmc_pl_ref_clk[0]
+    BUFG_PS_X0Y6         BUFG_PS (Prop_BUFG_PS_I_O)
+                                                      0.141     0.141 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+    X1Y1 (CLOCK_ROOT)    net (fo=11872, routed)       2.019     2.160    pcs_soc_bd_i/proc_sys_reset_0/U0/slowest_sync_clk
+    SLICE_X70Y86         FDRE                                         r  pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica_12/C
+  -------------------------------------------------------------------    -------------------
+    SLICE_X70Y86         FDRE (Prop_FFF_SLICEL_C_Q)
+                                                      0.126     2.286 r  pcs_soc_bd_i/proc_sys_reset_0/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N_replica_12/Q
+                         net (fo=59, routed)          1.326     3.612    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/peripheral_aresetn[0]_repN_12_alias
+    SLICE_X80Y86         FDCE                                         f  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/wptr_reg[3]/CLR  (IS_INVERTED)
+  -------------------------------------------------------------------    -------------------
+
+                         (clock clk_pl_0 rise edge)
+                                                     25.000    25.000 r  
+    PS9_X0Y0             PS9                          0.000    25.000 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/PS9_inst/PMCRCLKCLK[0]
+                         net (fo=1, routed)           0.000    25.000    pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/pmc_pl_ref_clk[0]
+    BUFG_PS_X0Y6         BUFG_PS (Prop_BUFG_PS_I_O)
+                                                      0.072    25.072 r  pcs_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/buffer_pl_clk_0.PL_CLK_0_BUFG/O
+    X1Y1 (CLOCK_ROOT)    net (fo=11872, routed)       1.777    26.849    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/aclk
+    SLICE_X80Y86         FDCE                                         r  pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/wptr_reg[3]/C
+                         clock pessimism              0.152    27.001    
+                         clock uncertainty           -0.129    26.872    
+    SLICE_X80Y86         FDCE (Recov_FFF2_SLICEL_C_CLR)
+                                                     -0.147    26.725    pcs_soc_bd_i/soc_pcs_0/inst/u_soc/u_mem/u_pcie/u_rc/u_txfifo/wptr_reg[3]
+  -------------------------------------------------------------------
+                         required time                         26.725    
+                         arrival time                          -3.612    
+  -------------------------------------------------------------------
+                         slack                                 23.112    
+
+
+
+
+

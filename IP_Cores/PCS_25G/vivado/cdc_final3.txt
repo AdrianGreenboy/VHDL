@@ -1,0 +1,20 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+--------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version      : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date              : Fri Aug  7 17:44:47 2026
+| Host              : adrian running 64-bit Ubuntu 24.04.4 LTS
+| Command           : report_cdc -file /home/adrian/vhdl_repo/IP_Cores/PCS_25G/vivado/cdc_final3.txt
+| Design            : pcs_soc_bd_wrapper
+| Device            : xcve2302-sfva784
+| Speed File        : -1LP  PRODUCTION 2.04 2025-08-19
+| Design State      : Physopt postRoute
+| Temperature Grade : E
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+CDC Report
+
+Severity  Source Clock       Destination Clock  CDC Type                 Exceptions               Endpoints  Safe  Unsafe  Unknown  No ASYNC_REG  
+--------  -----------------  -----------------  -----------------------  -----------------------  ---------  ----  ------  -------  ------------  
+Warning   clkout1_primitive  clk_pl_0           No Common Primary Clock  Max Delay Datapath Only        137   137       0        0             0  
+Info      clk_pl_0           clkout1_primitive  No Common Primary Clock  Max Delay Datapath Only          9     9       0        0             0  
+
