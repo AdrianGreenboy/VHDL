@@ -1,144 +1,141 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
   <defs>
-    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L7,3 L0,6 Z" fill="#475569"/>
+    <marker id="ar" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#37474f"/>
     </marker>
-    <marker id="arrowlight" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    <marker id="arw" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#ffffff"/>
     </marker>
   </defs>
 
-  <!-- ===================== title ===================== -->
-  <text x="380" y="30" text-anchor="middle" font-size="20" font-weight="700" fill="#0f172a">RF Digital Front-End (DDC / DUC)</text>
-  <text x="380" y="50" text-anchor="middle" font-size="12.5" fill="#64748b">RV32IM SoC v3 · Trenz TE0950 · AMD Versal xcve2302 · signature 0xB74940EB</text>
+  <rect width="760" height="560" fill="#fafafa"/>
 
-  <!-- ===================== SoC control (slate) ===================== -->
-  <rect x="30" y="80" width="180" height="150" rx="10" fill="#f1f5f9" stroke="#475569" stroke-width="1.6"/>
-  <text x="120" y="102" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">RV32IM SoC</text>
-  <rect x="48" y="114" width="144" height="30" rx="5" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
-  <text x="120" y="133" text-anchor="middle" font-size="11.5" fill="#334155">cpu_pipeline (RV32)</text>
-  <rect x="48" y="150" width="144" height="28" rx="5" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
-  <text x="120" y="168" text-anchor="middle" font-size="11" fill="#334155">MMIO 0x6000_0000</text>
-  <rect x="48" y="184" width="144" height="30" rx="5" fill="#e2e8f0" stroke="#64748b" stroke-width="1"/>
-  <text x="120" y="203" text-anchor="middle" font-size="11" fill="#334155">AXI-Lite slave 0x8000_0000</text>
+  <text x="380" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#212121">
+    HERCOSSNUX Core 19 — PCS 64B/66B @ 25G
+  </text>
+  <text x="380" y="44" text-anchor="middle" font-size="11" fill="#616161">
+    Trenz TE0950 · AMD Versal xcve2302-1LP · RV32 control plane · 390.625 MHz data plane
+  </text>
 
-  <!-- ===================== RX datapath band ===================== -->
-  <text x="490" y="98" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" letter-spacing="0.5">RECEIVE  ·  DDC</text>
+  <!-- ================= PS ================= -->
+  <rect x="24" y="62" width="200" height="118" rx="6" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.6"/>
+  <text x="124" y="82" text-anchor="middle" font-size="12" font-weight="bold" fill="#283593">PS — Cortex-A72</text>
+  <text x="124" y="99" text-anchor="middle" font-size="10" fill="#3949ab">PetaLinux · pcs-selftest</text>
+  <rect x="40" y="110" width="168" height="26" rx="4" fill="#c5cae9" stroke="#3f51b5"/>
+  <text x="124" y="127" text-anchor="middle" font-size="10" fill="#1a237e">carga fw_rv32.bin → IMEM</text>
+  <rect x="40" y="142" width="168" height="26" rx="4" fill="#c5cae9" stroke="#3f51b5"/>
+  <text x="124" y="159" text-anchor="middle" font-size="10" fill="#1a237e">sondea doorbell · lee DDR</text>
 
-  <!-- Tone generator (amber) -->
-  <rect x="250" y="110" width="92" height="60" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
-  <text x="296" y="134" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e">Tone gen</text>
-  <text x="296" y="150" text-anchor="middle" font-size="10" fill="#b45309">2nd NCO</text>
-  <text x="296" y="163" text-anchor="middle" font-size="9.5" fill="#b45309">TONE_FTW</text>
+  <!-- ================= NoC / DDR ================= -->
+  <rect x="536" y="62" width="200" height="118" rx="6" fill="#ede7f6" stroke="#673ab7" stroke-width="1.6"/>
+  <text x="636" y="82" text-anchor="middle" font-size="12" font-weight="bold" fill="#4527a0">NoC + DDR4</text>
+  <rect x="552" y="96" width="168" height="30" rx="4" fill="#d1c4e9" stroke="#673ab7"/>
+  <text x="636" y="109" text-anchor="middle" font-size="10" fill="#311b92">ventana no-map 16 MB</text>
+  <text x="636" y="121" text-anchor="middle" font-size="10" fill="#311b92">0x7000_0000</text>
+  <rect x="552" y="132" width="168" height="36" rx="4" fill="#d1c4e9" stroke="#673ab7"/>
+  <text x="636" y="147" text-anchor="middle" font-size="10" fill="#311b92">resultados @ +0x40</text>
+  <text x="636" y="160" text-anchor="middle" font-size="9" fill="#4527a0">ID · STATUS · CNT · BER · FLAGS</text>
 
-  <!-- NCO (amber) -->
-  <rect x="250" y="185" width="92" height="60" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
-  <text x="296" y="209" text-anchor="middle" font-size="11.5" font-weight="700" fill="#92400e">NCO</text>
-  <text x="296" y="224" text-anchor="middle" font-size="9.5" fill="#b45309">32-bit phase</text>
-  <text x="296" y="236" text-anchor="middle" font-size="9.5" fill="#b45309">sin/cos LUT</text>
+  <!-- ================= PL: SoC ================= -->
+  <rect x="24" y="206" width="712" height="330" rx="8" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+  <text x="40" y="228" font-size="12" font-weight="bold" fill="#263238">PL — soc_top_pcs</text>
 
-  <!-- Mixer (violet) -->
-  <rect x="370" y="148" width="88" height="60" rx="9" fill="#ede9fe" stroke="#6b4fa0" stroke-width="1.6"/>
-  <text x="414" y="172" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">Mixer</text>
-  <text x="414" y="187" text-anchor="middle" font-size="9.5" fill="#6d28d9">I·cos − Q·sin</text>
-  <text x="414" y="199" text-anchor="middle" font-size="9.5" fill="#6d28d9">complex Q1.15</text>
+  <!-- axil_soc -->
+  <rect x="44" y="242" width="150" height="86" rx="5" fill="#e0f2f1" stroke="#00897b" stroke-width="1.5"/>
+  <text x="119" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#00695c">axil_soc</text>
+  <text x="119" y="278" text-anchor="middle" font-size="9" fill="#00796b">CONTROL · IRQ</text>
+  <text x="119" y="292" text-anchor="middle" font-size="9" fill="#00796b">DDR_BASE</text>
+  <text x="119" y="306" text-anchor="middle" font-size="9" fill="#00796b">IMEM 0x1000</text>
+  <text x="119" y="320" text-anchor="middle" font-size="9" fill="#00796b">DMEM 0x2000</text>
 
-  <!-- CIC decimate (teal) -->
-  <rect x="486" y="148" width="86" height="60" rx="9" fill="#ccfbf1" stroke="#0f766e" stroke-width="1.6"/>
-  <text x="529" y="169" text-anchor="middle" font-size="11.5" font-weight="700" fill="#115e59">CIC ↓</text>
-  <text x="529" y="184" text-anchor="middle" font-size="9.5" fill="#0f766e">sinc³ decim.</text>
-  <text x="529" y="196" text-anchor="middle" font-size="9.5" fill="#0f766e">R∈{4,8,16,32}</text>
+  <!-- RV32 -->
+  <rect x="216" y="242" width="150" height="86" rx="5" fill="#fff3e0" stroke="#ef6c00" stroke-width="1.5"/>
+  <text x="291" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#e65100">RV32IM</text>
+  <text x="291" y="277" text-anchor="middle" font-size="9" fill="#ef6c00">cpu_pipeline</text>
+  <text x="291" y="291" text-anchor="middle" font-size="9" fill="#ef6c00">control plane</text>
+  <text x="291" y="307" text-anchor="middle" font-size="9" fill="#ef6c00">IMEM 1 KB</text>
+  <text x="291" y="321" text-anchor="middle" font-size="9" fill="#ef6c00">RAM local 256 w</text>
 
-  <!-- FIR (teal, highlighted pipeline) -->
-  <rect x="600" y="148" width="130" height="60" rx="9" fill="#ccfbf1" stroke="#0f766e" stroke-width="2.2"/>
-  <text x="665" y="167" text-anchor="middle" font-size="11.5" font-weight="700" fill="#115e59">FIR 16-tap</text>
-  <text x="665" y="182" text-anchor="middle" font-size="9.5" fill="#0f766e">5-stage pipeline</text>
-  <text x="665" y="194" text-anchor="middle" font-size="9.5" fill="#0f766e">→ DSP58</text>
+  <!-- mem_subsys_dma -->
+  <rect x="388" y="242" width="150" height="86" rx="5" fill="#f3e5f5" stroke="#8e24aa" stroke-width="1.5"/>
+  <text x="463" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#6a1b9a">mem_subsys_dma</text>
+  <text x="463" y="278" text-anchor="middle" font-size="9" fill="#8e24aa">RAM local + DMA</text>
+  <text x="463" y="292" text-anchor="middle" font-size="9" fill="#8e24aa">local → DDR</text>
+  <text x="463" y="308" text-anchor="middle" font-size="9" fill="#8e24aa">m_axi 40 bits</text>
+  <text x="463" y="322" text-anchor="middle" font-size="9" fill="#8e24aa">doorbell DONE=127</text>
 
-  <!-- AGC (pink) -->
-  <rect x="600" y="238" width="130" height="56" rx="9" fill="#fce7f3" stroke="#be185d" stroke-width="1.6"/>
-  <text x="665" y="261" text-anchor="middle" font-size="11.5" font-weight="700" fill="#9d174d">AGC + RSSI</text>
-  <text x="665" y="277" text-anchor="middle" font-size="9.5" fill="#be185d">gain · signal strength</text>
+  <!-- puente MMIO -->
+  <rect x="560" y="242" width="152" height="86" rx="5" fill="#fce4ec" stroke="#c2185b" stroke-width="1.5"/>
+  <text x="636" y="261" text-anchor="middle" font-size="11" font-weight="bold" fill="#ad1457">pcs_mmio_bridge</text>
+  <text x="636" y="278" text-anchor="middle" font-size="9" fill="#c2185b">dmem → AXI4-Lite</text>
+  <text x="636" y="292" text-anchor="middle" font-size="9" fill="#c2185b">ventana 0xD000_0000</text>
+  <text x="636" y="308" text-anchor="middle" font-size="9" fill="#c2185b">estanca el CPU</text>
+  <text x="636" y="322" text-anchor="middle" font-size="9" fill="#c2185b">hasta ready</text>
 
-  <!-- RX FIFO (indigo) -->
-  <rect x="486" y="238" width="86" height="56" rx="9" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.6"/>
-  <text x="529" y="261" text-anchor="middle" font-size="11.5" font-weight="700" fill="#3730a3">RX FIFO</text>
-  <text x="529" y="277" text-anchor="middle" font-size="9.5" fill="#4338ca">I/Q word</text>
+  <!-- ============ pcs_stats_top ============ -->
+  <rect x="44" y="348" width="668" height="172" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>
+  <text x="60" y="368" font-size="12" font-weight="bold" fill="#0d47a1">pcs_stats_top</text>
 
-  <!-- ===================== TX datapath (DUC) ===================== -->
-  <text x="414" y="330" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" letter-spacing="0.5">TRANSMIT  ·  DUC</text>
-  <!-- TX FIFO (indigo) -->
-  <rect x="250" y="344" width="92" height="52" rx="9" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.6"/>
-  <text x="296" y="366" text-anchor="middle" font-size="11.5" font-weight="700" fill="#3730a3">TX FIFO</text>
-  <text x="296" y="381" text-anchor="middle" font-size="9.5" fill="#4338ca">I/Q word</text>
-  <!-- CIC interpolate (teal) -->
-  <rect x="370" y="344" width="88" height="52" rx="9" fill="#ccfbf1" stroke="#0f766e" stroke-width="1.6"/>
-  <text x="414" y="366" text-anchor="middle" font-size="11.5" font-weight="700" fill="#115e59">CIC ↑</text>
-  <text x="414" y="381" text-anchor="middle" font-size="9.5" fill="#0f766e">sinc³ interp.</text>
-  <!-- Up-mixer (violet) -->
-  <rect x="486" y="344" width="86" height="52" rx="9" fill="#ede9fe" stroke="#6b4fa0" stroke-width="1.6"/>
-  <text x="529" y="366" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">Up-mixer</text>
-  <text x="529" y="381" text-anchor="middle" font-size="9.5" fill="#6d28d9">Q·cos + I·sin</text>
+  <!-- dominio AXI -->
+  <rect x="58" y="378" width="150" height="66" rx="4" fill="#bbdefb" stroke="#1976d2"/>
+  <text x="133" y="396" text-anchor="middle" font-size="10" font-weight="bold" fill="#0d47a1">pcs_regbank</text>
+  <text x="133" y="411" text-anchor="middle" font-size="9" fill="#1565c0">AXI4-Lite · 64 regs</text>
+  <text x="133" y="424" text-anchor="middle" font-size="9" fill="#1565c0">stickies IRQ (W1C)</text>
+  <text x="133" y="437" text-anchor="middle" font-size="9" fill="#1565c0">FNV 0xD49A4DB4</text>
 
-  <!-- ===================== NoC + masters (slate) ===================== -->
-  <rect x="30" y="430" width="700" height="100" rx="10" fill="#f8fafc" stroke="#475569" stroke-width="1.6"/>
-  <text x="55" y="452" font-size="12" font-weight="700" fill="#334155">AXI4 NoC (NUM_SI=8)</text>
+  <!-- CDC -->
+  <rect x="224" y="378" width="132" height="66" rx="4" fill="#ffe0b2" stroke="#f57c00" stroke-width="1.5"/>
+  <text x="290" y="396" text-anchor="middle" font-size="10" font-weight="bold" fill="#e65100">pcs_cdc</text>
+  <text x="290" y="411" text-anchor="middle" font-size="9" fill="#ef6c00">2FF ASYNC_REG</text>
+  <text x="290" y="424" text-anchor="middle" font-size="9" fill="#ef6c00">snapshot handshake</text>
+  <text x="290" y="437" text-anchor="middle" font-size="9" fill="#ef6c00">toggle + cooldown</text>
 
-  <!-- RF master (slate) -->
-  <rect x="250" y="462" width="150" height="50" rx="8" fill="#e2e8f0" stroke="#475569" stroke-width="1.6"/>
-  <text x="325" y="483" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">RF master (rf_axi)</text>
-  <text x="325" y="499" text-anchor="middle" font-size="9.5" fill="#475569">RX FIFO → DDR · S07</text>
+  <!-- dataplane FSM -->
+  <rect x="372" y="378" width="132" height="66" rx="4" fill="#c8e6c9" stroke="#388e3c" stroke-width="1.5"/>
+  <text x="438" y="396" text-anchor="middle" font-size="10" font-weight="bold" fill="#1b5e20">pcs_dataplane</text>
+  <text x="438" y="411" text-anchor="middle" font-size="9" fill="#2e7d32">block_lock (64)</text>
+  <text x="438" y="424" text-anchor="middle" font-size="9" fill="#2e7d32">hi_ber · lock_time</text>
+  <text x="438" y="437" text-anchor="middle" font-size="9" fill="#2e7d32">eventos</text>
 
-  <!-- Family DMA (slate) -->
-  <rect x="60" y="462" width="150" height="50" rx="8" fill="#e2e8f0" stroke="#475569" stroke-width="1.6"/>
-  <text x="135" y="483" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">family DMA</text>
-  <text x="135" y="499" text-anchor="middle" font-size="9.5" fill="#475569">report / doorbell · S06</text>
+  <!-- silicon datapath -->
+  <rect x="520" y="378" width="178" height="128" rx="4" fill="#ffcdd2" stroke="#d32f2f" stroke-width="1.6"/>
+  <text x="609" y="396" text-anchor="middle" font-size="10" font-weight="bold" fill="#b71c1c">pcs_silicon_datapath</text>
+  <rect x="532" y="404" width="154" height="19" rx="3" fill="#ef9a9a" stroke="#c62828"/>
+  <text x="609" y="417" text-anchor="middle" font-size="9" fill="#7f0000">PRBS31 gen → scrambler</text>
+  <rect x="532" y="427" width="154" height="19" rx="3" fill="#ef9a9a" stroke="#c62828"/>
+  <text x="609" y="440" text-anchor="middle" font-size="9" fill="#7f0000">gearbox TX 64→66</text>
+  <rect x="532" y="450" width="154" height="19" rx="3" fill="#f8bbd0" stroke="#c2185b"/>
+  <text x="609" y="463" text-anchor="middle" font-size="9" fill="#880e4f">loopback paralelo + INJ</text>
+  <rect x="532" y="473" width="154" height="19" rx="3" fill="#ef9a9a" stroke="#c62828"/>
+  <text x="609" y="486" text-anchor="middle" font-size="9" fill="#7f0000">gearbox RX → descrambler</text>
+  <text x="609" y="502" text-anchor="middle" font-size="9" fill="#b71c1c">checker PRBS31 · FNV 0x50BA6983</text>
 
-  <!-- DDR (indigo) -->
-  <rect x="560" y="462" width="150" height="50" rx="8" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.6"/>
-  <text x="635" y="483" text-anchor="middle" font-size="11.5" font-weight="700" fill="#3730a3">DDR 0x7000_0000</text>
-  <text x="635" y="499" text-anchor="middle" font-size="9.5" fill="#4338ca">reserved 16 MB (no-map)</text>
+  <!-- etiquetas de dominio -->
+  <line x1="360" y1="356" x2="360" y2="512" stroke="#9e9e9e" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <text x="180" y="512" text-anchor="middle" font-size="9.5" fill="#616161">dominio AXI — clk_pl_0 40 MHz</text>
+  <text x="470" y="512" text-anchor="middle" font-size="9.5" fill="#616161">dominio data plane — clk_dp 390.625 MHz</text>
 
-  <!-- ===================== flow arrows ===================== -->
-  <!-- tone/NCO into mixer -->
-  <path d="M342,140 L366,168" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path d="M342,212 L366,190" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <!-- mixer -> CIC -> FIR -->
-  <path d="M458,178 L482,178" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path d="M572,178 L596,178" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <!-- FIR -> AGC -->
-  <path d="M665,208 L665,234" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <!-- AGC -> RX FIFO -->
-  <path d="M600,266 L574,266" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <!-- RX FIFO -> RF master (routed around the TX band) -->
-  <path d="M529,294 L529,420 Q529,430 519,430 L335,430 Q325,430 325,440 L325,458" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <!-- RF master -> DDR -->
-  <path d="M400,487 L556,487" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <!-- ================= conexiones ================= -->
+  <line x1="124" y1="180" x2="124" y2="242" stroke="#37474f" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="130" y="200" font-size="9" fill="#37474f">AXI4-Lite 0xA400_0000</text>
 
-  <!-- TX flow -->
-  <path d="M342,370 L366,370" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowlight)"/>
-  <path d="M458,370 L482,370" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowlight)"/>
+  <line x1="194" y1="285" x2="216" y2="285" stroke="#37474f" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="366" y1="285" x2="388" y2="285" stroke="#37474f" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="538" y1="285" x2="560" y2="285" stroke="#37474f" stroke-width="1.6" marker-end="url(#ar)"/>
 
-  <!-- SoC control (dashed) into the datapath and buses -->
-  <path d="M210,150 L246,140" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arrowlight)"/>
-  <path d="M210,165 L246,210" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arrowlight)"/>
-  <path d="M135,214 L135,458" fill="none" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#arrowlight)"/>
+  <path d="M 636 242 L 636 196 L 636 180" fill="none" stroke="#37474f" stroke-width="1.8"/>
+  <line x1="500" y1="196" x2="636" y2="196" stroke="#37474f" stroke-width="1.8"/>
+  <line x1="500" y1="196" x2="500" y2="242" stroke="#37474f" stroke-width="1.8"/>
+  <line x1="636" y1="196" x2="636" y2="182" stroke="#37474f" stroke-width="1.8" marker-end="url(#ar)"/>
+  <text x="508" y="192" font-size="9" fill="#37474f">m_axi 40 bits → DDR</text>
 
-  <!-- ===================== legend ===================== -->
-  <g font-size="9.5" fill="#475569">
-    <rect x="30" y="540" width="11" height="11" rx="2" fill="#fef3c7" stroke="#d97706"/>
-    <text x="46" y="549">NCO / tone</text>
-    <rect x="122" y="540" width="11" height="11" rx="2" fill="#ede9fe" stroke="#6b4fa0"/>
-    <text x="138" y="549">mixer</text>
-    <rect x="192" y="540" width="11" height="11" rx="2" fill="#ccfbf1" stroke="#0f766e"/>
-    <text x="208" y="549">CIC / FIR</text>
-    <rect x="278" y="540" width="11" height="11" rx="2" fill="#fce7f3" stroke="#be185d"/>
-    <text x="294" y="549">AGC</text>
-    <rect x="336" y="540" width="11" height="11" rx="2" fill="#e0e7ff" stroke="#4338ca"/>
-    <text x="352" y="549">FIFO / DDR</text>
-    <rect x="426" y="540" width="11" height="11" rx="2" fill="#e2e8f0" stroke="#475569"/>
-    <text x="442" y="549">SoC / masters</text>
-    <line x1="536" y1="546" x2="560" y2="546" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="4 3"/>
-    <text x="566" y="549">control</text>
-  </g>
+  <line x1="636" y1="328" x2="636" y2="348" stroke="#37474f" stroke-width="1.6" marker-end="url(#ar)"/>
+  <line x1="208" y1="411" x2="224" y2="411" stroke="#37474f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="356" y1="411" x2="372" y2="411" stroke="#37474f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <line x1="504" y1="411" x2="520" y2="411" stroke="#37474f" stroke-width="1.4" marker-end="url(#ar)"/>
+
+  <!-- pie -->
+  <text x="24" y="551" font-size="9.5" fill="#455a64">
+    Silicon pass: BER = 0 sobre 1 823 313 palabras · inyección de 1 bit → 9 bits erróneos · WNS 0.000 / WHS 0.000 · CDC sin violaciones
+  </text>
 </svg>

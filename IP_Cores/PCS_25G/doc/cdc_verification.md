@@ -66,3 +66,24 @@ Estas se verifican **estructuralmente** en Layer 5, no por testbench:
 Esta separación es honesta: no se afirma que la simulación funcional prueba la
 robustez ante metaestabilidad, porque no puede. La prueba de esa robustez es el
 análisis estructural de Vivado sobre el silicio configurado.
+
+## Addendum — cooldown en los toggles de eventos (hallazgo de Layer 5)
+
+La verificación original de esta capa exigía **conteo exacto** de eventos entre
+dominios. Esa propiedad es físicamente inalcanzable cuando la relación de
+frecuencias es grande (dp 390.625 MHz frente a axi 40 MHz en silicio): dos
+eventos en ciclos consecutivos del dominio rápido producen dos toggles que el
+dominio lento nunca llega a muestrear, y el flanco se cancela. El fallo apareció
+en Layer 5 como un `IRQ_STATUS` que leía cero pese a que el sticky interno del
+banco valía `0x11`.
+
+El CDC gatea ahora cada toggle con un contador de enfriamiento que garantiza un
+nivel estable durante más de dos ciclos del dominio destino. La propiedad P2 se
+corrigió en consecuencia:
+
+- si hubo al menos un evento en dp, llega al menos uno a axi;
+- no aparecen eventos espurios (axi ≤ dp).
+
+Esto es suficiente porque los eventos alimentan **solo stickies de interrupción**.
+Los contadores exactos (`CNT_RX_ERR`, `CNT_BER`) no viajan por eventos: cruzan por
+el handshake de snapshot, que sí es exacto y está verificado en P1.
