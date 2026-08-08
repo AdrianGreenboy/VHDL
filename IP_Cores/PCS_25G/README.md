@@ -432,15 +432,23 @@ exact event counting is physically unachievable across such a frequency ratio, a
 the events only feed sticky interrupt bits — the exact counters cross through the
 snapshot handshake, which is exact.
 
-**A silent hazard in `cpu_pipeline` (not in this core).** The soft core loses the
-**second of two consecutive `lw` instructions** when the first stalls on a slow
-region: the access never reaches the bus and the destination register takes
-residual bus data — a plausible-looking wrong value with no error indication. It
-was found by tracing every CPU access to the peripheral window and comparing
-against the disassembly. Mitigated here by never chaining MMIO reads
-(`PCS_RD()` inserts a barrier); documented for correction in
-`~/rv32i/BUG_cpu_pipeline_lw_hazard.md`. This affects every SoC in the family that
-chains MMIO reads.
+**A silent forwarding hazard in `cpu_pipeline` (now fixed).** The soft core used to
+lose the **second of two consecutive `lw` instructions** when the first stalled on
+a slow region and the base register was produced by the immediately preceding
+instruction: the write-back in flight was squashed to a bubble during the stall,
+killing its forwarding path, so the second `lw` computed its address from a stale
+(zero) base. The access landed outside the peripheral window and the destination
+register took residual data — a plausible wrong value with no error indication. It
+was isolated by sweeping the producer-to-load distance and tracing the full bus
+address (not just the offset), which pinned the fault to forwarding-during-stall
+rather than the memory handshake. **Fixed** in `cpu_pipeline.vhd` with a persistent
+write-back history buffer as a third forwarding level; the firmware mitigation
+(`PCS_RD()` barrier) was **removed** and the firmware returned to a direct `PREG()`
+read (896 → 612 bytes). Verified in simulation (dedicated regression `tb_lw_hazard_reg`,
+all CPU testbenches, Layer 5 with and without the mitigation) and on silicon
+(`L5 SILICON PASS`, `IRQ_STATUS=0x11` read directly). Root-cause writeup in
+`~/rv32i/BUG_cpu_pipeline_lw_hazard.md` (mirror in `doc/`). This affected every SoC
+in the family; the shared core is now corrected.
 
 ---
 

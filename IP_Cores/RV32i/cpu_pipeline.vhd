@@ -159,6 +159,13 @@ architecture rtl of cpu_pipeline is
 
   signal stall_lu, stall_md : std_logic;
   signal stall_mem          : std_logic;
+  -- buffer historico de write-back: preserva el ultimo WB retirado para
+  -- forwarding persistente, cubriendo el hueco cuando stall_mem aplasta
+  -- mem_wb a NOP (hazard: base producida en la instruccion previa a un lw
+  -- que estanca el pipeline).
+  signal wbh_we   : std_logic := '0';
+  signal wbh_addr : reg_addr_t := (others => '0');
+  signal wbh_data : word_t := (others => '0');
 
 begin
 
@@ -212,6 +219,8 @@ begin
                                ex_mem.rd_addr = id_ex.rs1_addr) else
            wb_data       when (mem_wb.reg_we = '1' and mem_wb.rd_addr /= "00000" and
                                mem_wb.rd_addr = id_ex.rs1_addr) else
+           wbh_data      when (wbh_we = '1' and wbh_addr /= "00000" and
+                               wbh_addr = id_ex.rs1_addr) else
            id_ex.a_val;
 
   fwd_b <= ex_mem.result when (ex_mem.reg_we = '1' and ex_mem.mem_re = '0' and
@@ -219,6 +228,8 @@ begin
                                ex_mem.rd_addr = id_ex.rs2_addr) else
            wb_data       when (mem_wb.reg_we = '1' and mem_wb.rd_addr /= "00000" and
                                mem_wb.rd_addr = id_ex.rs2_addr) else
+           wbh_data      when (wbh_we = '1' and wbh_addr /= "00000" and
+                               wbh_addr = id_ex.rs2_addr) else
            id_ex.b_val;
 
   alu_a <= id_ex.pc  when id_ex.ctrl.alu_a_pc  = '1' else fwd_a;
@@ -401,6 +412,14 @@ begin
   process(clk)
   begin
     if rising_edge(clk) then
+      -- captura del ultimo write-back retirado (forwarding persistente).
+      -- Registra el mem_wb vigente, que es lo que el regfile escribe en
+      -- este mismo flanco; sobrevive a los stalls que aplastan mem_wb.
+      if rst = '1' then
+        wbh_we <= '0'; wbh_addr <= (others => '0'); wbh_data <= (others => '0');
+      elsif mem_wb.reg_we = '1' and mem_wb.rd_addr /= "00000" then
+        wbh_we <= '1'; wbh_addr <= mem_wb.rd_addr; wbh_data <= wb_data;
+      end if;
       if rst = '1' then
         pc       <= (others => '0');
         if_id    <= IFID_NOP;

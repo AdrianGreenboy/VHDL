@@ -151,10 +151,9 @@ static void delay_cycles(uint32_t n);
 
 static uint32_t PCS_RD(uint32_t off)
 {
-    uint32_t v = *(volatile uint32_t *)(PCS_BASE + off);
-    __asm__ volatile ("" ::: "memory");
-    delay_cycles(2);
-    return v;
+    /* mitigacion retirada: lectura directa (el hazard lw-lw fue corregido en
+       el CPU con el buffer historico de forwarding). Antes: delay_cycles(2). */
+    return PREG(off);
 }
 
 static void delay_cycles(uint32_t n)
