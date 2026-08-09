@@ -1,0 +1,757 @@
+#-----------------------------------------------------------
+# Vivado v2025.2.1 (64-bit)
+# SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
+# IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
+# SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
+# Start of session at: Sun Aug  9 05:49:53 2026
+# Process ID         : 953267
+# Current directory  : /home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.runs/ecc_soc_bd_soc_ecc_0_0_synth_1
+# Command line       : vivado -log ecc_soc_bd_soc_ecc_0_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source ecc_soc_bd_soc_ecc_0_0.tcl
+# Log file           : /home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.runs/ecc_soc_bd_soc_ecc_0_0_synth_1/ecc_soc_bd_soc_ecc_0_0.vds
+# Journal file       : /home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.runs/ecc_soc_bd_soc_ecc_0_0_synth_1/vivado.jou
+# Running On         : adrian
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 24.04.4 LTS
+# Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
+# CPU Frequency      : 5500.000 MHz
+# CPU Physical cores : 24
+# CPU Logical cores  : 32
+# Host memory        : 67103 MB
+# Swap memory        : 8589 MB
+# Total Virtual      : 75693 MB
+# Available Virtual  : 55660 MB
+#-----------------------------------------------------------
+Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
+source ecc_soc_bd_soc_ecc_0_0.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/data/Xilinx/2025.2.1/data/ip'.
+Command: synth_design -top ecc_soc_bd_soc_ecc_0_0 -part xcve2302-sfva784-1LP-e-S -incremental_mode off -mode out_of_context
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xcve2302'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcve2302'
+INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 7 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 953342
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2664.766 ; gain = 384.688 ; free physical = 9419 ; free virtual = 51208
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'ecc_soc_bd_soc_ecc_0_0' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.gen/sources_1/bd/ecc_soc_bd/ip/ecc_soc_bd_soc_ecc_0_0/synth/ecc_soc_bd_soc_ecc_0_0.v:53]
+INFO: [Synth 8-6157] synthesizing module 'soc_top_ecc_wrap' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/rtl/soc_top_ecc_wrap.v:16]
+	Parameter S_ADDR_W bound to: 16 - type: integer 
+	Parameter M_ADDR_W bound to: 40 - type: integer 
+INFO: [Synth 8-638] synthesizing module 'ecc_soc_si' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_soc_si.vhd:84]
+INFO: [Synth 8-638] synthesizing module 'cpu_pipeline' [/home/adrian/rv32i/cpu_pipeline.vhd:52]
+INFO: [Synth 8-638] synthesizing module 'control' [/home/adrian/rv32i/control.vhd:25]
+INFO: [Synth 8-226] default block is never used [/home/adrian/rv32i/control.vhd:35]
+INFO: [Synth 8-226] default block is never used [/home/adrian/rv32i/control.vhd:35]
+INFO: [Synth 8-256] done synthesizing module 'control' (0#1) [/home/adrian/rv32i/control.vhd:25]
+INFO: [Synth 8-638] synthesizing module 'immgen' [/home/adrian/rv32i/immgen.vhd:30]
+INFO: [Synth 8-256] done synthesizing module 'immgen' (0#1) [/home/adrian/rv32i/immgen.vhd:30]
+INFO: [Synth 8-638] synthesizing module 'regfile' [/home/adrian/rv32i/regfile.vhd:39]
+	Parameter BYPASS bound to: 1 - type: bool 
+INFO: [Synth 8-256] done synthesizing module 'regfile' (0#1) [/home/adrian/rv32i/regfile.vhd:39]
+INFO: [Synth 8-638] synthesizing module 'alu' [/home/adrian/rv32i/alu.vhd:25]
+INFO: [Synth 8-256] done synthesizing module 'alu' (0#1) [/home/adrian/rv32i/alu.vhd:25]
+INFO: [Synth 8-638] synthesizing module 'muldiv' [/home/adrian/rv32i/muldiv.vhd:39]
+INFO: [Synth 8-256] done synthesizing module 'muldiv' (0#1) [/home/adrian/rv32i/muldiv.vhd:39]
+INFO: [Synth 8-638] synthesizing module 'csr' [/home/adrian/rv32i/csr.vhd:51]
+INFO: [Synth 8-256] done synthesizing module 'csr' (0#1) [/home/adrian/rv32i/csr.vhd:51]
+INFO: [Synth 8-256] done synthesizing module 'cpu_pipeline' (0#1) [/home/adrian/rv32i/cpu_pipeline.vhd:52]
+INFO: [Synth 8-638] synthesizing module 'dp_ram' [/home/adrian/rv32i/dp_ram.vhd:43]
+	Parameter DEPTH bound to: 256 - type: integer 
+	Parameter INIT_FILE bound to: (null) - type: string 
+INFO: [Synth 8-256] done synthesizing module 'dp_ram' (0#1) [/home/adrian/rv32i/dp_ram.vhd:43]
+INFO: [Synth 8-638] synthesizing module 'mem_subsys_dma' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/mem_subsys_dma.vhd:69]
+	Parameter DEPTH bound to: 256 - type: integer 
+	Parameter INIT_FILE bound to: (null) - type: string 
+	Parameter ADDR_W bound to: 40 - type: integer 
+INFO: [Synth 8-638] synthesizing module 'dp_ram__parameterized0' [/home/adrian/rv32i/dp_ram.vhd:43]
+	Parameter DEPTH bound to: 256 - type: integer 
+	Parameter INIT_FILE bound to: (null) - type: string 
+INFO: [Synth 8-256] done synthesizing module 'dp_ram__parameterized0' (0#1) [/home/adrian/rv32i/dp_ram.vhd:43]
+INFO: [Synth 8-638] synthesizing module 'dma_burst' [/home/adrian/rv32i/dma_burst.vhd:72]
+	Parameter ADDR_W bound to: 40 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'dma_burst' (0#1) [/home/adrian/rv32i/dma_burst.vhd:72]
+INFO: [Synth 8-256] done synthesizing module 'mem_subsys_dma' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/mem_subsys_dma.vhd:69]
+INFO: [Synth 8-638] synthesizing module 'ecc_regbank_si' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_regbank_si.vhd:35]
+	Parameter DEPTH bound to: 32 - type: integer 
+	Parameter INITFILE bound to: (null) - type: string 
+INFO: [Synth 8-638] synthesizing module 'scrub_bram' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/scrub_bram.vhd:27]
+	Parameter DEPTH bound to: 32 - type: integer 
+	Parameter INITFILE bound to: (null) - type: string 
+INFO: [Synth 8-256] done synthesizing module 'scrub_bram' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/scrub_bram.vhd:27]
+INFO: [Synth 8-638] synthesizing module 'ecc_codec_mmio' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_codec_mmio.vhd:31]
+INFO: [Synth 8-638] synthesizing module 'ecc_codec' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_codec.vhd:25]
+INFO: [Synth 8-256] done synthesizing module 'ecc_codec' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_codec.vhd:25]
+INFO: [Synth 8-256] done synthesizing module 'ecc_codec_mmio' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_codec_mmio.vhd:31]
+INFO: [Synth 8-638] synthesizing module 'scrub_fsm' [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/scrub_fsm.vhd:44]
+	Parameter DEPTH bound to: 32 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'scrub_fsm' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/scrub_fsm.vhd:44]
+INFO: [Synth 8-256] done synthesizing module 'ecc_regbank_si' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_regbank_si.vhd:35]
+INFO: [Synth 8-638] synthesizing module 'axil_soc' [/home/adrian/rv32i/axil_soc.vhd:71]
+	Parameter ADDR_W bound to: 16 - type: integer 
+INFO: [Synth 8-256] done synthesizing module 'axil_soc' (0#1) [/home/adrian/rv32i/axil_soc.vhd:71]
+INFO: [Synth 8-256] done synthesizing module 'ecc_soc_si' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_soc_si.vhd:84]
+INFO: [Synth 8-6155] done synthesizing module 'soc_top_ecc_wrap' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/rtl/soc_top_ecc_wrap.v:16]
+INFO: [Synth 8-6155] done synthesizing module 'ecc_soc_bd_soc_ecc_0_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.gen/sources_1/bd/ecc_soc_bd/ip/ecc_soc_bd_soc_ecc_0_0/synth/ecc_soc_bd_soc_ecc_0_0.v:53]
+WARNING: [Synth 8-6014] Unused sequential element id_ex_reg[ctrl][imm_fmt] was removed.  [/home/adrian/rv32i/cpu_pipeline.vhd:341]
+INFO: [Synth 8-7129] Port waddr[15] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[14] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[13] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[12] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[11] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[10] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[9] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[8] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[7] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[6] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port waddr[5] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[15] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[14] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[13] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[12] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[11] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[10] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[9] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[8] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[7] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[6] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port raddr[5] in module scrub_bram is either unconnected or has no load
+INFO: [Synth 8-7129] Port addr[15] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Synth 8-7129] Port addr[14] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Synth 8-7129] Port addr[13] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_bresp[1] in module dma_burst is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_bresp[0] in module dma_burst is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_rresp[1] in module dma_burst is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_rresp[0] in module dma_burst is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[31] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[30] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[29] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[28] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[27] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[26] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[25] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[24] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[23] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[22] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[21] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[20] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[19] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[18] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[17] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[16] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[15] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[14] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[13] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[12] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[11] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[10] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[1] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port cpu_addr[0] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[31] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[30] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[29] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[28] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[27] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[26] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[25] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[24] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[23] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[22] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[21] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[20] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[19] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[18] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[17] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[16] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[15] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[14] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[13] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[12] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[11] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[10] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[1] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port axi_addr[0] in module dp_ram is either unconnected or has no load
+INFO: [Synth 8-7129] Port dmem_req in module mem_subsys_dma is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[6] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[5] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[4] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[3] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[2] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[1] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[0] in module immgen is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[19] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[18] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[17] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[16] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[15] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[11] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[10] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[9] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[8] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port instr[7] in module control is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_bid[0] in module soc_top_ecc_wrap is either unconnected or has no load
+INFO: [Synth 8-7129] Port m_axi_rid[0] in module soc_top_ecc_wrap is either unconnected or has no load
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2786.703 ; gain = 506.625 ; free physical = 9266 ; free virtual = 51056
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2798.578 ; gain = 518.500 ; free physical = 9266 ; free virtual = 51056
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2798.578 ; gain = 518.500 ; free physical = 9266 ; free virtual = 51056
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2798.578 ; gain = 0.000 ; free physical = 9266 ; free virtual = 51056
+INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
+INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
+INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
+INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2904.543 ; gain = 0.000 ; free physical = 9249 ; free virtual = 51039
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.08 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2904.578 ; gain = 0.000 ; free physical = 9248 ; free virtual = 51038
+INFO: [Designutils 20-5008] Incremental synthesis strategy off
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2904.578 ; gain = 624.500 ; free physical = 9253 ; free virtual = 51043
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xcve2302-sfva784-1LP-e-S
+INFO: [Synth 8-6742] Reading net delay rules and data
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2912.547 ; gain = 632.469 ; free physical = 9253 ; free virtual = 51043
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2912.547 ; gain = 632.469 ; free physical = 9253 ; free virtual = 51043
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-3936] Found unconnected internal register 'prod_reg' and it is trimmed from '66' to '64' bits. [/home/adrian/rv32i/muldiv.vhd:104]
+INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'muldiv'
+INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'dma_burst'
+INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'scrub_fsm'
+INFO: [Synth 8-802] inferred FSM for state register 'inj_state_reg' in module 'ecc_regbank_si'
+INFO: [Synth 8-802] inferred FSM for state register 'win_state_reg' in module 'ecc_regbank_si'
+INFO: [Synth 8-802] inferred FSM for state register 'wstate_reg' in module 'axil_soc'
+INFO: [Synth 8-6904] The RAM "regfile:/regs_reg" of size (depth=32 x width=32) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  s_idle |                               00 |                               00
+                   s_mul |                               01 |                               01
+                   s_div |                               10 |                               10
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 'sequential' in module 'muldiv'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  d_idle |                          0000001 |                              000
+                  d_calc |                          0000010 |                              001
+                    r_ar |                          0000100 |                              010
+                  r_data |                          0001000 |                              011
+                    w_aw |                          0010000 |                              100
+                  w_data |                          0100000 |                              101
+                  w_resp |                          1000000 |                              110
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 'one-hot' in module 'dma_burst'
+INFO: [Synth 8-6904] The RAM "scrub_bram:/mem_reg" of size (depth=32 x width=39) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  s_idle |                           000001 |                              000
+                 s_start |                           000010 |                              001
+                 s_wait1 |                           000100 |                              010
+                  s_eval |                           001000 |                              011
+                  s_next |                           010000 |                              100
+                  s_done |                           100000 |                              101
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 'one-hot' in module 'scrub_fsm'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                inj_idle |                             0001 |                               00
+                inj_read |                             0010 |                               01
+                inj_wait |                             0100 |                               10
+               inj_write |                             1000 |                               11
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'inj_state_reg' using encoding 'one-hot' in module 'ecc_regbank_si'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                 ws_idle |                             0001 |                               00
+                 ws_wait |                             0010 |                               01
+                  ws_cap |                             0100 |                               10
+                 ws_hold |                             1000 |                               11
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'win_state_reg' using encoding 'one-hot' in module 'ecc_regbank_si'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  w_idle |                              001 |                               00
+                 w_write |                              010 |                               01
+                  w_resp |                              100 |                               10
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'wstate_reg' using encoding 'one-hot' in module 'axil_soc'
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2912.547 ; gain = 632.469 ; free physical = 9229 ; free virtual = 51020
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   40 Bit       Adders := 2     
+	   3 Input   33 Bit       Adders := 1     
+	   2 Input   32 Bit       Adders := 15    
+	   3 Input   32 Bit       Adders := 1     
+	   2 Input   11 Bit       Adders := 1     
+	   2 Input    9 Bit       Adders := 3     
+	   2 Input    8 Bit       Adders := 1     
+	   2 Input    6 Bit       Adders := 2     
++---XORs : 
+	   2 Input     39 Bit         XORs := 1     
+	   2 Input     32 Bit         XORs := 1     
+	   2 Input      1 Bit         XORs := 3     
+	  18 Input      1 Bit         XORs := 6     
+	  15 Input      1 Bit         XORs := 4     
+	   6 Input      1 Bit         XORs := 2     
+	  38 Input      1 Bit         XORs := 2     
+	   3 Input      1 Bit         XORs := 2     
+	  16 Input      1 Bit         XORs := 6     
+	   5 Input      1 Bit         XORs := 2     
+	  12 Input      1 Bit         XORs := 2     
+	   7 Input      1 Bit         XORs := 2     
+	  10 Input      1 Bit         XORs := 2     
+	   4 Input      1 Bit         XORs := 2     
+	  24 Input      1 Bit         XORs := 2     
++---Registers : 
+	               64 Bit    Registers := 1     
+	               40 Bit    Registers := 1     
+	               39 Bit    Registers := 6     
+	               33 Bit    Registers := 1     
+	               32 Bit    Registers := 48    
+	               16 Bit    Registers := 6     
+	               12 Bit    Registers := 1     
+	               10 Bit    Registers := 2     
+	                9 Bit    Registers := 4     
+	                8 Bit    Registers := 2     
+	                6 Bit    Registers := 6     
+	                5 Bit    Registers := 6     
+	                4 Bit    Registers := 2     
+	                3 Bit    Registers := 7     
+	                2 Bit    Registers := 2     
+	                1 Bit    Registers := 46    
++---Multipliers : 
+	              33x33  Multipliers := 1     
++---RAMs : 
+	             1024 Bit	(32 X 32 bit)          RAMs := 1     
+	               1K Bit	(32 X 39 bit)          RAMs := 1     
++---Muxes : 
+	   7 Input   40 Bit        Muxes := 1     
+	   2 Input   39 Bit        Muxes := 1     
+	   2 Input   38 Bit        Muxes := 6     
+	   2 Input   33 Bit        Muxes := 3     
+	   4 Input   33 Bit        Muxes := 2     
+	   3 Input   33 Bit        Muxes := 1     
+	   2 Input   32 Bit        Muxes := 56    
+	   3 Input   32 Bit        Muxes := 5     
+	   4 Input   32 Bit        Muxes := 12    
+	   7 Input   32 Bit        Muxes := 1     
+	   6 Input   32 Bit        Muxes := 2     
+	   2 Input   31 Bit        Muxes := 1     
+	   2 Input   16 Bit        Muxes := 4     
+	   2 Input   10 Bit        Muxes := 1     
+	   2 Input    9 Bit        Muxes := 1     
+	   7 Input    9 Bit        Muxes := 2     
+	   4 Input    8 Bit        Muxes := 2     
+	   7 Input    7 Bit        Muxes := 1     
+	   2 Input    7 Bit        Muxes := 2     
+	   3 Input    6 Bit        Muxes := 1     
+	   6 Input    6 Bit        Muxes := 2     
+	   2 Input    6 Bit        Muxes := 1     
+	   8 Input    4 Bit        Muxes := 2     
+	   2 Input    4 Bit        Muxes := 10    
+	   4 Input    4 Bit        Muxes := 1     
+	   2 Input    3 Bit        Muxes := 2     
+	   8 Input    2 Bit        Muxes := 1     
+	   3 Input    2 Bit        Muxes := 1     
+	   2 Input    2 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 81    
+	   8 Input    1 Bit        Muxes := 1     
+	   3 Input    1 Bit        Muxes := 14    
+	   7 Input    1 Bit        Muxes := 5     
+	   5 Input    1 Bit        Muxes := 8     
+	   4 Input    1 Bit        Muxes := 9     
+	   6 Input    1 Bit        Muxes := 10    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 464 (col length:116)
+BRAMs: 310 (col length: RAMB18 120 RAMB36 60)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6904] The RAM "\inst/u_soc /u_cpu/u_rf/regs_reg" of size (depth=32 x width=32) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+DSP Report: Generating DSP prod0, operation Mode is: A*B.
+DSP Report: operator prod0 is absorbed into DSP prod0.
+DSP Report: operator prod0 is absorbed into DSP prod0.
+DSP Report: Generating DSP prod0, operation Mode is: A*B.
+DSP Report: operator prod0 is absorbed into DSP prod0.
+DSP Report: operator prod0 is absorbed into DSP prod0.
+DSP Report: Generating DSP prod_reg, operation Mode is: (PCIN>>23)+A*B.
+DSP Report: register prod_reg is absorbed into DSP prod_reg.
+DSP Report: operator prod0 is absorbed into DSP prod_reg.
+DSP Report: operator prod0 is absorbed into DSP prod_reg.
+WARNING: [Synth 8-3936] Found unconnected internal register 'inj_raddr_reg' and it is trimmed from '16' to '5' bits. [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_regbank_si.vhd:249]
+WARNING: [Synth 8-3936] Found unconnected internal register 'inj_waddr_reg' and it is trimmed from '16' to '5' bits. [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_regbank_si.vhd:256]
+WARNING: [Synth 8-3936] Found unconnected internal register 'win_raddr_reg' and it is trimmed from '9' to '5' bits. [/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/ecc_regbank_si.vhd:281]
+INFO: [Synth 8-6904] The RAM "\inst/u_soc /u_scrub/bram/mem_reg" of size (depth=32 x width=39) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awid[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awlock[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awcache[3] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awcache[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awcache[1] driven by constant 1
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awcache[0] driven by constant 1
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awprot[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awprot[1] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awprot[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awqos[3] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awqos[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awqos[1] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_awqos[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arid[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arlock[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arcache[3] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arcache[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arcache[1] driven by constant 1
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arcache[0] driven by constant 1
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arprot[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arprot[1] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arprot[0] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arqos[3] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arqos[2] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arqos[1] driven by constant 0
+INFO: [Synth 8-3917] design ecc_soc_bd_soc_ecc_0_0 has port m_axi_arqos[0] driven by constant 0
+INFO: [Synth 8-7129] Port addr[15] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Synth 8-7129] Port addr[14] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Synth 8-7129] Port addr[13] in module ecc_regbank_si is either unconnected or has no load
+INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+INFO: [Synth 8-6904] The RAM "\inst/u_soc /u_cpu/u_rf/regs_reg" of size (depth=32 x width=32) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-6904] The RAM "\inst/u_soc /u_scrub/bram/mem_reg" of size (depth=32 x width=39) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+WARNING: [Synth 8-3332] Sequential element (prod_reg[57]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[56]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[55]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[54]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[53]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[52]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[51]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[50]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[49]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[48]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[47]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[46]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[45]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[44]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[43]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[42]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[41]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[40]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[39]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[38]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[37]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[36]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[35]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[34]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[33]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[32]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[31]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[30]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[29]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[28]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[27]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[26]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[25]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[24]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[23]) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[57]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[56]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[55]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[54]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[53]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[52]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[51]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[50]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[49]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[48]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[47]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[46]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[45]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[44]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[43]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[42]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[41]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[40]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[39]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[38]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[37]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[36]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[35]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[34]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[33]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[32]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[31]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[30]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[29]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[28]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[27]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[26]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[25]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[24]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[23]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[22]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[21]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[20]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[19]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[18]__0) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[57]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[56]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[55]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[54]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[53]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[52]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[51]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[50]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[49]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[48]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[47]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[46]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[45]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[44]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[43]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[42]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[41]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[40]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[39]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[38]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[37]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[36]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[35]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[34]__1) is unused and will be removed from module muldiv.
+WARNING: [Synth 8-3332] Sequential element (prod_reg[33]__1) is unused and will be removed from module muldiv.
+INFO: [Common 17-14] Message 'Synth 8-3332' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:23 ; elapsed = 00:00:23 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8823 ; free virtual = 50615
+---------------------------------------------------------------------------------
+ Sort Area is  prod0_0 : 0 0 : 3982 5770 : Used 1 time 0
+ Sort Area is  prod0_0 : 0 1 : 1788 5770 : Used 1 time 0
+ Sort Area is  prod0_3 : 0 0 : 1728 1728 : Used 1 time 0
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+Distributed RAM: Preliminary Mapping Report (see note below)
++------------------------+-----------------+-----------+----------------------+---------------+
+|Module Name             | RTL Object      | Inference | Size (Depth x Width) | Primitives    | 
++------------------------+-----------------+-----------+----------------------+---------------+
+|\inst/u_soc /u_cpu/u_rf | regs_reg        | Implied   | 32 x 32              | RAM32M16 x 9  | 
+|\inst/u_soc /u_imem     | mem_reg         | Implied   | 256 x 32             | RAM64M8 x 40  | 
+|\inst/u_soc /u_mem      | u_local/mem_reg | Implied   | 256 x 32             | RAM64M8 x 40  | 
+|\inst/u_soc /u_scrub    | bram/mem_reg    | Implied   | 32 x 39              | RAM32M16 x 3  | 
++------------------------+-----------------+-----------+----------------------+---------------+
+
+Note: The table above is a preliminary report that shows the Distributed RAMs at the current stage of the synthesis flow. Some Distributed RAMs may be reimplemented as non Distributed RAM primitives later in the synthesis flow. Multiple instantiated RAMs are reported only once.
+
+DSP: Preliminary Mapping Report (see note below. The ' indicates corresponding REG is set)
++------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name | DSP Mapping    | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|muldiv      | A*B            | 24     | 10     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|muldiv      | A*B            | 24     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|muldiv      | (PCIN>>23)+A*B | 24     | 10     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 1    | 
++------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:24 ; elapsed = 00:00:24 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8830 ; free virtual = 50621
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+Distributed RAM: Final Mapping Report
++------------------------+-----------------+-----------+----------------------+---------------+
+|Module Name             | RTL Object      | Inference | Size (Depth x Width) | Primitives    | 
++------------------------+-----------------+-----------+----------------------+---------------+
+|\inst/u_soc /u_cpu/u_rf | regs_reg        | Implied   | 32 x 32              | RAM32M16 x 9  | 
+|\inst/u_soc /u_imem     | mem_reg         | Implied   | 256 x 32             | RAM64M8 x 40  | 
+|\inst/u_soc /u_mem      | u_local/mem_reg | Implied   | 256 x 32             | RAM64M8 x 40  | 
+|\inst/u_soc /u_scrub    | bram/mem_reg    | Implied   | 32 x 39              | RAM32M16 x 3  | 
++------------------------+-----------------+-----------+----------------------+---------------+
+
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:24 ; elapsed = 00:00:25 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8840 ; free virtual = 50632
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8841 ; free virtual = 50633
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8841 ; free virtual = 50633
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8841 ; free virtual = 50633
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8841 ; free virtual = 50633
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8843 ; free virtual = 50635
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8843 ; free virtual = 50635
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+DSP Final Report (the ' indicates corresponding REG is set)
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name | DSP Mapping     | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|muldiv      | A*B             | 23     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|muldiv      | A*B             | 23     | 23     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|muldiv      | (PCIN>>23+A*B)' | 23     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 1    | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+-----------+------+
+|      |Cell       |Count |
++------+-----------+------+
+|1     |DSP58      |     3|
+|2     |LOOKAHEAD8 |    74|
+|3     |LUT1       |    51|
+|4     |LUT2       |   282|
+|5     |LUT3       |   442|
+|6     |LUT4       |   556|
+|7     |LUT5       |   747|
+|8     |LUT6       |  1183|
+|9     |LUT6CY     |   566|
+|10    |LUT6       |    45|
+|11    |RAM32M     |     2|
+|12    |RAM32M16   |     7|
+|13    |RAM64M8    |    80|
+|14    |FDRE       |  2134|
+|15    |FDSE       |    12|
++------+-----------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.516 ; gain = 1123.438 ; free physical = 8843 ; free virtual = 50635
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 114 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:25 ; elapsed = 00:00:25 . Memory (MB): peak = 3403.516 ; gain = 1017.438 ; free physical = 8843 ; free virtual = 50635
+Synthesis Optimization Complete : Time (s): cpu = 00:00:26 ; elapsed = 00:00:26 . Memory (MB): peak = 3403.523 ; gain = 1123.438 ; free physical = 8843 ; free virtual = 50635
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.03 . Memory (MB): peak = 3403.523 ; gain = 0.000 ; free physical = 9028 ; free virtual = 50819
+INFO: [Netlist 29-17] Analyzing 703 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
+INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
+INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
+INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 3459.543 ; gain = 0.000 ; free physical = 9029 ; free virtual = 50821
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 703 instances were transformed.
+  DSP58 => DSP58 (DSP_ALUADD, DSP_ALUMUX, DSP_ALUREG, DSP_A_B_DATA58, DSP_C_DATA58, DSP_MULTIPLIER58, DSP_M_DATA58, DSP_OUTPUT58, DSP_PATDET, DSP_PREADD58, DSP_PREADD_DATA58, DSP_SRCMX_OPTINV, VCC): 3 instances
+  LUT6CY => LUT6CY (LUTCY1, LUTCY2): 566 instances
+  LUT6_2 => LUT6_2 (LUT5, LUT6): 45 instances
+  RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 2 instances
+  RAM32M16 => RAM32M16 (RAMD32(x14), RAMS32(x2)): 7 instances
+  RAM64M8 => RAM64M8 (RAMD64E5(x8), VCC): 80 instances
+
+Synth Design complete | Checksum: d4f96429
+INFO: [Common 17-83] Releasing license: Synthesis
+217 Infos, 105 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:32 ; elapsed = 00:00:31 . Memory (MB): peak = 3459.578 ; gain = 1708.125 ; free physical = 9029 ; free virtual = 50820
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 2756.390; main = 2552.886; forked = 293.001
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 4391.641; main = 3459.547; forked = 1016.129
+INFO: [Coretcl 2-1174] Renamed 16 cell refs.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3483.555 ; gain = 0.000 ; free physical = 9027 ; free virtual = 50819
+INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/ECC_Scrubber/vivado/ecc_soc/ecc_soc.runs/ecc_soc_bd_soc_ecc_0_0_synth_1/ecc_soc_bd_soc_ecc_0_0.dcp' has been generated.
+INFO: [Vivado 12-24828] Executing command : report_utilization -file ecc_soc_bd_soc_ecc_0_0_utilization_synth.rpt -pb ecc_soc_bd_soc_ecc_0_0_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Sun Aug  9 05:50:28 2026...

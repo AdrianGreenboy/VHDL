@@ -1,0 +1,131 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date         : Sun Aug  9 05:54:23 2026
+| Host         : adrian running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_drc -file route_report_drc_0.rpt -pb route_report_drc_0.pb -rpx route_report_drc_0.rpx
+| Design       : ecc_soc_bd_wrapper
+| Device       : xcve2302-sfva784-1LP-e-S
+| Speed File   : -1LP
+| Design State : Fully Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Report DRC
+
+Table of Contents
+-----------------
+1. REPORT SUMMARY
+2. REPORT DETAILS
+
+1. REPORT SUMMARY
+-----------------
+            Netlist: netlist
+          Floorplan: checkpoint_ecc_soc_bd_wrapper
+      Design limits: <entire design considered>
+           Ruledeck: default
+             Max checks: <unlimited>
+             Checks found: 15
++-----------+----------+------------------------------------------------+--------+
+| Rule      | Severity | Description                                    | Checks |
++-----------+----------+------------------------------------------------+--------+
+| CSUC-1    | Warning  | Unconnected channel                            | 1      |
+| DPBU-4    | Warning  | CLK pin needs to be connected to active signal | 2      |
+| DPIP-3    | Warning  | Input pipelining                               | 6      |
+| DPOP-5    | Warning  | PREG Output pipelining                         | 2      |
+| DPOP-6    | Warning  | MREG Output pipelining                         | 3      |
+| RTSTAT-10 | Warning  | No routable loads                              | 1      |
++-----------+----------+------------------------------------------------+--------+
+
+2. REPORT DETAILS
+-----------------
+CSUC-1#1 Warning
+Unconnected channel  
+HW Debug port ecc_soc_bd_i/versal_cips_0/pl1_resetn is unconnected.  Unconnected channels may cause errors during implementation.  Since this port cannot be removed, please connect this port or remove the associated debug core.
+Related violations: <none>
+
+DPBU-4#1 Warning
+CLK pin needs to be connected to active signal  
+Invalid connection used for DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0, CLK pin ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0/CLK should be connected to active signal.
+Related violations: <none>
+
+DPBU-4#2 Warning
+CLK pin needs to be connected to active signal  
+Invalid connection used for DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0, CLK pin ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0/CLK should be connected to active signal.
+Related violations: <none>
+
+DPIP-3#1 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0 input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0/A[33:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPIP-3#2 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0 input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0/B[23:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPIP-3#3 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0 input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0/A[33:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPIP-3#4 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0 input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0/B[23:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPIP-3#5 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg/A[33:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPIP-3#6 Warning
+Input pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg input ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg/B[23:0] is not pipelined. Pipelining DSP48 input will improve performance.
+Related violations: <none>
+
+DPOP-5#1 Warning
+PREG Output pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0 output ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0/P[57:0] is not pipelined (PREG=0). Pipelining the DSP48 output will improve performance and often saves power so it is suggested whenever possible to fully pipeline this function.  If this DSP48 function was inferred, it is suggested to describe an additional register stage after this function.  If the DSP48 was instantiated in the design, it is suggested to set the PREG attribute to 1.
+Related violations: <none>
+
+DPOP-5#2 Warning
+PREG Output pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0 output ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0/P[57:0] is not pipelined (PREG=0). Pipelining the DSP48 output will improve performance and often saves power so it is suggested whenever possible to fully pipeline this function.  If this DSP48 function was inferred, it is suggested to describe an additional register stage after this function.  If the DSP48 was instantiated in the design, it is suggested to set the PREG attribute to 1.
+Related violations: <none>
+
+DPOP-6#1 Warning
+MREG Output pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0 multiplier stage ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0/P[57:0] is not pipelined (MREG=0). Pipelining the multiplier function will improve performance and will save significant power so it is suggested whenever possible to fully pipeline this function.  If this multiplier was inferred, it is suggested to describe an additional register stage after this function.  If there is no registered adder/accumulator following the multiply function, two pipeline stages are suggested to allow both the MREG and PREG registers to be used.  If the DSP48 was instantiated in the design, it is suggested to set both the MREG and PREG attributes to 1 when performing multiply functions.
+Related violations: <none>
+
+DPOP-6#2 Warning
+MREG Output pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0 multiplier stage ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod0__0/P[57:0] is not pipelined (MREG=0). Pipelining the multiplier function will improve performance and will save significant power so it is suggested whenever possible to fully pipeline this function.  If this multiplier was inferred, it is suggested to describe an additional register stage after this function.  If there is no registered adder/accumulator following the multiply function, two pipeline stages are suggested to allow both the MREG and PREG registers to be used.  If the DSP48 was instantiated in the design, it is suggested to set both the MREG and PREG attributes to 1 when performing multiply functions.
+Related violations: <none>
+
+DPOP-6#3 Warning
+MREG Output pipelining  
+DSP ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg multiplier stage ecc_soc_bd_i/soc_ecc_0/inst/u_soc/u_cpu/u_md/prod_reg/P[57:0] is not pipelined (MREG=0). Pipelining the multiplier function will improve performance and will save significant power so it is suggested whenever possible to fully pipeline this function.  If this multiplier was inferred, it is suggested to describe an additional register stage after this function.  If there is no registered adder/accumulator following the multiply function, two pipeline stages are suggested to allow both the MREG and PREG registers to be used.  If the DSP48 was instantiated in the design, it is suggested to set both the MREG and PREG attributes to 1 when performing multiply functions.
+Related violations: <none>
+
+RTSTAT-10#1 Warning
+No routable loads  
+4508 net(s) have no routable loads. The problem bus(es) and/or net(s) are ecc_soc_bd_i/axi_noc_0/inst/S06_AXI_nmu/bd_bbcd_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_BID[0],
+ecc_soc_bd_i/axi_noc_0/inst/S06_AXI_nmu/bd_bbcd_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_BRESP[1:0],
+ecc_soc_bd_i/axi_noc_0/inst/S06_AXI_nmu/bd_bbcd_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_RID[0],
+ecc_soc_bd_i/axi_noc_0/inst/S06_AXI_nmu/bd_bbcd_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_RRESP[1:0],
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/apu_event_o,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/apu_event_standby_wfe[1:0],
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/apu_event_standby_wfi[1:0],
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_capture,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_drck,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_reset,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_runtest,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_sel,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_shift,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_tck,
+ecc_soc_bd_i/versal_cips_0/inst/pspmc_0/inst/bscan_user1_usr_tdi
+ (the first 15 of 895 listed nets/buses).
+Related violations: <none>
+
+

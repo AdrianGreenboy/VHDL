@@ -1,0 +1,3 @@
+Measurement Name , ROOT_ID, POLARITY, AUX_IO_P, AUX_IO_N, Average Enable, Alarm Enable, Low Threshold, High Threshold, Satellite Name 
+VAUX_CH0, 0, 1 V unipolar, LPD_MIO20_502, LPD_MIO21_502,, 0, , , PS LPD satellitePS9_X0Y0
+VAUX_CH1, 1, 1 V unipolar, LPD_MIO14_502, LPD_MIO15_502,, 0, , , PS LPD satellitePS9_X0Y0

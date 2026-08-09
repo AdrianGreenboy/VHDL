@@ -1,0 +1,21 @@
+/include/ "system-conf.dtsi"
+/ {
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+        ecc_reserved: buffer@70000000 {
+            no-map;
+            reg = <0x0 0x70000000 0x0 0x1000000>;
+        };
+    };
+    chosen {
+        bootargs = "console=ttyAMA0,115200 earlycon=pl011,mmio32,0xFF010000 root=/dev/ram0 rw";
+    };
+    aliases {
+        serial0 = &serial1;
+    };
+};
+&serial1 {
+    status = "okay";
+};
