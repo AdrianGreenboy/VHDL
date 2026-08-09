@@ -8,6 +8,8 @@ designs for the AMD Versal `xcve2302-sfva784-1LP-e-S` on the Trenz TE0950.
 **Status:** all five verification layers pass, including on-silicon validation on
 the TE0950. Synthesis WNS +19.09 ns, implementation WNS +16.85 ns.
 
+![architecture](doc/architecture.svg)
+
 ---
 
 ## Table of contents
@@ -82,8 +84,10 @@ and in C (`ecc_selftest.c`).
 
 ## 3. Architecture
 
-See `architecture.svg` for the block diagram. The silicon SoC (`ecc_soc_si.vhd`)
-is built on the family's `soc_top_master` pattern and comprises:
+The block diagram above shows the full data flow: the PS writes the corrupt region
+and reads back the scrubbed one over AXI-Lite, while the silicon SoC
+(`ecc_soc_si.vhd`) runs the scrub loop and masters AXI4 to DDR through the NoC. The
+SoC is built on the family's `soc_top_master` pattern and comprises:
 
 - **RV32IMA pipeline** (`cpu_pipeline.vhd`, v1.1) — 5-stage in-order core with the
   write-back-history forwarding fix.
@@ -249,7 +253,7 @@ ECC_Scrubber/
   vivado/                 BD Tcl, synth/impl scripts, XSA
   petalinux_files/        device tree, selftest recipe
   README.md               this file
-  architecture.svg        block diagram
+  doc/architecture.svg    block diagram
 ```
 
 Shared RV32 infrastructure lives at `~/rv32i/` (cpu_pipeline v1.1, asm.py, dp_ram,
