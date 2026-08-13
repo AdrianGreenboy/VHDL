@@ -376,3 +376,34 @@ Firmware/silicon: `i3c_test.s` (asm.py), `i3c_pins.xdc`,
 MIT. MIPI and I3C are trademarks of the MIPI Alliance; this is an
 independent implementation of the publicly documented SDR protocol subset
 and has not been certified by MIPI.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Additionally, the Vivado project was **regenerated from scratch** applying
+the lessons distilled from the USART and IIC regenerations, in order, from
+the first command:
+
+1. Wrapper FREQ_HZ removed from `soc_top_i3c_wrap.v` BEFORE creating the
+   project (same RTL fix as IIC; avoids Vivado's module-reference cache).
+2. Board part configured BEFORE the block design; Block Automation run with
+   `board_preset {Yes}` so the DDR MC, pins and input clock derive from the
+   TE0950 board file at birth (no retargeting, no duplicated ports).
+3. Standard connection sequence (dedicated aclk6 for the PL master SI, S06
+   removed from aclk0, explicit MC_0 CONNECTIONS, SmartConnect on M_AXI_LPD
+   with m_axi_lpd_aclk connected).
+
+The BD validated on the first attempt - the cleanest of the three
+regenerations.
+
+Result: WNS +3.005 ns (best of the three regenerated cores). **Silicon:
+clean Linux boot, RV32 v1.1 executing firmware** (DBG_PC advancing,
+STATUS=1). Functional validation of the I3C peripheral pending an own
+bring-up binary (rootfs carries the cross usart-bringup; tracked as the
+bring-up debt work item).
+

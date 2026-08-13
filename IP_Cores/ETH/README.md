@@ -434,3 +434,16 @@ their origin, never duplicated.
 ## 16. License
 
 MIT.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Result: WNS +3.133 ns. **Silicon: clean Linux boot, no panic/oops/fault.**
+Functional validation pending an own bring-up (rootfs carries the cross
+usart-bringup from the clone lineage).
+

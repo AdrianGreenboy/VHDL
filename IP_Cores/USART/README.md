@@ -658,3 +658,24 @@ them with local-copy fallbacks):
 |--------|------|---------|
 | `byte_fifo.vhd` | `IP_Cores/SPI/` | layers 2–5 (both FIFOs) |
 | `riscv_pkg, alu, regfile, muldiv, immgen, control, csr, dp_ram, cpu_pipeline, dma_burst, axil_soc, axi_ddr_sim, asm.py` | `IP_Cores/RV32i/` | layers 3–5 |
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Additionally, the Vivado project was **regenerated from scratch**: the
+original block design carried a full CAN SoC embedded by the clone lineage
+(17 cross-references: u_soc_can, soc_top_can_wrap, can_bus, can_irq_out,
+SEG_u_soc_can_reg0). Regeneration from `vivado_soc_usart.tcl` + interactive
+CIPS/Block Automation + `fix_noc` produced a clean BD. PL clock corrected
+from the 240 MHz default (WNS -1.035, critical path in the u_md divider) to
+~100 MHz.
+
+Result: WNS +2.430 ns. **SILICON PASS (functional):** `usart-bringup`
+reported PIO {2,0x5A,0xC3} + concurrent 32-byte DMA echo OK (IRQ=0x0) at
+115200 baud. The clean BD is captured in `regenera_bd_usart.tcl`.
+

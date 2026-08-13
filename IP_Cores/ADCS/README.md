@@ -462,3 +462,18 @@ file for the full text.
 Bit-exact floating point verified against AMD *Floating-Point Operator*
 (PG060): the fused MAC is correctly rounded (round-to-nearest-even,
 flush-to-zero), which is why the simulation signature holds on silicon.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Result: WNS +2.844 ns. **SILICON PASS (functional, signature-exact):**
+`adcs-verify` with the three payload files in `/usr/share/adcs/` reported
+STATUS/FIRMA/SENTINELA/DOORBELL all matching the oracle - FNV-1a signature
+0x0C4CCCD2, doorbell 0x0000D0ED. This exercises the exact MMIO + DMA-to-DDR
+doorbell pattern that exposed the v1.0 bug.
+

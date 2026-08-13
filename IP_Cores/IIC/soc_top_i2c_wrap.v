@@ -22,7 +22,7 @@ module soc_top_i2c_wrap #(
   parameter FIFO_LOG2 = 8
 )(
   (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 aclk CLK" *)
-  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF s_axi:m_axi, ASSOCIATED_RESET aresetn, FREQ_HZ 100000000" *)
+  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF s_axi:m_axi, ASSOCIATED_RESET aresetn" *)
   input  wire                 aclk,
   (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 aresetn RST" *)
   (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_LOW" *)

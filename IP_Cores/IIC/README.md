@@ -242,3 +242,34 @@ aarch64 binary if the rootfs has no toolchain.
 * **External-bus validation** pending the CR00025 adapter (non-blocking).
 * **I3C**: separate IP, separate project — the open-drain pad discipline,
   filters and IOBUF-in-wrapper pattern here are half the road.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Additionally, the Vivado project was **regenerated from scratch twice**: the
+original project was an unrenamed USART clone (project files named
+rv32i_soc_usart.*, BD bd_soc_usart) with CAN residue. Two root causes were
+fixed during regeneration:
+
+1. **Wrapper FREQ_HZ fix (RTL change):** `soc_top_i2c_wrap.v` declared a
+   hard `FREQ_HZ 100000000` in the aclk X_INTERFACE_PARAMETER. The Versal
+   CIPS PL0 clock is 99.999001 MHz, producing non-downgradable FREQ_HZ DRC
+   errors. The attribute was removed (matching the USART wrapper pattern).
+   Vivado's module-reference cache does not re-read an edited HDL file in the
+   same session, so the project had to be recreated with the fixed wrapper.
+2. **Board-first project creation:** the board part must be set before the
+   block design so the DDR MC, its pin placement and its 200 MHz input clock
+   derive coherently from the TE0950 board file (a board-less MC cannot be
+   retargeted afterwards without fighting derived/disabled parameters).
+
+Result: WNS +2.432 ns. **Silicon: clean Linux boot, RV32 v1.1 executing
+firmware** (DBG_PC advancing, STATUS=1). Functional validation of the I2C
+peripheral itself is pending an own bring-up binary: the packaged rootfs
+carries the cross `usart-bringup` from the clone lineage (tracked
+separately as the bring-up debt work item).
+

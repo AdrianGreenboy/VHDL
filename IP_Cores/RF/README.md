@@ -356,3 +356,18 @@ The bit-exact signature holds from the Python model to silicon because the whole
 datapath is fixed-point `Q1.15` with a frozen accumulation and saturation order:
 the FIR pipeline changes *when* a sample is produced, never *what* value — which
 is why pipelining for timing left the signature `0xB74940EB` untouched.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Result: WNS +0.146 ns - the tightest margin of the family after the v1.1
+forwarding logic was added; monitored specifically for marginal behaviour.
+**Silicon: clean Linux boot** (kernel 6.12.40, no panic/oops/fault). No
+bring-up recipe exists yet for this core; boot-level validation is the
+maximum available.
+

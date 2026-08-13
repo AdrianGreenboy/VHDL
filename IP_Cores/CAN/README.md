@@ -423,3 +423,18 @@ thing that bites later.
 ## 12. License
 
 MIT. See `LICENSE` at the repository root.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Result: WNS +0.603 ns. **Silicon: clean Linux boot, RV32 v1.1 executing
+firmware** (DBG_PC advancing, STATUS=1 under the cross bring-up). Functional
+validation of the CAN peripheral pending an own bring-up binary: the rootfs
+carries `usart-bringup` from the clone lineage, whose MMIO map does not
+match this bitstream (expected TIMEOUT; not a CPU failure).
+

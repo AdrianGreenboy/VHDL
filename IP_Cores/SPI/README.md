@@ -474,3 +474,16 @@ config, SPI DMA, or report DMA).
 ## License <a name="license"></a>
 
 MIT. See the repository root. If this saved you time, a star is appreciated.
+
+<!-- CPU-V11-PROP -->
+## CPU v1.1 propagation (Aug 2026)
+
+The shared RV32 pipeline was upgraded to v1.1, fixing the
+forwarding-during-stall bug (stale data on back-to-back MMIO reads without
+barriers; "GAP=0" fault). This core was re-synthesized against
+`rv32i/cpu_pipeline.vhd` v1.1 and re-validated on the TE0950 (xcve2302).
+
+Result: WNS +2.128 ns. **SILICON PASS (functional):** PIO {2,0x5A,0xC3} and a
+concurrent 32-byte DMA echo verified on the board with the core's own
+bring-up. SCLK 12.5 MHz.
+

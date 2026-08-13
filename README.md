@@ -170,3 +170,29 @@ purpose. See each core's README (or the `LICENSE` file) for the full text.
 
 If you build something with these cores, I'd love to hear about it. Happy
 hacking! 🔧
+
+<!-- CPU-V11-PROP -->
+## Silicon status after cpu_pipeline v1.1 propagation (Aug 2026)
+
+All short-cycle cores re-synthesized with the shared RV32 pipeline v1.1
+(forwarding-during-stall fix) and re-validated on the TE0950 (xcve2302).
+Nothing below replaces earlier per-core validation records; this table
+reflects the v1.1 re-validation pass.
+
+| Core  | WNS (ns) | Silicon result | Validation level |
+|-------|----------|----------------|------------------|
+| SPI   | +2.128   | PASS           | Functional (PIO + 32 B DMA echo) |
+| ADCS  | +2.844   | PASS           | Functional (FNV-1a signature 0x0C4CCCD2 exact) |
+| USART | +2.430   | PASS           | Functional (PIO {2,0x5A,0xC3} + 32 B DMA echo @115200) - BD regenerated |
+| IIC   | +2.432   | Boot OK        | Boot + RV32 executing firmware - BD regenerated (board-first, wrapper FREQ_HZ fix); own bring-up pending |
+| I3C   | +3.005   | Boot OK        | Boot + RV32 executing firmware - BD regenerated (board-first, wrapper FREQ_HZ fix); own bring-up pending |
+| CAN   | +0.603   | Boot OK        | Boot + RV32 executing firmware; own bring-up pending (cross bring-up from clone lineage) |
+| RF    | +0.146   | Boot OK        | Boot-level (tightest margin of the family; no bring-up recipe yet) |
+| SPW   | +2.740   | Boot OK        | Boot-level; own bring-up pending |
+| M1553 | +3.110   | Boot OK        | Boot-level; own bring-up pending |
+| ETH   | +3.133   | Boot OK        | Boot-level; own bring-up pending |
+| DSP   | +0.867   | Boot OK        | Boot-level (no bring-up recipe yet) |
+
+Long-cycle cores (ADC, RV32IMA, PTP, TSN, MIPI, PCS, PQC, ECC): v1.1
+re-validation deferred to the next campaign. See `rv32i/README.md` for the
+bug description, the fix and the family-wide lessons learned.
