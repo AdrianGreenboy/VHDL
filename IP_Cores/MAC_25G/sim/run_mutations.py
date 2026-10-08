@@ -20,12 +20,13 @@ W = sys.argv[1] if len(sys.argv) > 1 else "/tmp/mac25g_mut"
 VEC = "/tmp/mac25g_sim/vec"
 
 PCS_FILES = ["pcs_scrambler.vhd", "pcs_gearbox_tx.vhd", "pcs_gearbox_rx.vhd",
-             "pcs_tx_datapath.vhd", "pcs_rx_datapath.vhd"]
+             "pcs_tx_datapath.vhd", "pcs_rx_datapath.vhd", "pcs_mmio_bridge.vhd"]
 MAC_FILES = ["mac25g_pkg.vhd", "mac25g_pcs_tx.vhd", "mac25g_gen.vhd",
              "mac25g_tx.vhd", "mac25g_rx.vhd", "mac25g_chk.vhd",
-             "mac25g_datapath.vhd"]
+             "mac25g_datapath.vhd", "mac25g_sync.vhd", "mac25g_top.vhd"]
 TB_FILES = ["tb_mac_pkg.vhd", "tb_mac_pcs_tx.vhd", "tb_mac_tx.vhd",
-            "tb_mac_rx.vhd", "tb_mac_chk.vhd", "tb_mac_datapath.vhd"]
+            "tb_mac_rx.vhd", "tb_mac_chk.vhd", "tb_mac_datapath.vhd",
+            "tb_mac_top.vhd", "tb_mac_sync.vhd"]
 
 L3B = ["-gVEC=l3_l3b.txt", "-gINJ=true"]
 TXB = ["-gVEC=tx_txb.txt", "-gLEN_MIN=20", "-gLEN_MAX=90", "-gSTEP=1", "-gNFR=71"]
@@ -79,6 +80,12 @@ MUTS = [
     ("M16", "secuencia del generador salta", "mac25g_gen.vhd",
      "seq   <= seq + 1;", "seq   <= seq + 2;",
      "tb_mac_datapath", [], "LAYER3_PASS"),
+    ("M18", "CMD sin retener mientras hay otro en vuelo", "mac25g_top.vhd",
+     "not (s_axi_awaddr(7 downto 2) = \"000011\" and cmd_busy = '1')", "true",
+     "tb_mac_top", [], "LAYER4_PASS"),
+    ("M19", "evento IRQ con toggle simple (sin handshake)", "mac25g_sync.vhd",
+     "if busy = '1' and a2 = req then busy <= '0'; end if;", "busy <= '0';",
+     "tb_mac_sync", [], "LAYER1C_PASS"),
 ]
 
 
