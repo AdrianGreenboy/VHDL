@@ -13,8 +13,13 @@
 --   R5 class  : residuo 0xDEBB20E3, runt (<64), oversize (>1522), aborto;
 --               un unico contador por trama con prioridad
 --               aborto > runt > oversize > crc
---   R6 strip  : retira los 4 bytes de FCS (1 palabra retenida) y entrega
---               AXIS con tuser=1 en la ultima palabra si la trama es mala
+--   R6 strip  : retira los 4 bytes de FCS (1 palabra retenida)
+--   R7 out    : AXIS registrado (dato enmascarado, tkeep, tlast, tuser=1 en
+--               la ultima palabra si la trama es mala)
+--
+-- Limitaciones v1: no se comprueban los caracteres de control dentro de los
+-- bloques Tn/idle, y los sync headers invalidos (00/11) no son visibles (el RX
+-- del Core 19 trata todo lo que no es "01" como control).
 --
 -- Filtro: unicast propio, broadcast, o todo con 'promisc'. Las tramas
 -- filtradas no se entregan y solo cuentan como rx_filtered.
@@ -117,6 +122,10 @@ architecture rtl of mac25g_rx is
   signal o_v, o_last, o_user : std_logic := '0';
   signal o_d     : std_logic_vector(63 downto 0) := (others => '0');
   signal o_n     : unsigned(3 downto 0) := (others => '0');
+  -- R7
+  signal q_v, q_last, q_user : std_logic := '0';
+  signal q_d     : std_logic_vector(63 downto 0) := (others => '0');
+  signal q_k     : std_logic_vector(7 downto 0) := (others => '0');
 begin
 
   -----------------------------------------------------------------------------
@@ -236,13 +245,13 @@ begin
                 if r1_k = K_E then bad := true; end if;
             end case;
           end if;
-          -- link: 64 bloques seguidos sin error de protocolo
+          -- link: 64 bloques seguidos sin error de protocolo (el 64o lo sube)
           if bad then
             lnk_cnt <= (others => '0'); lnk <= '0';
-          elsif lnk_cnt /= 64 then
-            lnk_cnt <= lnk_cnt + 1;
-          else
+          elsif lnk_cnt = 63 then
             lnk <= '1';
+          else
+            lnk_cnt <= lnk_cnt + 1;
           end if;
         end if;
       end if;
@@ -276,7 +285,8 @@ begin
         end if;
         if r2_last = '0' then
           crc_acc <= crc_upd(v_crc, r2_d, 64);
-          cnt     <= v_cnt + 8;
+          -- saturante: una trama desbocada nunca da la vuelta y parece runt
+          if v_cnt < 65520 then cnt <= v_cnt + 8; else cnt <= v_cnt; end if;
         end if;
         r3_d <= r2_d; r3_n <= r2_n; r3_last <= r2_last; r3_ab <= r2_ab;
         r3_acc <= v_acc; r3_crc <= v_crc; r3_len <= v_cnt + resize(r2_n, 16);
@@ -381,11 +391,28 @@ begin
     end if;
   end process;
 
-  m_tvalid <= o_v;
-  m_tdata  <= o_d and byte_mask(o_n);
-  m_tkeep  <= n_to_keep(o_n);
-  m_tlast  <= o_last;
-  m_tuser  <= o_user;
+  -- R7: salida AXIS totalmente registrada (corta el camino hacia el checker)
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        q_v <= '0';
+      else
+        q_v <= o_v;
+        if o_v = '1' then
+          q_d <= o_d and byte_mask(o_n);
+          q_k <= n_to_keep(o_n);
+          q_last <= o_last; q_user <= o_user;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  m_tvalid <= q_v;
+  m_tdata  <= q_d;
+  m_tkeep  <= q_k;
+  m_tlast  <= q_last;
+  m_tuser  <= q_user;
 
   ev_ok     <= e_ok;
   ev_bytes  <= e_bytes;

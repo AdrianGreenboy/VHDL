@@ -10,6 +10,13 @@
 --                  pierden todos (con un toggle simple, dos pulsos seguidos
 --                  se anulan y el destino no ve nada).
 --
+-- Resets: los biestables de toggle (tg, req) y las cadenas de sincronizacion
+-- NO se resetean: siguen siempre a su origen y solo importan los CAMBIOS. Un
+-- reset de UN solo dominio (p. ej. rst_dp al caer 'locked' del clocking
+-- wizard) no puede asi fabricar un flanco falso: con reset en tg/s* el lado
+-- reseteado ve un toggle inexistente y re-ejecuta el ultimo comando o crea
+-- un evento IRQ falso. Mientras el destino esta en reset la salida se anula.
+--
 -- MIT License.
 -------------------------------------------------------------------------------
 library ieee;
@@ -53,20 +60,16 @@ begin
   process(clk_src)
   begin
     if rising_edge(clk_src) then
-      if rst_src = '1' then tg <= '0';
-      elsif pulse_in = '1' then tg <= not tg;
-      end if;
+      if rst_src = '0' and pulse_in = '1' then tg <= not tg; end if;
     end if;
   end process;
   process(clk_dst)
   begin
     if rising_edge(clk_dst) then
-      if rst_dst = '1' then s1 <= '0'; s2 <= '0'; s3 <= '0';
-      else s1 <= tg; s2 <= s1; s3 <= s2;
-      end if;
+      s1 <= tg; s2 <= s1; s3 <= s2;
     end if;
   end process;
-  pulse_out <= s2 xor s3;
+  pulse_out <= (s2 xor s3) and not rst_dst;
 end architecture rtl;
 
 
@@ -92,7 +95,7 @@ begin
     if rising_edge(clk_src) then
       a1 <= r2; a2 <= a1;
       if rst_src = '1' then
-        pend <= '0'; busy <= '0'; req <= '0';
+        pend <= '0'; busy <= '0';            -- req NO: ver cabecera
       else
         if busy = '0' and (pend = '1' or ev_in = '1') then
           req <= not req; busy <= '1'; pend <= '0';
@@ -107,10 +110,8 @@ begin
   process(clk_dst)
   begin
     if rising_edge(clk_dst) then
-      if rst_dst = '1' then r1 <= '0'; r2 <= '0'; r3 <= '0';
-      else r1 <= req; r2 <= r1; r3 <= r2;
-      end if;
+      r1 <= req; r2 <= r1; r3 <= r2;
     end if;
   end process;
-  ev_out <= r2 xor r3;
+  ev_out <= (r2 xor r3) and not rst_dst;
 end architecture rtl;

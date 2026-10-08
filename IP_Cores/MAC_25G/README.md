@@ -12,9 +12,10 @@ filtering and FCS stripping — all at one 66-bit block slot per 390.625 MHz
 cycle.
 
 > **Status: simulation-validated, silicon pending.** Five verification layers
-> (18 GHDL runs) match the Python oracle bit for bit, including the real
-> compiled firmware running on the real RV32 of this repository; 19/19 RTL
-> mutations are detected. **No Vivado run has been made yet**: timing closure
+> (19 GHDL runs) match the Python oracle bit for bit, including the real
+> compiled firmware running on the real RV32 of this repository; 24/24 RTL
+> mutations are detected, and the core went through an independent review
+> whose findings are fixed and covered by tests. **No Vivado run has been made yet**: timing closure
 > at 390.625 MHz on the `-1LP` part is the main open risk (see
 > [risks](#9-risks-and-what-is-not-proven-yet)). The silicon result is fully
 > predicted in advance: `L5 SILICON PASS` requires the 23 deterministic words
@@ -69,9 +70,10 @@ the second finding below.
 
 ## 3. What Core 20 found in Core 19
 
-Building a frame MAC on top of the PCS exposed three things that Core 19's
-PRBS self-test could not see. **Core 19 has not been modified**; Core 20 works
-around (1) and documents (2) and (3).
+Building a frame MAC on top of the PCS exposed one real limitation and two
+points to settle before a real transceiver, none visible to Core 19's PRBS
+self-test. **Core 19 has not been modified**; Core 20 works around (1) and
+documents (2) and (3).
 
 1. **`pcs_tx_datapath` accepts 31 blocks per 33 cycles, not 32.** When the
    gearbox drops `ready`, the block already in the scrambler goes to the skid
@@ -84,8 +86,9 @@ around (1) and documents (2) and (3).
    **predictive, registered `ready`** (an exact copy of the gearbox fill level,
    one cycle ahead): 3 200 blocks / 3 300 words, and a **bit-identical** output
    word stream versus Core 19 (`tb_mac_pcs_tx`, with and without source gaps).
-2. **A 64-bit gearbox at 390.625 MHz is a 25.0 Gb/s serial equivalent, not
-   25.78125.** 390.625 MHz is the 25GBASE-R *block* rate only if each cycle
+2. **Clocking note — a 64-bit gearbox at 390.625 MHz is a 25.0 Gb/s serial
+   equivalent, not 25.78125.** Not a defect of the Core 19 logic, but it
+   matters for the claim "true 25G line rate". 390.625 MHz is the 25GBASE-R *block* rate only if each cycle
    carries a full 66-bit block (GT internal gearbox). With a fabric 66→64
    gearbox emitting one 64-bit word per cycle, 32 blocks per 33 cycles flow,
    i.e. 25.0 Gb/s; a true 25.78125 Gb/s lane needs 402.83 MHz on that
@@ -97,7 +100,10 @@ around (1) and documents (2) and (3).
    notation of IEEE 802.3 Figure 49-7 (bit 0 first) a data block is `0` then
    `1`. TX and RX of Core 19 are consistent with each other, so loopback is
    unaffected; against a standard link partner data and control would be
-   swapped. Core 20 keeps the Core 19 convention so it can reuse its RX.
+   swapped. Whether it is actually wrong on silicon also depends on the GT's
+   `TXHEADER`/data bit ordering, which must be checked together with the
+   payload bit order (scrambler output LSB first) when a GT is connected.
+   Core 20 keeps the Core 19 convention so it can reuse its RX.
 
 ## 4. Architecture
 
@@ -116,14 +122,27 @@ Two clock domains, as in Core 19: `aclk` (40 MHz, RV32 + register bank) and
   constant bit count (flat XOR trees); block types are selected with `case`,
   never with an indexed constant table (the Vivado 2025.2.1 lesson of this
   family).
-- **The output to the Core 19 scrambler is a register** (FIFO output stage):
-  no logic is added in front of a scrambler that closed at WNS 0.000 ns.
+- **The scrambler's data input comes straight from a register** (FIFO output
+  stage) and its enable is the AND of two registers: nothing heavier is put in
+  front of a scrambler that closed at WNS 0.000 ns.
+- **The MAC always transmits**: with no traffic it sends idle blocks (a real
+  PMA needs them); `CTRL.MAC_EN` only lets generator frames through.
 - **Control plane.** Configuration is captured into the fast domain when
-  `CMD` is written; a new `CMD` write is held in hardware until the previous
-  one has executed; counters are frozen into a stable shadow on `SNAP`; IRQ
-  events cross with a request/acknowledge synchronizer that coalesces but
-  never loses events (a plain toggle loses two events closer than ~2 `aclk`
-  periods — mutation M19 proves the test catches it).
+  `CMD` is written; while a `CMD` is in flight **no register write is
+  accepted** (`awready` held), so commands are never lost or reordered and the
+  configuration cannot change under the capture — with a 256-cycle timeout
+  (`STATUS.CMD_TIMEOUT`) so the bus can never hang if `clk_dp` is stopped.
+  B and R responses come one cycle after their handshake (AXI-compliant).
+  Counters are frozen into a stable shadow on `SNAP`. IRQ events cross with a
+  request/acknowledge synchronizer that coalesces but never loses events (a
+  plain toggle loses two events closer than ~2 `aclk` periods — mutation M19).
+  Toggle flip-flops and synchronizer chains are deliberately **not reset**, so
+  a reset of only one domain (e.g. `rst_dp` when the clock wizard loses
+  `locked`) cannot fabricate an edge that would replay the last command or
+  raise a false IRQ (mutations M23, M24).
+- **`GEN_STOP` ends a burst at a frame boundary** (continuous mode): the frame
+  in progress is completed, then `GEN_DONE` rises. The datapath reset and the
+  TX clock-enable are registered with `MAX_FANOUT` for replication.
 
 Register map: **[doc/register_map.md](doc/register_map.md)**.
 
@@ -137,12 +156,12 @@ fail.
 |-------|-------|----------------|----------------|
 | 1A | `tb_mac_pkg` | CRC over 1..8 bytes (400 vectors), xorshift64, block constants vs oracle | `FNV32 = 0x1695834C` |
 | 1B | `tb_mac_pcs_tx` | line-rate PCS TX, output stream identical to Core 19 | 3 200 blocks / 3 300 words |
-| 1C | `tb_mac_sync` | event CDC: pairs of events 1..24 `clk_dp` cycles apart, none lost | `LAYER1C_PASS` |
+| 1C | `tb_mac_sync` | event CDC: pairs of events 1..24 `clk_dp` cycles apart, none lost; one-sided reset fabricates no command or event | `LAYER1C_PASS` |
 | 2A | `tb_mac_tx` | TX block stream vs oracle: wide sweep, fine sweep 20..90 B (padding, every `/Tn/`), injection; random and 32/33 clock-enable; IPG ≥ 12 | `0x51B51B7C`, `0x46CE078A`, `0x315146E7` |
 | 2B | `tb_mac_rx` | RX vs oracle with every error class: bad FCS, runt, oversize, aborts by `/E/` and `/S/`, bad SFD, unsupported blocks, 0- and 1-word frames, broadcast/foreign destination, random `valid` gaps | `0x1CE6D232` |
 | 2C | `tb_mac_chk` | checker against crafted frames (truncated, extended, wrong padding, payload, destination, sequence gap, `tuser`) | `0x08FB60FE` |
-| 3 | `tb_mac_datapath` | gen → TX → FIFO → PCS → loopback → PCS → RX → checker: clean burst, 1-bit injection, fine sweep, oversize frames; 16 counters vs oracle | `0x62B78AAD`, `0x1E1BA41D`, `0x710C2A4E`, `0x9B22CCD6` |
-| 4 | `tb_mac_top` | whole core through registers at 40/390.625 MHz, direct AXI4-Lite **and** through `pcs_mmio_bridge` | `LAYER4_PASS`, `LAYER4MMIO_PASS` |
+| 3 | `tb_mac_datapath` | gen → TX → FIFO → PCS → loopback → PCS → RX → checker: clean burst, 1-bit injection, fine sweep, oversize frames, continuous mode cut by `GEN_STOP` followed by a normal burst; 16 counters vs oracle | `0x62B78AAD`, `0x1E1BA41D`, `0x710C2A4E`, `0x9B22CCD6`, `0x62B78AAD` |
+| 4 | `tb_mac_top` | whole core through registers at 40/390.625 MHz, direct AXI4-Lite **and** through `pcs_mmio_bridge`; AXI response-timing monitor; `CMD` with the fast domain held in reset must not hang the bus | `LAYER4_PASS`, `LAYER4MMIO_PASS` |
 | 5 (sim) | `tb_soc_mac` | the compiled firmware on the real RV32 of `IP_Cores/RV32i`; 24 DMA'd words vs oracle | `LAYER5SIM_PASS`, signature `0x6CFBF90C` |
 | 5 (silicon) | `mac-selftest` | TE0950 | **pending** — expected signature `0x446C2628` |
 
@@ -151,23 +170,32 @@ frame 0 is flipped before the scrambler, so exactly one frame fails the FCS,
 it is delivered with `tuser = 1`, and the sequence check stays clean
 (`RX_OK = N − 1`, `RX_CRC_ERR = 1`, `CHK_SEQ_ERR = 0`).
 
-**Mutations** (`sim/run_mutations.py`), all detected (19/19): CRC polynomial,
+**Mutations** (`sim/run_mutations.py`), all detected (24/24): CRC polynomial,
 `/T3/` type, short IPG, padding threshold, uncomplemented FCS, injection
 target, RX residue, FCS-strip offset, broadcast filter, unmarked abort,
 oversize limit, checker pattern / length / padding checks, PCS `ready`
 prediction, injection not reaching the wire, generator sequence, `CMD`
-ordering, event CDC.
+ordering, event CDC, `GEN_STOP` mid-frame, AXI B in the handshake cycle,
+`CMD` without timeout, reset in a pulse synchronizer, reset of `req` in the
+event synchronizer. A hang counts as detected (per-run timeout).
 
-Two real bugs were caught by these layers before any hardware: the `CMD`
-ordering race (layer 4 read the previous burst's `DONE` and snapshotted 17 of
-64 frames) and the Core 19 PCS TX rate (layer 3 throughput 6 % below theory).
+Bugs caught before any hardware:
+- by the layers: the `CMD` ordering race (layer 4 read the previous burst's
+  `DONE` and snapshotted 17 of 64 frames) and the Core 19 PCS TX rate (layer 3
+  throughput 6 % below theory);
+- by the independent review, all fixed and now covered by a test and a
+  mutation: `GEN_STOP` cutting a frame (an `/E/`, a false `LINK_LOST`, and the
+  first frame of the next burst silently lost), B/R responses in the same cycle
+  as the address handshake, a bus hang if `clk_dp` is stopped, and a reset of
+  only the fast domain replaying the last command.
 
 ### Running everything
 
 ```bash
 cd IP_Cores/MAC_25G
-bash sim/run_layers.sh            # oracle + vectors + firmware + 18 GHDL runs (~1 min)
-python3 sim/run_mutations.py      # 19 mutations, each must fail (~30 s)
+bash sim/run_layers.sh            # oracle + vectors + firmware + 19 GHDL runs (~1 min)
+python3 sim/run_mutations.py      # 24 mutations, each must fail (~1 min)
+# (if run_layers.sh used another workdir: MAC25G_SIM=<workdir> python3 sim/run_mutations.py)
 ```
 
 Requires GHDL ≥ 4 (`--std=08`) and Python 3; `riscv64-unknown-elf-gcc` is
@@ -258,9 +286,17 @@ Not yet measured (no Vivado run). The largest blocks are the two sets of
 - **Timing at 390.625 MHz on the -1LP part.** Core 19 closed at WNS 0.000 ns
   with far less logic. Every stage here was designed for few LUT levels and
   the CRC loop is a plain 64-bit XOR tree, but nothing replaces the
-  implementation report. Likely hot spots, in order: TX stage A (framer and
-  byte mask), the RX `R3` CRC loop (it has a `sof` mux in front of the XOR
-  tree), the checker's byte compare, the FCS merge mux.
+  implementation report. Likely hot spots: the partial-CRC stages (8 XOR
+  trees + 8:1 mux, TX stage C and RX stage R4); the checker's per-byte compare
+  (now behind a registered input stage, with the RX AXI-Stream outputs fully
+  registered); the `mac25g_pcs_tx` ready prediction (two chained gearbox
+  steps into a register that enables the scrambler, fanout ~130); RX stage R1
+  (64-bit start-block compare) and R3 (48-bit filter compares + `sof` mux in
+  front of the CRC loop); the generator's 64-bit output muxes.
+- **RX limitations of v1**: control characters inside `/Tn/` and idle blocks
+  are not checked, and invalid sync headers (`00`/`11`) are invisible (the
+  Core 19 RX maps everything that is not `01` to control). `tkeep = 0` or a
+  non-contiguous `tkeep` is treated as 8 bytes.
 - **CDC** is constrained the Core 19 way (`set_max_delay -datapath_only`);
   `report_cdc` must be clean.
 - **No real PMA yet**: findings 2 and 3 of section 3 must be resolved before

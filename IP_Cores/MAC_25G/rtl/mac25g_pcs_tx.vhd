@@ -12,7 +12,9 @@
 --
 -- Aqui se lleva una copia exacta del nivel de llenado del gearbox (sf) y se
 -- decide con un ciclo de antelacion si el gearbox podra aceptar el bloque que
--- sale del scrambler: in_ready(t) = [fill(t+1) <= 64]. Resultado: 32 bloques
+-- saldra del scrambler: rdy_r(t+1) = [fill(t+2) <= 64], calculado en t a
+-- partir de sf(t), scr_valid(t) y scr_en(t), todos registros o AND de
+-- registros. Resultado: 32 bloques
 -- cada 33 ciclos y una palabra por ciclo. El contenido del flujo de palabras
 -- es bit a bit identico al del Core 19 (mismo scrambler, mismo gearbox,
 -- mismo orden): lo demuestra tb_mac_pcs_tx.

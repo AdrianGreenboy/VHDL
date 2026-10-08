@@ -15,8 +15,8 @@
 -- Tramas con tuser=1 (mala segun el MAC): solo cuentan como chk_rxerr y
 -- avanzan la secuencia esperada.
 --
--- Pipeline: X1 calcula el desajuste por byte (registrado), X2 acumula y emite
--- el veredicto en la ultima palabra.
+-- Pipeline: X0 registra la entrada y decodifica tkeep, X1 calcula el
+-- desajuste por byte (registrado), X2 acumula y emite el veredicto.
 --
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -47,6 +47,10 @@ entity mac25g_chk is
 end entity mac25g_chk;
 
 architecture rtl of mac25g_chk is
+  -- X0
+  signal i_v, i_last, i_user : std_logic := '0';
+  signal i_d    : std_logic_vector(63 downto 0) := (others => '0');
+  signal i_n    : unsigned(3 downto 0) := (others => '0');
   signal w      : unsigned(8 downto 0) := (others => '0');
   signal len_r  : unsigned(15 downto 0) := (others => '0');
   signal rem_r  : signed(15 downto 0) := (others => '0');    -- len - 8*w (w>=2)
@@ -63,6 +67,23 @@ architecture rtl of mac25g_chk is
   signal p_ok, p_bad, p_seq, p_rxe : std_logic := '0';
 begin
 
+  -- X0: registro de entrada; n = bytes validos (8 si no es la ultima)
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' or restart = '1' then
+        i_v <= '0';
+      else
+        i_v <= s_tvalid;
+        if s_tvalid = '1' then
+          i_d <= s_tdata; i_last <= s_tlast; i_user <= s_tuser;
+          if s_tlast = '1' then i_n <= keep_to_n(s_tkeep);
+          else i_n <= to_unsigned(8, 4); end if;
+        end if;
+      end if;
+    end if;
+  end process;
+
   -- X1: desajuste por byte
   process(clk)
     variable e    : std_logic_vector(63 downto 0);
@@ -76,9 +97,8 @@ begin
       x_v <= '0';
       if rst = '1' or restart = '1' then
         w <= (others => '0');
-      elsif s_tvalid = '1' then
-        n := keep_to_n(s_tkeep);
-        if s_tlast = '0' then n := to_unsigned(8, 4); end if;
+      elsif i_v = '1' then
+        n := i_n;
         cmpm := n_to_keep(n);
         padz := (others => '0');
         e := p;
@@ -86,12 +106,12 @@ begin
           when 0 =>
             e := src(15 downto 0) & dst;
           when 1 =>
-            e := s_tdata(63 downto 48) & ETHERTYPE_GEN(7 downto 0) &
+            e := i_d(63 downto 48) & ETHERTYPE_GEN(7 downto 0) &
                  ETHERTYPE_GEN(15 downto 8) & src(47 downto 16);
-            len_r <= unsigned(s_tdata(63 downto 48));
-            rem_r <= signed(resize(unsigned(s_tdata(63 downto 48)), 16)) - 16;
+            len_r <= unsigned(i_d(63 downto 48));
+            rem_r <= signed(resize(unsigned(i_d(63 downto 48)), 16)) - 16;
           when 2 =>
-            seq_now := s_tdata(31 downto 0);
+            seq_now := i_d(31 downto 0);
             e := (not seq_now) & seq_now;
             seq_r <= unsigned(seq_now);
             p <= seed_of(seq_now);
@@ -109,15 +129,15 @@ begin
           if padz(b) = '1' then
             e(8*b+7 downto 8*b) := x"00";
           end if;
-          if cmpm(b) = '1' and s_tdata(8*b+7 downto 8*b) /= e(8*b+7 downto 8*b) then
+          if cmpm(b) = '1' and i_d(8*b+7 downto 8*b) /= e(8*b+7 downto 8*b) then
             mm(b) := '1';
           else
             mm(b) := '0';
           end if;
         end loop;
-        x_v <= '1'; x_mm <= mm; x_last <= s_tlast; x_user <= s_tuser;
+        x_v <= '1'; x_mm <= mm; x_last <= i_last; x_user <= i_user;
         x_tot <= shift_left(resize(w, 16), 3) + resize(n, 16);
-        if s_tlast = '1' then
+        if i_last = '1' then
           w <= (others => '0');
         elsif w /= 511 then
           w <= w + 1;

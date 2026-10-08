@@ -6,7 +6,8 @@
 # testbench no cubre esa clase de defecto.
 #
 #   python3 sim/run_mutations.py [workdir]
-# Requiere haber pasado sim/run_layers.sh (reutiliza sus vectores).
+# Requiere haber pasado sim/run_layers.sh (reutiliza sus vectores); si se uso
+# un workdir distinto de /tmp/mac25g_sim, indicarlo en MAC25G_SIM.
 # =============================================================================
 import os
 import re
@@ -17,7 +18,8 @@ import sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PCS = os.path.normpath(os.path.join(HERE, "..", "PCS_25G", "rtl"))
 W = sys.argv[1] if len(sys.argv) > 1 else "/tmp/mac25g_mut"
-VEC = "/tmp/mac25g_sim/vec"
+# vectores de sim/run_layers.sh: <workdir de run_layers>/vec
+VEC = os.path.join(os.environ.get("MAC25G_SIM", "/tmp/mac25g_sim"), "vec")
 
 PCS_FILES = ["pcs_scrambler.vhd", "pcs_gearbox_tx.vhd", "pcs_gearbox_rx.vhd",
              "pcs_tx_datapath.vhd", "pcs_rx_datapath.vhd", "pcs_mmio_bridge.vhd"]
@@ -81,17 +83,40 @@ MUTS = [
      "seq   <= seq + 1;", "seq   <= seq + 2;",
      "tb_mac_datapath", [], "LAYER3_PASS"),
     ("M18", "CMD sin retener mientras hay otro en vuelo", "mac25g_top.vhd",
-     "not (s_axi_awaddr(7 downto 2) = \"000011\" and cmd_busy = '1')", "true",
+     "awready_i = '0' and cmd_busy = '0' then", "awready_i = '0' then",
      "tb_mac_top", [], "LAYER4_PASS"),
+    ("M20", "GEN_STOP corta a mitad de trama", "mac25g_gen.vhd",
+     "if stop = '1' and r_busy = '1' then stop_req <= '1'; end if;",
+     "if stop = '1' then r_busy <= '0'; r_done <= '1'; end if;",
+     "tb_mac_datapath", ["-gSTOP_TEST=true"], "LAYER3_PASS"),
+    ("M21", "respuesta B en el mismo ciclo que AWREADY", "mac25g_top.vhd",
+     "awready_i <= '1'; wready_i <= '1';\n", "awready_i <= '1'; wready_i <= '1'; bvalid_i <= '1';\n",
+     "tb_mac_top", [], "LAYER4_PASS"),
+    ("M22", "CMD sin timeout (bus colgado con dp parado)", "mac25g_top.vhd",
+     "if cmd_tmo = 255 then cmd_busy <= '0'; cmd_err <= '1';",
+     "if false then cmd_busy <= '0'; cmd_err <= '1';",
+     "tb_mac_top", [], "LAYER4_PASS"),
+    ("M23", "psync con reset en el destino (replay de CMD)", "mac25g_sync.vhd",
+     "      s1 <= tg; s2 <= s1; s3 <= s2;",
+     "      if rst_dst = '1' then s1 <= '0'; s2 <= '0'; s3 <= '0';\n      else s1 <= tg; s2 <= s1; s3 <= s2; end if;",
+     "tb_mac_sync", [], "LAYER1C_PASS"),
+    ("M24", "evsync con reset de req (evento falso)", "mac25g_sync.vhd",
+     "pend <= '0'; busy <= '0';            -- req NO: ver cabecera",
+     "pend <= '0'; busy <= '0'; req <= '0';",
+     "tb_mac_sync", [], "LAYER1C_PASS"),
     ("M19", "evento IRQ con toggle simple (sin handshake)", "mac25g_sync.vhd",
      "if busy = '1' and a2 = req then busy <= '0'; end if;", "busy <= '0';",
      "tb_mac_sync", [], "LAYER1C_PASS"),
 ]
 
 
-def run(cmd, cwd):
-    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
-    return p.returncode, p.stdout + p.stderr
+def run(cmd, cwd, timeout=None):
+    try:
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                           timeout=timeout)
+        return p.returncode, p.stdout + p.stderr
+    except subprocess.TimeoutExpired:
+        return 124, "TIMEOUT de la simulacion (cuelgue)"
 
 
 def main():
@@ -123,7 +148,7 @@ def main():
         if rc == 0:
             rc, out = run(["ghdl", "-e"] + gf + [tb], d)
         if rc == 0:
-            rc, out = run(["ghdl", "-r"] + gf + [tb] + gens, VEC)
+            rc, out = run(["ghdl", "-r"] + gf + [tb] + gens, VEC, timeout=300)
         killed = (pas not in out)
         verdict = "MUERTA" if killed else "SOBREVIVE"
         if not killed:

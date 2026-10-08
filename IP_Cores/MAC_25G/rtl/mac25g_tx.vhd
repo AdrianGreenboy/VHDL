@@ -24,8 +24,8 @@
 -- cuenta tx_underrun y se descarta el resto de la trama de origen.
 --
 -- Inyeccion (inj, pulso): arma un flip del bit 0 del bloque de DATOS de indice
--- 1 de la siguiente trama (determinista: el CRC del receptor debe fallar en
--- exactamente esa trama).
+-- 1 de la SIGUIENTE trama que empiece (/S/ posterior al pulso), aunque llegue a
+-- mitad de otra trama. Determinista: el CRC falla en exactamente esa trama.
 --
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ architecture rtl of mac25g_tx is
 
   type a_st_t is (SA_IDLE, SA_DATA, SA_PAD, SA_GAP1, SA_GAP2, SA_DRAIN);
   signal a_st : a_st_t := SA_IDLE;
-  signal wcnt : unsigned(8 downto 0) := (others => '0');   -- palabras emitidas (satura 511)
+  signal wcnt : unsigned(11 downto 0) := (others => '0');  -- palabras emitidas (satura 4095)
 
   -- token etapa A
   signal a_kind : std_logic_vector(1 downto 0) := K_BUB;
@@ -99,6 +99,7 @@ architecture rtl of mac25g_tx is
   signal pend_t0 : std_logic := '0';
   signal dblk    : unsigned(1 downto 0) := (others => '0');  -- indice de bloque de datos (satura 3)
   signal inj_arm : std_logic := '0';
+  signal inj_pend : std_logic := '0';
   signal o_valid : std_logic := '0';
   signal o_pl    : std_logic_vector(63 downto 0) := IDLE_BLOCK;
   signal o_isd   : std_logic := '0';
@@ -145,7 +146,7 @@ begin
               a_kind <= K_DATA;
               a_data <= dm;
               if s_tlast = '0' then
-                if wcnt /= 511 then wcnt <= wcnt + 1; end if;
+                if wcnt /= 4095 then wcnt <= wcnt + 1; end if;
               elsif wcnt >= 8 or (wcnt = 7 and n >= 4) then
                 -- trama >= 60 bytes: sin padding
                 a_last <= '1'; a_n <= n;
@@ -288,17 +289,20 @@ begin
   begin
     if rising_edge(clk) then
       if rst = '1' then
-        pend_t0 <= '0'; dblk <= (others => '0'); inj_arm <= '0';
+        pend_t0 <= '0'; dblk <= (others => '0'); inj_arm <= '0'; inj_pend <= '0';
         o_valid <= '0'; o_pl <= IDLE_BLOCK; o_isd <= '0';
       else
         o_valid <= ce;
-        if inj = '1' then inj_arm <= '1'; end if;
+        if inj = '1' then inj_pend <= '1'; end if;
         if ce = '1' then
           case d_kind is
             when K_STRT =>
               o_pl <= START_BLOCK; o_isd <= '0';
               dblk <= (others => '0');
               pend_t0 <= '0';
+              -- la inyeccion pendiente se aplica a ESTA trama
+              inj_arm <= inj_pend or inj;
+              inj_pend <= '0';
             when K_ERR =>
               o_pl <= ERROR_BLOCK; o_isd <= '0';
               pend_t0 <= '0';

@@ -87,6 +87,7 @@ run "L3 barrido fino/pad"    LAYER3_PASS  "$(sig L3C)" tb_mac_datapath -gVEC=l3_
     -gLEN_MIN=20 -gLEN_MAX=90 -gSTEP=1 -gNFR=71
 run "L3 oversize"            LAYER3_PASS  "$(sig L3D)" tb_mac_datapath -gVEC=l3_l3d.txt \
     -gLEN_MIN=1400 -gLEN_MAX=1700 -gSTEP=23 -gNFR=24
+run "L3 GEN_STOP + rafaga"    LAYER3_PASS  "$(sig L3A)" tb_mac_datapath -gSTOP_TEST=true
 run "L4 registros AXI4-Lite"  LAYER4_PASS -              tb_mac_top
 run "L4 registros via MMIO"   LAYER4MMIO_PASS -          tb_mac_top -gBRIDGE=true
 run "L5 SoC + firmware RV32"  LAYER5SIM_PASS -           tb_soc_mac

@@ -12,8 +12,11 @@
 -- La ultima palabra lleva tkeep con los n bytes validos; el resto del dato es
 -- patron (el MAC enmascara).
 --
--- start (pulso) reinicia seq=0 y la longitud; count tramas (0 = sin fin);
--- 'cont'=1 ignora count. busy alto mientras genera; done sticky hasta start.
+-- start (pulso) reinicia seq=0 y la longitud; count tramas; 'cont'=1 ignora
+-- count. busy alto mientras genera; done sticky hasta start.
+-- stop (pulso) termina la rafaga en la FRONTERA de trama: la trama en curso se
+-- completa (tvalid no cae nunca a mitad de trama, lo que el MAC trataria como
+-- underrun y cerraria con /E/) y despues busy=0, done=1.
 --
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -49,6 +52,7 @@ end entity mac25g_gen;
 
 architecture rtl of mac25g_gen is
   signal r_busy, r_done : std_logic := '0';
+  signal stop_req : std_logic := '0';
   signal eff_min, eff_max, step : unsigned(10 downto 0) := (others => '0');
   signal ln       : unsigned(10 downto 0) := (others => '0');   -- trama actual
   signal ln_nx    : unsigned(10 downto 0) := (others => '0');   -- siguiente
@@ -106,7 +110,7 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         r_busy <= '0'; r_done <= '0'; w <= (others => '0');
-        seq <= (others => '0'); o_last <= '0';
+        seq <= (others => '0'); o_last <= '0'; stop_req <= '0';
       elsif start = '1' then
         lmin := len_min;
         if lmin < GEN_MIN_LEN then lmin := to_unsigned(GEN_MIN_LEN, 11); end if;
@@ -121,15 +125,15 @@ begin
         w     <= (others => '0');
         o_data <= w0_of(dst, src);
         o_keep <= x"FF"; o_last <= '0';
-        r_busy <= '1'; r_done <= '0';
-      elsif stop = '1' then
-        r_busy <= '0';
-      elsif r_busy = '1' and m_tready = '1' then
+        r_busy <= '1'; r_done <= '0'; stop_req <= '0';
+      else
+        if stop = '1' and r_busy = '1' then stop_req <= '1'; end if;
+        if r_busy = '1' and m_tready = '1' then
         fin_frame := (w = lastw);
         if fin_frame then
-          -- siguiente trama
-          if cont = '0' and left = 1 then
-            r_busy <= '0'; r_done <= '1';
+          -- siguiente trama (o fin de rafaga: cuenta agotada o stop pedido)
+          if (cont = '0' and left = 1) or stop_req = '1' or stop = '1' then
+            r_busy <= '0'; r_done <= '1'; stop_req <= '0';
           end if;
           left  <= left - 1;
           seq   <= seq + 1;
@@ -156,6 +160,7 @@ begin
           else
             o_last <= '0'; o_keep <= x"FF";
           end if;
+        end if;
         end if;
       end if;
     end if;

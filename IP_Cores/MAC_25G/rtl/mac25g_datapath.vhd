@@ -1,6 +1,8 @@
 -------------------------------------------------------------------------------
 -- HERCOSSNUX Core 20 - MAC 25G
--- Datapath de silicio (dominio clk_dp, 390.625 MHz = tasa de bloque 25G):
+-- Datapath de silicio (dominio clk_dp, 390.625 MHz: una ranura de bloque de
+-- 66 bits por ciclo; con el gearbox de fabric 66->64 del banco de loopback
+-- eso equivale a 25.0 Gb/s serie, ver README seccion 3):
 --
 --   mac25g_gen -> mac25g_tx -> FIFO de bloques -> mac25g_pcs_tx
 --      -> loopback paralelo registrado
@@ -9,7 +11,8 @@
 -- Control de flujo TX: el PCS acepta 32 bloques cada 33 ciclos (gearbox
 -- 64/66). En vez de propagar su in_ready combinacional por todo el MAC, el
 -- MAC avanza con un 'ce' registrado que vale 1 mientras la FIFO tiene <= 4
--- bloques. La FIFO (8 + 1 registro de salida) absorbe el desfase; la salida
+-- bloques. El MAC emite siempre (idles sin trafico, como necesita un PMA
+-- real); MAC_EN solo deja pasar tramas del generador. La FIFO (8 + 1 registro de salida) absorbe el desfase; la salida
 -- hacia el scrambler es un REGISTRO (el Core 19 cerro a WNS 0.000 ns: no se
 -- anade logica delante de su scrambler).
 --
@@ -74,6 +77,9 @@ architecture rtl of mac25g_datapath is
   signal g_tlast, g_tvalid, g_tready, g_busy, g_done : std_logic;
   -- TX MAC
   signal ce       : std_logic := '0';
+  signal s_tvalid, s_tready : std_logic;
+  attribute MAX_FANOUT : integer;
+  attribute MAX_FANOUT of ce : signal is 32;
   signal b_valid, b_isd : std_logic;
   signal b_pl     : std_logic_vector(63 downto 0);
   signal t_evf, t_evu : std_logic;
@@ -125,7 +131,7 @@ begin
   begin
     if rising_edge(clk_dp) then
       if rst_dp = '1' then ce <= '0';
-      elsif mac_en = '1' and flevel <= 4 then ce <= '1';
+      elsif flevel <= 4 then ce <= '1';
       else ce <= '0';
       end if;
     end if;
@@ -134,9 +140,13 @@ begin
   u_tx: entity work.mac25g_tx
     port map (clk=>clk_dp, rst=>rst_dp, ce=>ce,
               s_tdata=>g_tdata, s_tkeep=>g_tkeep, s_tlast=>g_tlast,
-              s_tvalid=>g_tvalid, s_tready=>g_tready, inj=>inj,
+              s_tvalid=>s_tvalid, s_tready=>s_tready, inj=>inj,
               blk_valid=>b_valid, blk_payload=>b_pl, blk_is_data=>b_isd,
               ev_frame=>t_evf, ev_bytes=>t_evb, ev_underrun=>t_evu);
+
+  -- MAC_EN abre el paso de tramas (cuasi-estatico: se captura con CMD)
+  s_tvalid <= g_tvalid and mac_en;
+  g_tready <= s_tready and mac_en;
 
   -- FIFO 8 + registro de salida (FWFT)
   process(clk_dp)

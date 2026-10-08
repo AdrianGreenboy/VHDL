@@ -7,9 +7,9 @@ RV32 at **`0xD000_0000`** through `pcs_mmio_bridge`.
 |-------:|------|--------|-------|-------------|
 | `0x00` | `ID` | RO | `0x4D414320` | `"MAC"` + core number `0x20` |
 | `0x04` | `SCRATCH` | RW | 0 | free |
-| `0x08` | `CTRL` | RW | 0 | b0 `MAC_EN` (TX clock-enable), b1 `LOOPBACK` (parallel fabric loopback), b2 `PROMISC`, b3 `GEN_CONT` (generator ignores `GEN_COUNT`) |
+| `0x08` | `CTRL` | RW | 0 | b0 `MAC_EN` (lets generator frames into the MAC; idles are always sent), b1 `LOOPBACK` (parallel fabric loopback), b2 `PROMISC`, b3 `GEN_CONT` (generator ignores `GEN_COUNT`; end the burst with `GEN_STOP`) |
 | `0x0C` | `CMD` | W | — | b0 `SOFT_RESET`, b1 `CNT_CLEAR`, b2 `GEN_START`, b3 `GEN_STOP`, b4 `INJ` (reads 0). See *command semantics* |
-| `0x10` | `STATUS` | RO | 0 | b0 `LINK_UP`, b1 `GEN_BUSY`, b2 `GEN_DONE`, b3 `RX_ACTIVE`, b4 `TX_ACTIVE`, b8 `SNAP_DONE`, b9 `CMD_BUSY` |
+| `0x10` | `STATUS` | RO | 0 | b0 `LINK_UP` (64 consecutive blocks without a protocol error), b1 `GEN_BUSY`, b2 `GEN_DONE`, b3 `RX_ACTIVE`, b4 `TX_ACTIVE`, b8 `SNAP_DONE`, b9 `CMD_BUSY`, b10 `CMD_TIMEOUT` (the last `CMD` was not acknowledged by the fast domain within 256 `aclk` cycles) |
 | `0x14` | `IRQ_STATUS` | RW1C | 0 | b0 `GEN_DONE`, b1 `RX_CRC_ERR`, b2 `CHK_ERR` (payload or sequence), b3 `LINK_LOST`. An event in the same cycle as the clear wins |
 | `0x18` | `IRQ_ENABLE` | RW | 0 | `irq_out = OR(IRQ_STATUS & IRQ_ENABLE)` |
 | `0x1C` | `SNAP` | W | — | any write: freeze the 16 counters into the shadow; `STATUS.SNAP_DONE` rises when done (cleared by the write) |
@@ -53,12 +53,19 @@ mutually exclusive: every received frame increments **exactly one** of
 * `CTRL` and all configuration registers are **captured into the 390.625 MHz
   domain when `CMD` is written**. Write the configuration first, then a
   command (`SOFT_RESET` is the usual one).
-* A write to `CMD` is **held (AXI `awready` low) while the previous command has
-  not yet executed** in the data-plane domain. Commands are therefore never
-  lost or reordered, however fast software writes them.
+* **Every register write is held (AXI `awready` low) while a command is in
+  flight** to the data-plane domain. Commands are therefore never lost or
+  reordered, however fast software writes them, and the configuration cannot
+  change while it is being captured. If the fast domain does not acknowledge
+  within 256 `aclk` cycles (clock stopped or in reset), the hold is released
+  and `STATUS.CMD_TIMEOUT` is set: the bus never hangs.
+* `GEN_STOP` ends a burst at the next frame boundary (the frame in progress is
+  completed); `GEN_DONE` then rises as for a counted burst.
 * While `CMD_BUSY = 1`, `STATUS.GEN_DONE` reads 0 and `GEN_BUSY` reads 1, so a
   poll issued right after `GEN_START` never sees the previous burst's `DONE`.
 * `INJ` arms a single bit flip (bit 0 of the 2nd data block) of the next frame
-  transmitted. `GEN_START | INJ` in one write corrupts frame 0 of the burst,
+  that **starts** after the command, even if a frame is in progress.
+  `GEN_START | INJ` in one write corrupts frame 0 of the burst,
   deterministically.
+* B and R responses are issued one cycle after the AW/W and AR handshakes.
 * Do not combine `SOFT_RESET` with other bits (the reset wins).

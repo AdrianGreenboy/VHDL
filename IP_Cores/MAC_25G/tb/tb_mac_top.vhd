@@ -11,6 +11,10 @@
 --   SNAP_DONE -> 16 contadores == oraculo (l3_l3a)
 --   -> CMD=CNT_CLEAR -> CMD=GEN_START|INJ -> ... == oraculo (l3_l3b)
 --   -> IRQ_STATUS: GEN_DONE y RX_CRC_ERR activos; W1C los limpia.
+--   -> con el dominio dp en reset, dos escrituras seguidas a CMD no cuelgan
+--      el bus (timeout) y STATUS.CMD_TIMEOUT se activa.
+-- Un monitor comprueba en todo momento que B y R llegan DESPUES de su
+-- handshake (BVALID nunca junto a AWREADY, RVALID nunca junto a ARREADY).
 -- Criterio: LAYER4_PASS (o LAYER4MMIO_PASS con BRIDGE=true).
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -38,6 +42,7 @@ architecture sim of tb_mac_top is
   signal wstrb : std_logic_vector(3 downto 0) := (others => '0');
   signal bresp, rresp : std_logic_vector(1 downto 0);
   signal irq : std_logic;
+  signal axi_errs : natural := 0;
 
   -- lado MMIO del puente
   signal m_sel, m_ready : std_logic := '0';
@@ -85,6 +90,29 @@ begin
     wvalid <= t_wvalid; bready <= t_bready; araddr <= t_araddr; arvalid <= t_arvalid;
     rready <= t_rready;
   end generate;
+
+  -- watchdog global: un bus colgado (p. ej. CMD retenido para siempre) es un fallo
+  process
+  begin
+    wait for 500 us;
+    assert done_sim report "TIMEOUT global: bus AXI colgado" severity failure;
+    wait;
+  end process;
+
+  -- monitor de protocolo AXI (respuesta posterior al handshake)
+  process(aclk)
+  begin
+    if rising_edge(aclk) then
+      if bvalid = '1' and awready = '1' then
+        report "FAIL AXI: BVALID en el mismo ciclo que AWREADY" severity error;
+        axi_errs <= axi_errs + 1;
+      end if;
+      if rvalid = '1' and arready = '1' then
+        report "FAIL AXI: RVALID en el mismo ciclo que ARREADY" severity error;
+        axi_errs <= axi_errs + 1;
+      end if;
+    end if;
+  end process;
 
   process
     variable errs : natural := 0;
@@ -219,6 +247,19 @@ begin
       report "FAIL STATUS final = " & to_hstring(v) severity error;
       errs := errs + 1;
     end if;
+
+    -- dominio dp parado: el CMD no se confirma nunca -> timeout, sin cuelgue
+    rst_dp <= '1';
+    wait for 100 ns;
+    wr(16#0C#, x"00000002");
+    wr(16#0C#, x"00000002");                  -- colgaria sin timeout
+    rd(16#10#, v);
+    if v(10) /= '1' then
+      report "FAIL: CMD_TIMEOUT no activo con el dominio dp en reset" severity error;
+      errs := errs + 1;
+    end if;
+    wait until rising_edge(clk_dp); rst_dp <= '0';
+    errs := errs + axi_errs;
 
     if errs = 0 then
       if BRIDGE then report "LAYER4MMIO_PASS STATUS=0x" & to_hstring(v);

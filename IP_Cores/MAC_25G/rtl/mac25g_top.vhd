@@ -10,7 +10,7 @@
 --   0x0C CMD         W   b0 SOFT_RESET b1 CNT_CLEAR b2 GEN_START b3 GEN_STOP
 --                        b4 INJ   (lee 0)
 --   0x10 STATUS      RO  b0 LINK_UP b1 GEN_BUSY b2 GEN_DONE b3 RX_ACTIVE
---                        b4 TX_ACTIVE b8 SNAP_DONE b9 CMD_BUSY
+--                        b4 TX_ACTIVE b8 SNAP_DONE b9 CMD_BUSY b10 CMD_TIMEOUT
 --                        (CMD_BUSY: el ultimo CMD aun no se ha ejecutado en el
 --                        dominio dp; mientras vale 1, GEN_DONE lee 0 y GEN_BUSY
 --                        lee 1, para que un sondeo inmediato no vea el estado
@@ -30,9 +30,13 @@
 --     avisa al dominio dp, que en ese momento CAPTURA tambien CTRL y toda la
 --     configuracion (estables: se escribieron antes que CMD). La
 --     configuracion entra en vigor en la siguiente escritura de CMD.
---     Una escritura a CMD no se acepta (awready retenido) mientras el CMD
---     anterior no se haya ejecutado en el dominio dp (CMD_BUSY): ningun
---     comando se pierde ni se reordena aunque el software escriba seguido.
+--     Mientras el CMD anterior no se haya ejecutado en el dominio dp
+--     (CMD_BUSY) no se acepta NINGUNA escritura (awready retenido): ningun
+--     comando se pierde ni se reordena y la configuracion no cambia mientras
+--     el dominio dp la captura. Si el dominio dp no confirma en 256 ciclos
+--     de aclk (clk_dp parado o en reset) CMD_BUSY se libera y se marca
+--     STATUS.CMD_TIMEOUT: el bus nunca queda bloqueado.
+--   * AXI: B y R se activan el ciclo DESPUES del handshake de AW/W y AR.
 --   * SNAP: toggle a dp, dp copia los 16 contadores a una sombra estable y
 --     devuelve un evento; el AXI lee la sombra directamente (estable).
 --   * STATUS: doble FF por bit. IRQ: mac25g_evsync (sin perdida de eventos).
@@ -92,6 +96,8 @@ architecture rtl of mac25g_top is
   signal p_cmd, p_snap : std_logic := '0';
   signal snap_done  : std_logic := '0';
   signal cmd_busy   : std_logic := '0';
+  signal cmd_tmo    : unsigned(7 downto 0) := (others => '0');
+  signal cmd_err    : std_logic := '0';
 
   -- estado sincronizado a AXI
   signal a_link, a_busy, a_done, a_rx, a_tx : std_logic;
@@ -106,7 +112,7 @@ architecture rtl of mac25g_top is
   signal c_cmd      : std_logic_vector(4 downto 0) := (others => '0');
   signal c_go       : std_logic := '0';
   signal dp_soft, dp_clr, dp_start, dp_stop, dp_inj : std_logic := '0';
-  signal dp_rst     : std_logic;
+  signal dp_rst     : std_logic := '1';
   signal st_link, st_busy, st_done, st_rx, st_tx : std_logic;
   signal ev_done, ev_crc, ev_chk, ev_ll : std_logic;
   signal cnt_flat   : std_logic_vector(16*32-1 downto 0);
@@ -116,6 +122,8 @@ architecture rtl of mac25g_top is
 
   attribute DONT_TOUCH : string;
   attribute DONT_TOUCH of shadow : signal is "TRUE";
+  attribute MAX_FANOUT : integer;
+  attribute MAX_FANOUT of dp_rst : signal is 64;
 begin
   rst_axi <= not s_axi_aresetn;
 
@@ -139,7 +147,7 @@ begin
         r_lmax <= std_logic_vector(to_unsigned(1514, 11));
         r_lstep <= std_logic_vector(to_unsigned(37, 11));
         r_count <= std_logic_vector(to_unsigned(64, 32));
-        snap_done <= '0'; cmd_busy <= '0';
+        snap_done <= '0'; cmd_busy <= '0'; cmd_tmo <= (others => '0'); cmd_err <= '0';
       else
         -- stickies de IRQ (set por eventos sincronizados)
         if a_ev_done = '1' then r_irq_st(0) <= '1'; end if;
@@ -148,21 +156,28 @@ begin
         if a_ev_ll   = '1' then r_irq_st(3) <= '1'; end if;
         if a_snap_ack = '1' then snap_done <= '1'; end if;
         -- CMD_BUSY: desde la escritura de CMD hasta que el dominio dp confirma
-        -- que lo ejecuto (y el estado ya refleja el comando)
-        if a_cmd_ack = '1' then cmd_busy <= '0'; end if;
+        -- que lo ejecuto (y el estado ya refleja el comando), con timeout
+        if a_cmd_ack = '1' then
+          cmd_busy <= '0'; cmd_err <= '0';
+        elsif cmd_busy = '1' then
+          if cmd_tmo = 255 then cmd_busy <= '0'; cmd_err <= '1';
+          else cmd_tmo <= cmd_tmo + 1; end if;
+        end if;
+        -- respuesta B el ciclo siguiente al handshake AW/W
+        if awready_i = '1' then bvalid_i <= '1'; end if;
 
-        -- una escritura a CMD espera a que el CMD anterior se haya ejecutado
-        -- (awready retenido): el orden de comandos queda garantizado en HW
+        -- ninguna escritura se acepta mientras un CMD esta en vuelo (awready
+        -- retenido): orden de comandos y estabilidad de la config en HW
         if s_axi_awvalid = '1' and s_axi_wvalid = '1' and bvalid_i = '0' and
-           not (s_axi_awaddr(7 downto 2) = "000011" and cmd_busy = '1') then
-          awready_i <= '1'; wready_i <= '1'; bvalid_i <= '1';
+           awready_i = '0' and cmd_busy = '0' then
+          awready_i <= '1'; wready_i <= '1';
           a := s_axi_awaddr;
           case a(7 downto 2) is
             when "000001" => r_scratch <= s_axi_wdata;
             when "000010" => r_ctrl <= s_axi_wdata(3 downto 0);
             when "000011" =>
               r_cmd <= s_axi_wdata(4 downto 0);
-              p_cmd <= '1'; cmd_busy <= '1';
+              p_cmd <= '1'; cmd_busy <= '1'; cmd_tmo <= (others => '0');
             when "000101" =>
               -- RW1C (un evento del mismo ciclo gana)
               for i in 0 to 3 loop
@@ -199,8 +214,10 @@ begin
       arready_i <= '0';
       if s_axi_aresetn = '0' then
         rvalid_i <= '0'; rdata_i <= (others => '0');
+      elsif arready_i = '1' then
+        rvalid_i <= '1';                       -- R el ciclo siguiente a AR
       elsif s_axi_arvalid = '1' and rvalid_i = '0' then
-        arready_i <= '1'; rvalid_i <= '1';
+        arready_i <= '1';
         a := s_axi_araddr;
         if a(7 downto 6) = "01" then
           idx := to_integer(unsigned(a(5 downto 2)));
@@ -213,7 +230,8 @@ begin
             when "000100" =>
               rdata_i <= (0 => a_link, 1 => a_busy or cmd_busy,
                           2 => a_done and not cmd_busy, 3 => a_rx,
-                          4 => a_tx, 8 => snap_done, 9 => cmd_busy, others => '0');
+                          4 => a_tx, 8 => snap_done, 9 => cmd_busy,
+                          10 => cmd_err, others => '0');
             when "000101" => rdata_i <= x"0000000" & r_irq_st;
             when "000110" => rdata_i <= x"0000000" & r_irq_en;
             when "001000" => rdata_i <= r_mac_lo;
@@ -287,7 +305,13 @@ begin
     end if;
   end process;
 
-  dp_rst <= rst_dp or dp_soft;
+  -- reset del datapath registrado (gran fanout: MAX_FANOUT replica)
+  process(clk_dp)
+  begin
+    if rising_edge(clk_dp) then
+      dp_rst <= rst_dp or dp_soft;
+    end if;
+  end process;
 
   -----------------------------------------------------------------------------
   -- datapath
