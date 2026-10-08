@@ -9,7 +9,8 @@
 --   R2 framer : ensambla palabras con 1 palabra retenida (para marcar 'last'
 --               en T0 y para abortos); detecta errores de protocolo
 --   R3 crc    : CRC acumulado (incluye FCS), longitud, decision de filtro
---   R4 crc_n  : CRC de la ultima palabra (8 arboles + mux)
+--   R4 crc_n  : las 8 variantes del CRC de la ultima palabra, registradas
+--   R4b       : comparacion de cada variante con el residuo (8 bits)
 --   R5 class  : residuo 0xDEBB20E3, runt (<64), oversize (>1522), aborto;
 --               un unico contador por trama con prioridad
 --               aborto > runt > oversize > crc
@@ -103,11 +104,17 @@ architecture rtl of mac25g_rx is
   signal r3_n    : unsigned(3 downto 0) := (others => '0');
   signal r3_crc  : std_logic_vector(31 downto 0) := (others => '0');
   signal r3_len  : unsigned(15 downto 0) := (others => '0');
-  -- R4
+  -- R4 (variantes)
+  signal rv_v, rv_last, rv_ab, rv_acc : std_logic := '0';
+  signal rv_d    : std_logic_vector(63 downto 0) := (others => '0');
+  signal rv_n    : unsigned(3 downto 0) := (others => '0');
+  signal rv_var  : crc_var_t := (others => (others => '0'));
+  signal rv_len  : unsigned(15 downto 0) := (others => '0');
+  -- R4b (residuo por variante)
   signal r4_v, r4_last, r4_ab, r4_acc : std_logic := '0';
   signal r4_d    : std_logic_vector(63 downto 0) := (others => '0');
   signal r4_n    : unsigned(3 downto 0) := (others => '0');
-  signal r4_res  : std_logic_vector(31 downto 0) := (others => '0');
+  signal r4_eq   : std_logic_vector(8 downto 1) := (others => '0');
   signal r4_len  : unsigned(15 downto 0) := (others => '0');
   -- R5
   signal r5_v, r5_last, r5_ab, r5_acc, r5_err : std_logic := '0';
@@ -271,8 +278,11 @@ begin
       if rst = '1' then
         r3_v <= '0'; crc_acc <= CRC_INIT; cnt <= (others => '0'); acc_r <= '0';
       elsif r2_v = '1' then
+        -- CRC_INIT es todo unos: el reinicio en sof es un OR que se pliega
+        -- en la primera capa de LUTs del arbol XOR
+        v_crc := crc_acc or (31 downto 0 => r2_sof);
         if r2_sof = '1' then
-          v_crc := CRC_INIT; v_cnt := (others => '0');
+          v_cnt := (others => '0');
           if promisc = '1' or r2_d(47 downto 0) = own_mac or
              r2_d(47 downto 0) = x"FFFFFFFFFFFF" then
             v_acc := '1';
@@ -281,7 +291,7 @@ begin
           end if;
           acc_r <= v_acc;
         else
-          v_crc := crc_acc; v_cnt := cnt; v_acc := acc_r;
+          v_cnt := cnt; v_acc := acc_r;
         end if;
         if r2_last = '0' then
           crc_acc <= crc_upd(v_crc, r2_d, 64);
@@ -295,18 +305,33 @@ begin
   end process;
 
   -----------------------------------------------------------------------------
-  -- R4: CRC de la ultima palabra
+  -- R4: las 8 variantes del CRC de la ultima palabra (ecuaciones planas)
   -----------------------------------------------------------------------------
   process(clk)
   begin
     if rising_edge(clk) then
-      r4_v <= r3_v;
-      if rst = '1' then
-        r4_v <= '0';
-      elsif r3_v = '1' then
-        r4_d <= r3_d; r4_n <= r3_n; r4_last <= r3_last; r4_ab <= r3_ab;
-        r4_acc <= r3_acc; r4_len <= r3_len;
-        r4_res <= crc_nbytes(r3_crc, r3_d, r3_n);
+      if rst = '1' then rv_v <= '0'; else rv_v <= r3_v; end if;
+      if r3_v = '1' then
+        rv_d <= r3_d; rv_n <= r3_n; rv_last <= r3_last; rv_ab <= r3_ab;
+        rv_acc <= r3_acc; rv_len <= r3_len;
+        rv_var <= crc_variants(r3_crc, r3_d);
+      end if;
+    end if;
+  end process;
+
+  -----------------------------------------------------------------------------
+  -- R4b: cada variante contra el residuo 0xDEBB20E3
+  -----------------------------------------------------------------------------
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then r4_v <= '0'; else r4_v <= rv_v; end if;
+      if rv_v = '1' then
+        r4_d <= rv_d; r4_n <= rv_n; r4_last <= rv_last; r4_ab <= rv_ab;
+        r4_acc <= rv_acc; r4_len <= rv_len;
+        for k in 1 to 8 loop
+          if rv_var(k) = CRC_RESIDUE then r4_eq(k) <= '1'; else r4_eq(k) <= '0'; end if;
+        end loop;
       end if;
     end if;
   end process;
@@ -315,9 +340,17 @@ begin
   -- R5: clasificacion de la trama (un solo contador por trama)
   -----------------------------------------------------------------------------
   process(clk)
-    variable err : std_logic;
+    variable err, crc_ok : std_logic;
   begin
     if rising_edge(clk) then
+      -- eleccion de la variante con 'case' (nunca indexar con una senal)
+      case to_integer(r4_n) is
+        when 1 => crc_ok := r4_eq(1);  when 2 => crc_ok := r4_eq(2);
+        when 3 => crc_ok := r4_eq(3);  when 4 => crc_ok := r4_eq(4);
+        when 5 => crc_ok := r4_eq(5);  when 6 => crc_ok := r4_eq(6);
+        when 7 => crc_ok := r4_eq(7);  when 8 => crc_ok := r4_eq(8);
+        when others => crc_ok := '0';
+      end case;
       e_ok <= '0'; e_crc <= '0'; e_runt <= '0'; e_over <= '0';
       e_abort <= '0'; e_filt <= '0';
       r5_v <= r4_v;
@@ -334,7 +367,7 @@ begin
             e_runt <= '1'; err := '1';
           elsif r4_len > MAX_FRAME then
             e_over <= '1'; err := '1';
-          elsif r4_res /= CRC_RESIDUE then
+          elsif crc_ok = '0' then
             e_crc <= '1'; err := '1';
           else
             e_ok <= '1'; e_bytes <= r4_len;

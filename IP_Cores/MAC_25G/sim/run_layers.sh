@@ -39,8 +39,8 @@ RVS="$RV/riscv_pkg.vhd $RV/alu.vhd $RV/immgen.vhd $RV/regfile.vhd $RV/control.vh
      $RV/axi_ddr_sim.vhd"
 RTL="$PCS/pcs_scrambler.vhd $PCS/pcs_gearbox_tx.vhd $PCS/pcs_gearbox_rx.vhd \
      $PCS/pcs_tx_datapath.vhd $PCS/pcs_rx_datapath.vhd $PCS/pcs_mmio_bridge.vhd \
-     $HERE/rtl/mac25g_pkg.vhd $HERE/rtl/mac25g_pcs_tx.vhd $HERE/rtl/mac25g_gen.vhd \
-     $HERE/rtl/mac25g_tx.vhd $HERE/rtl/mac25g_rx.vhd $HERE/rtl/mac25g_chk.vhd \
+     $HERE/rtl/mac25g_crc_pkg.vhd $HERE/rtl/mac25g_pkg.vhd $HERE/rtl/mac25g_pcs_tx.vhd $HERE/rtl/mac25g_gen.vhd \
+     $HERE/rtl/mac25g_tx.vhd $HERE/rtl/mac25g_rx.vhd $HERE/rtl/mac25g_chk.vhd $HERE/rtl/mac25g_pcs66.vhd \
      $HERE/rtl/mac25g_datapath.vhd $HERE/rtl/mac25g_sync.vhd \
      $HERE/rtl/mac25g_top.vhd $HERE/rtl/soc_top_mac.vhd"
 TBS="$HERE/tb/tb_mac_pkg.vhd $HERE/tb/tb_mac_pcs_tx.vhd $HERE/tb/tb_mac_tx.vhd \
@@ -88,6 +88,9 @@ run "L3 barrido fino/pad"    LAYER3_PASS  "$(sig L3C)" tb_mac_datapath -gVEC=l3_
 run "L3 oversize"            LAYER3_PASS  "$(sig L3D)" tb_mac_datapath -gVEC=l3_l3d.txt \
     -gLEN_MIN=1400 -gLEN_MAX=1700 -gSTEP=23 -gNFR=24
 run "L3 GEN_STOP + rafaga"    LAYER3_PASS  "$(sig L3A)" tb_mac_datapath -gSTOP_TEST=true
+run "L3 gearbox Core19 limpia" LAYER3_PASS "$(sig L3A)" tb_mac_datapath -gGEARBOX=true
+run "L3 gearbox Core19 inyec."  LAYER3_PASS "$(sig L3B)" tb_mac_datapath -gGEARBOX=true \
+    -gVEC=l3_l3b.txt -gINJ=true
 run "L4 registros AXI4-Lite"  LAYER4_PASS -              tb_mac_top
 run "L4 registros via MMIO"   LAYER4MMIO_PASS -          tb_mac_top -gBRIDGE=true
 run "L5 SoC + firmware RV32"  LAYER5SIM_PASS -           tb_soc_mac

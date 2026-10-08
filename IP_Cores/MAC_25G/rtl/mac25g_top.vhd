@@ -105,6 +105,8 @@ architecture rtl of mac25g_top is
 
   -- ---- dominio dp ----
   signal d_cmd_stb, d_snap_stb : std_logic;
+  -- strobes registrados y replicados: capturan 48+512 registros (CE)
+  signal cmd_stb_r, snap_stb_r : std_logic := '0';
   signal c_ctrl     : std_logic_vector(3 downto 0) := (others => '0');
   signal c_mac, c_src : std_logic_vector(47 downto 0) := (others => '0');
   signal c_lmin, c_lmax, c_lstep : unsigned(10 downto 0) := (others => '0');
@@ -124,6 +126,8 @@ architecture rtl of mac25g_top is
   attribute DONT_TOUCH of shadow : signal is "TRUE";
   attribute MAX_FANOUT : integer;
   attribute MAX_FANOUT of dp_rst : signal is 64;
+  attribute MAX_FANOUT of cmd_stb_r : signal is 32;
+  attribute MAX_FANOUT of snap_stb_r : signal is 32;
 begin
   rst_axi <= not s_axi_aresetn;
 
@@ -279,12 +283,13 @@ begin
       if rst_dp = '1' then
         c_go <= '0'; c_ctrl <= (others => '0'); ack_d1 <= '0'; ack_d2 <= '0';
       else
-        c_go <= d_cmd_stb;
+        cmd_stb_r <= d_cmd_stb;
+        c_go <= cmd_stb_r;
         -- confirmacion 2 ciclos despues de los pulsos: el generador ya
         -- actualizo busy/done cuando sale el ack
         ack_d1 <= c_go;
         ack_d2 <= ack_d1;
-        if d_cmd_stb = '1' then
+        if cmd_stb_r = '1' then
           c_ctrl  <= r_ctrl;
           c_cmd   <= r_cmd;
           c_mac   <= r_mac_hi & r_mac_lo;
@@ -333,7 +338,8 @@ begin
   begin
     if rising_edge(clk_dp) then
       d_snap_ack <= '0';
-      if d_snap_stb = '1' then
+      snap_stb_r <= d_snap_stb;
+      if snap_stb_r = '1' then
         shadow <= cnt_flat;
         d_snap_ack <= '1';
       end if;

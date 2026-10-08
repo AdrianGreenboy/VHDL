@@ -2,8 +2,9 @@
 -- HERCOSSNUX Core 20 - MAC 25G
 -- Paquete comun: constantes de bloque cl.49, CRC-32 Ethernet y xorshift64.
 --
--- Todas las funciones son recurrencias bit a bit desenrolladas con un numero
--- de bits CONSTANTE en cada llamada: sintetizan a arboles XOR planos.
+-- El CRC usa las ecuaciones XOR explicitas y balanceadas de mac25g_crc_pkg
+-- (generadas desde el oraculo): la forma recursiva bit a bit comparte nodos
+-- entre bits y Vivado la implemento con 10-11 niveles de LUT a 390.625 MHz.
 -- Deliberadamente NO hay tablas/constantes indexadas por senal (leccion de
 -- Vivado 2025.2.1 en esta familia: las busquedas indexadas en constantes se
 -- sintetizaron mal en silicio). Los tipos de bloque Tn se eligen con 'case'.
@@ -16,6 +17,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.mac25g_crc_pkg.all;
 
 package mac25g_pkg is
 
@@ -54,7 +56,13 @@ package mac25g_pkg is
                    d   : std_logic_vector(63 downto 0);
                    nbits : natural) return std_logic_vector;
 
-  -- CRC sobre los n bytes bajos de d, n = 1..8, con mux de 8 arboles.
+  -- las 8 variantes (1..8 bytes) en paralelo, para registrarlas y elegir
+  -- despues (el CRC parcial de la ultima palabra va en dos etapas)
+  type crc_var_t is array (1 to 8) of std_logic_vector(31 downto 0);
+  function crc_variants(crc : std_logic_vector(31 downto 0);
+                        d   : std_logic_vector(63 downto 0)) return crc_var_t;
+
+  -- CRC sobre los n bytes bajos de d, n = 1..8 (referencia, una etapa).
   function crc_nbytes(crc : std_logic_vector(31 downto 0);
                       d   : std_logic_vector(63 downto 0);
                       n   : unsigned(3 downto 0)) return std_logic_vector;
@@ -97,17 +105,30 @@ package body mac25g_pkg is
   function crc_upd(crc : std_logic_vector(31 downto 0);
                    d   : std_logic_vector(63 downto 0);
                    nbits : natural) return std_logic_vector is
-    variable s  : std_logic_vector(31 downto 0) := crc;
-    variable fb : std_logic;
+    variable r : std_logic_vector(31 downto 0);
   begin
-    for i in 0 to nbits - 1 loop
-      fb := s(0) xor d(i);
-      s  := '0' & s(31 downto 1);
-      if fb = '1' then
-        s := s xor CRC_POLY_R;
-      end if;
-    end loop;
-    return s;
+    case nbits is
+      when 8      => r := crc_d8(crc, d);
+      when 16     => r := crc_d16(crc, d);
+      when 24     => r := crc_d24(crc, d);
+      when 32     => r := crc_d32(crc, d);
+      when 40     => r := crc_d40(crc, d);
+      when 48     => r := crc_d48(crc, d);
+      when 56     => r := crc_d56(crc, d);
+      when others => r := crc_d64(crc, d);
+    end case;
+    return r;
+  end function;
+
+  function crc_variants(crc : std_logic_vector(31 downto 0);
+                        d   : std_logic_vector(63 downto 0)) return crc_var_t is
+    variable v : crc_var_t;
+  begin
+    v(1) := crc_d8(crc, d);  v(2) := crc_d16(crc, d);
+    v(3) := crc_d24(crc, d); v(4) := crc_d32(crc, d);
+    v(5) := crc_d40(crc, d); v(6) := crc_d48(crc, d);
+    v(7) := crc_d56(crc, d); v(8) := crc_d64(crc, d);
+    return v;
   end function;
 
   function crc_nbytes(crc : std_logic_vector(31 downto 0);

@@ -30,6 +30,13 @@ use ieee.numeric_std.all;
 use work.mac25g_pkg.all;
 
 entity mac25g_datapath is
+  generic (
+    -- false: PCS de 66 bits sin gearbox (interfaz de un GT con gearbox
+    --        interno; 1 bloque/ciclo = 25.78125 Gb/s a 390.625 MHz)
+    -- true : gearboxes de fabric 66<->64 del Core 19 (loopback de 64 bits,
+    --        32 bloques cada 33 ciclos = 25.0 Gb/s)
+    GEARBOX : boolean := false
+  );
   port (
     clk_dp    : in  std_logic;
     rst_dp    : in  std_logic;
@@ -78,8 +85,15 @@ architecture rtl of mac25g_datapath is
   -- TX MAC
   signal ce       : std_logic := '0';
   signal s_tvalid, s_tready : std_logic;
+  -- register slice AXIS (2 entradas) entre generador y MAC: el tready del MAC
+  -- no atraviesa el generador
+  signal rs_v, rs_sv : std_logic := '0';
+  signal rs_d, rs_sd : std_logic_vector(72 downto 0) := (others => '0');
+  signal rs_ready, rs_take : std_logic;
+  signal clr_r : std_logic := '1';
   attribute MAX_FANOUT : integer;
   attribute MAX_FANOUT of ce : signal is 32;
+  attribute MAX_FANOUT of clr_r : signal is 64;
   signal b_valid, b_isd : std_logic;
   signal b_pl     : std_logic_vector(63 downto 0);
   signal t_evf, t_evu : std_logic;
@@ -139,14 +153,36 @@ begin
 
   u_tx: entity work.mac25g_tx
     port map (clk=>clk_dp, rst=>rst_dp, ce=>ce,
-              s_tdata=>g_tdata, s_tkeep=>g_tkeep, s_tlast=>g_tlast,
+              s_tdata=>rs_d(63 downto 0), s_tkeep=>rs_d(71 downto 64),
+              s_tlast=>rs_d(72),
               s_tvalid=>s_tvalid, s_tready=>s_tready, inj=>inj,
               blk_valid=>b_valid, blk_payload=>b_pl, blk_is_data=>b_isd,
               ev_frame=>t_evf, ev_bytes=>t_evb, ev_underrun=>t_evu);
 
   -- MAC_EN abre el paso de tramas (cuasi-estatico: se captura con CMD)
-  s_tvalid <= g_tvalid and mac_en;
-  g_tready <= s_tready and mac_en;
+  s_tvalid <= rs_v and mac_en;
+  rs_take  <= s_tready and mac_en;
+  rs_ready <= not rs_sv;                      -- registrado
+  g_tready <= rs_ready;
+
+  process(clk_dp)
+  begin
+    if rising_edge(clk_dp) then
+      if rst_dp = '1' then
+        rs_v <= '0'; rs_sv <= '0';
+      elsif rs_take = '1' or rs_v = '0' then
+        -- la salida se vacia (o esta vacia): cargar desde skid o entrada
+        if rs_sv = '1' then
+          rs_d <= rs_sd; rs_v <= '1'; rs_sv <= '0';
+        else
+          rs_d <= g_tlast & g_tkeep & g_tdata; rs_v <= g_tvalid;
+        end if;
+      elsif g_tvalid = '1' and rs_sv = '0' then
+        -- salida retenida: la palabra aceptada va al skid
+        rs_sd <= g_tlast & g_tkeep & g_tdata; rs_sv <= '1';
+      end if;
+    end if;
+  end process;
 
   -- FIFO 8 + registro de salida (FWFT)
   process(clk_dp)
@@ -184,32 +220,63 @@ begin
   end process;
 
   -----------------------------------------------------------------------------
-  -- PCS 64B/66B: TX a tasa de linea (mac25g_pcs_tx, scrambler+gearbox del
-  -- Core 19) y RX del Core 19 sin modificar
+  -- PCS 64B/66B
   -----------------------------------------------------------------------------
-  u_pcs_tx: entity work.mac25g_pcs_tx
-    port map (clk=>clk_dp, rst=>rst_dp,
-              in_valid=>o_v, in_payload=>o_blk(63 downto 0), in_is_data=>o_blk(64),
-              in_ready=>pt_ready, out_valid=>pt_ovalid, out_word=>pt_oword);
+  g_gb: if GEARBOX generate
+    -- TX a tasa de linea (mac25g_pcs_tx: scrambler + gearbox del Core 19) y
+    -- RX del Core 19 sin modificar, con loopback de palabras de 64 bits
+    u_pcs_tx: entity work.mac25g_pcs_tx
+      port map (clk=>clk_dp, rst=>rst_dp,
+                in_valid=>o_v, in_payload=>o_blk(63 downto 0), in_is_data=>o_blk(64),
+                in_ready=>pt_ready, out_valid=>pt_ovalid, out_word=>pt_oword);
 
-  -- loopback paralelo registrado (mismo esquema que el Core 19)
-  process(clk_dp)
-  begin
-    if rising_edge(clk_dp) then
-      if rst_dp = '1' then
-        loop_word <= (others => '0'); loop_valid <= '0';
-      else
+    process(clk_dp)
+    begin
+      if rising_edge(clk_dp) then
+        if rst_dp = '1' then
+          loop_valid <= '0';
+        else
+          loop_valid <= pt_ovalid and loopback;
+        end if;
         if loopback = '1' then loop_word <= pt_oword;
         else loop_word <= (others => '0'); end if;
-        loop_valid <= pt_ovalid and loopback;
       end if;
-    end if;
-  end process;
+    end process;
 
-  u_pcs_rx: entity work.pcs_rx_datapath
-    port map (clk=>clk_dp, rst=>rst_dp,
-              in_valid=>loop_valid, in_word=>loop_word, in_ready=>pr_ready,
-              out_valid=>pr_valid, out_payload=>pr_pl, out_is_data=>pr_isd);
+    u_pcs_rx: entity work.pcs_rx_datapath
+      port map (clk=>clk_dp, rst=>rst_dp,
+                in_valid=>loop_valid, in_word=>loop_word, in_ready=>pr_ready,
+                out_valid=>pr_valid, out_payload=>pr_pl, out_is_data=>pr_isd);
+  end generate;
+
+  g_66: if not GEARBOX generate
+    -- bloque de 66 bits por ciclo (como el gearbox interno de un GT)
+    signal b66_v, l66_v : std_logic := '0';
+    signal b66, l66 : std_logic_vector(65 downto 0) := (others => '0');
+  begin
+    pt_ready <= '1';
+    u_pcs_tx: entity work.mac25g_pcs66_tx
+      port map (clk=>clk_dp, rst=>rst_dp,
+                in_valid=>o_v, in_payload=>o_blk(63 downto 0), in_is_data=>o_blk(64),
+                out_valid=>b66_v, out_block=>b66);
+
+    process(clk_dp)
+    begin
+      if rising_edge(clk_dp) then
+        if rst_dp = '1' then
+          l66_v <= '0';
+        else
+          l66_v <= b66_v and loopback;
+        end if;
+        if loopback = '1' then l66 <= b66; else l66 <= (others => '0'); end if;
+      end if;
+    end process;
+
+    u_pcs_rx: entity work.mac25g_pcs66_rx
+      port map (clk=>clk_dp, rst=>rst_dp,
+                in_valid=>l66_v, in_block=>l66,
+                out_valid=>pr_valid, out_payload=>pr_pl, out_is_data=>pr_isd);
+  end generate;
 
   -----------------------------------------------------------------------------
   -- MAC RX + checker
@@ -242,7 +309,8 @@ begin
   begin
     if rising_edge(clk_dp) then
       p_lnk_lo <= '0'; p_done <= '0';
-      if rst_dp = '1' or cnt_clear = '1' then
+      clr_r <= rst_dp or cnt_clear;           -- clear registrado y replicado
+      if clr_r = '1' then
         cnt <= (others => (others => '0'));
         rx_act <= '0'; tx_act <= '0';
         if rst_dp = '1' then lnk_d <= '0'; done_d <= '0'; end if;

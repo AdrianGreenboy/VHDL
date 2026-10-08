@@ -9,7 +9,9 @@
 --
 --   A  framer : token START, palabras, padding a 60 B, 2 ranuras de hueco
 --   B  CRC    : acumula CRC-32 sobre palabras completas (lazo de 64 bits)
---   C  FCS    : CRC de la ultima palabra (n = 1..8 bytes), fuera del lazo
+--   C  FCS    : las 8 variantes del CRC de la ultima palabra (1..8 bytes),
+--               registradas (ecuaciones XOR planas, fuera del lazo)
+--   C2 FCS    : eleccion de la variante por n y complemento
 --   D  merge  : inserta las 4 bytes de FCS; si no caben, las desborda a la
 --               ranura siguiente (que A garantiza que es un hueco)
 --   E  encoder: S / D / T0..T7 / I / E  (cl.49)
@@ -81,7 +83,13 @@ architecture rtl of mac25g_tx is
   signal b_n     : unsigned(3 downto 0) := (others => '0');
   signal b_last  : std_logic := '0';
   signal b_crc   : std_logic_vector(31 downto 0) := (others => '0');
-  -- etapa C
+  -- etapa C (variantes)
+  signal cv_kind : std_logic_vector(1 downto 0) := K_BUB;
+  signal cv_data : std_logic_vector(63 downto 0) := (others => '0');
+  signal cv_n    : unsigned(3 downto 0) := (others => '0');
+  signal cv_last : std_logic := '0';
+  signal cv_var  : crc_var_t := (others => (others => '0'));
+  -- etapa C2 (eleccion)
   signal c_kind  : std_logic_vector(1 downto 0) := K_BUB;
   signal c_data  : std_logic_vector(63 downto 0) := (others => '0');
   signal c_n     : unsigned(3 downto 0) := (others => '0');
@@ -123,8 +131,7 @@ begin
       r_evu <= '0';
       if rst = '1' then
         a_st <= SA_IDLE; wcnt <= (others => '0');
-        a_kind <= K_BUB; a_last <= '0'; a_n <= (others => '0');
-        a_data <= (others => '0');
+        a_kind <= K_BUB; a_last <= '0';
       elsif ce = '1' then
         -- por defecto: hueco
         a_kind <= K_BUB;
@@ -205,32 +212,62 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         crc_acc <= CRC_INIT; b_kind <= K_BUB; b_last <= '0';
-        b_n <= (others => '0'); b_data <= (others => '0');
-        b_crc <= (others => '0');
       elsif ce = '1' then
-        b_kind <= a_kind; b_data <= a_data; b_n <= a_n; b_last <= a_last;
-        b_crc  <= crc_acc;
+        b_kind <= a_kind; b_last <= a_last;
         if a_kind = K_STRT then
           crc_acc <= CRC_INIT;
         elsif a_kind = K_DATA and a_last = '0' then
           crc_acc <= crc_upd(crc_acc, a_data, 64);
         end if;
       end if;
+      if ce = '1' then                       -- datos sin reset
+        b_data <= a_data; b_n <= a_n; b_crc <= crc_acc;
+      end if;
     end if;
   end process;
 
   -----------------------------------------------------------------------------
-  -- Etapa C: FCS de la ultima palabra (8 arboles + mux, fuera del lazo)
+  -- Etapa C: las 8 variantes del CRC de la ultima palabra, registradas
+  -- (los registros de datos no llevan reset: menos fanout del reset)
   -----------------------------------------------------------------------------
   process(clk)
   begin
     if rising_edge(clk) then
       if rst = '1' then
-        c_kind <= K_BUB; c_last <= '0'; c_n <= (others => '0');
-        c_data <= (others => '0'); c_fcs <= (others => '0');
+        cv_kind <= K_BUB; cv_last <= '0';
       elsif ce = '1' then
-        c_kind <= b_kind; c_data <= b_data; c_n <= b_n; c_last <= b_last;
-        c_fcs  <= not crc_nbytes(b_crc, b_data, b_n);
+        cv_kind <= b_kind; cv_last <= b_last;
+      end if;
+      if ce = '1' then
+        cv_data <= b_data; cv_n <= b_n;
+        cv_var  <= crc_variants(b_crc, b_data);
+      end if;
+    end if;
+  end process;
+
+  -----------------------------------------------------------------------------
+  -- Etapa C2: eleccion de la variante (mux 8:1) y complemento -> FCS
+  -----------------------------------------------------------------------------
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        c_kind <= K_BUB; c_last <= '0';
+      elsif ce = '1' then
+        c_kind <= cv_kind; c_last <= cv_last;
+      end if;
+      if ce = '1' then
+        c_data <= cv_data; c_n <= cv_n;
+        case to_integer(cv_n) is
+          when 1      => c_fcs <= not cv_var(1);
+          when 2      => c_fcs <= not cv_var(2);
+          when 3      => c_fcs <= not cv_var(3);
+          when 4      => c_fcs <= not cv_var(4);
+          when 5      => c_fcs <= not cv_var(5);
+          when 6      => c_fcs <= not cv_var(6);
+          when 7      => c_fcs <= not cv_var(7);
+          when others => c_fcs <= not cv_var(8);
+        end case;
       end if;
     end if;
   end process;
@@ -243,9 +280,7 @@ begin
   begin
     if rising_edge(clk) then
       if rst = '1' then
-        d_kind <= K_BUB; d_last <= '0'; d_n <= (others => '0');
-        d_data <= (others => '0'); sp_v <= '0';
-        sp_data <= (others => '0'); sp_n <= (others => '0');
+        d_kind <= K_BUB; d_last <= '0'; sp_v <= '0';
       elsif ce = '1' then
         if c_kind = K_DATA and c_last = '1' then
           v := x"00000000" & c_data;          -- bytes >= n ya son cero
@@ -290,7 +325,7 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         pend_t0 <= '0'; dblk <= (others => '0'); inj_arm <= '0'; inj_pend <= '0';
-        o_valid <= '0'; o_pl <= IDLE_BLOCK; o_isd <= '0';
+        o_valid <= '0'; o_isd <= '0';
       else
         o_valid <= ce;
         if inj = '1' then inj_pend <= '1'; end if;

@@ -30,7 +30,8 @@ entity tb_mac_datapath is
     STEP    : natural := 37;
     NFR     : natural := 64;
     INJ     : boolean := false;
-    STOP_TEST : boolean := false
+    STOP_TEST : boolean := false;
+    GEARBOX : boolean := false
   );
 end entity;
 
@@ -50,6 +51,7 @@ begin
   clk <= not clk after T/2 when not done_sim;
 
   dut: entity work.mac25g_datapath
+    generic map (GEARBOX => GEARBOX)
     port map (clk_dp=>clk, rst_dp=>rst, mac_en=>'1', loopback=>'1', promisc=>'0',
               gen_cont=>cont, own_mac=>OWN, src_mac=>SRC,
               len_min=>to_unsigned(LEN_MIN, 11), len_max=>to_unsigned(LEN_MAX, 11),

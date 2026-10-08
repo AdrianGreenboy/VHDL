@@ -56,6 +56,7 @@ architecture rtl of mac25g_gen is
   signal eff_min, eff_max, step : unsigned(10 downto 0) := (others => '0');
   signal ln       : unsigned(10 downto 0) := (others => '0');   -- trama actual
   signal ln_nx    : unsigned(10 downto 0) := (others => '0');   -- siguiente
+  signal ln_sum   : unsigned(11 downto 0) := (others => '0');
   signal lastw    : unsigned(8 downto 0) := (others => '0');    -- indice ultima palabra
   signal lastn    : unsigned(3 downto 0) := (others => '0');    -- bytes ultima palabra
   signal seq      : unsigned(31 downto 0) := (others => '0');
@@ -92,14 +93,15 @@ architecture rtl of mac25g_gen is
   end function;
 begin
 
-  -- longitud siguiente del barrido (precalculada, fuera del handshake)
+  -- longitud siguiente del barrido, precalculada en DOS etapas (suma y
+  -- comparacion): vale 2 ciclos despues de cambiar 'ln', y la siguiente
+  -- frontera de trama llega como pronto 3 ciclos despues (>= 3 palabras)
   process(clk)
-    variable s : unsigned(11 downto 0);
   begin
     if rising_edge(clk) then
-      s := ('0' & ln) + ('0' & step);
-      if s > ('0' & eff_max) then ln_nx <= eff_min;
-      else ln_nx <= s(10 downto 0); end if;
+      ln_sum <= ('0' & ln) + ('0' & step);
+      if ln_sum > ('0' & eff_max) then ln_nx <= eff_min;
+      else ln_nx <= ln_sum(10 downto 0); end if;
     end if;
   end process;
 

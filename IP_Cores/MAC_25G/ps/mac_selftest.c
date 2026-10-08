@@ -14,8 +14,11 @@
  * DDR no-map son memoria de dispositivo (memcpy/memset dan SIGBUS ahi).
  *
  * Compilar: aarch64-linux-gnu-gcc -O2 -static mac_selftest.c -o mac-selftest
- * Uso:      mac-selftest [fw_rv32.bin] [base_axil_soc_hex]
- *           (por defecto /lib/firmware/mac25g/fw_rv32.bin y 0xA4000000)
+ * Uso:      mac-selftest [fw_rv32.bin] [base_axil_soc_hex] [clk_dp_MHz]
+ *           (por defecto /lib/firmware/mac25g/fw_rv32.bin, 0xA4000000 y
+ *           390.625; con el build de prueba a 200 MHz: ... 200)
+ * La firma no depende de la frecuencia (contadores deterministas); solo el
+ * rendimiento informado escala con clk_dp.
  * MIT License.
  * ==========================================================================*/
 #include <fcntl.h>
@@ -60,6 +63,7 @@ int main(int argc, char **argv)
 {
     const char *fwp = argc > 1 ? argv[1] : "/lib/firmware/mac25g/fw_rv32.bin";
     unsigned long base = argc > 2 ? strtoul(argv[2], NULL, 16) : 0xA4000000UL;
+    double fmhz = argc > 3 ? atof(argv[3]) : 390.625;
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) { perror("open /dev/mem"); return 1; }
     soc = mmap(NULL, SOC_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, base);
@@ -102,13 +106,14 @@ int main(int argc, char **argv)
         printf("%-16s: 0x%08X (%10u)  esperado 0x%08X %s\n", NAME[i], got[i], got[i],
                EXP[i], m ? "" : "<-- DISTINTO");
     }
-    /* rendimiento medido en el banco: gearbox de fabric a 390.625 MHz */
-    double secs = got[W_BURST] / 390.625e6;
+    /* rendimiento: 1 bloque de 66 bits por ciclo (GEARBOX=false) */
+    double secs = got[W_BURST] / (fmhz * 1e6);
     double gbps = secs > 0 ? got[3] * 8.0 / secs / 1e9 : 0.0;
-    printf("\nrafaga de %u tramas en %u ciclos de clk_dp (%.3f ms): L2+FCS = %.2f Gb/s\n",
-           got[2], got[W_BURST], secs * 1e3, gbps);
-    printf("(teorico del banco 23.52 Gb/s; en 25GBASE-R real el MAC da 24.26 Gb/s)\n\n");
-    printf(ok ? "L5 SILICON PASS - MAC 25G operativo a 390.625 MHz\n"
-              : "L5 SILICON FAIL\n");
+    printf("\nrafaga de %u tramas en %u ciclos de clk_dp a %.3f MHz (%.3f ms): "
+           "L2+FCS = %.2f Gb/s\n", got[2], got[W_BURST], fmhz, secs * 1e3, gbps);
+    printf("(teorico: %.2f Gb/s; 24.26 Gb/s a 390.625 MHz = 25GBASE-R)\n\n",
+           24.26 * fmhz / 390.625);
+    printf(ok ? "L5 SILICON PASS - MAC 25G operativo a %.3f MHz\n"
+              : "L5 SILICON FAIL\n", fmhz);
     return ok ? 0 : 1;
 }

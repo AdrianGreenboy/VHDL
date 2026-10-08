@@ -23,8 +23,8 @@ VEC = os.path.join(os.environ.get("MAC25G_SIM", "/tmp/mac25g_sim"), "vec")
 
 PCS_FILES = ["pcs_scrambler.vhd", "pcs_gearbox_tx.vhd", "pcs_gearbox_rx.vhd",
              "pcs_tx_datapath.vhd", "pcs_rx_datapath.vhd", "pcs_mmio_bridge.vhd"]
-MAC_FILES = ["mac25g_pkg.vhd", "mac25g_pcs_tx.vhd", "mac25g_gen.vhd",
-             "mac25g_tx.vhd", "mac25g_rx.vhd", "mac25g_chk.vhd",
+MAC_FILES = ["mac25g_crc_pkg.vhd", "mac25g_pkg.vhd", "mac25g_pcs_tx.vhd", "mac25g_gen.vhd",
+             "mac25g_tx.vhd", "mac25g_rx.vhd", "mac25g_chk.vhd", "mac25g_pcs66.vhd",
              "mac25g_datapath.vhd", "mac25g_sync.vhd", "mac25g_top.vhd"]
 TB_FILES = ["tb_mac_pkg.vhd", "tb_mac_pcs_tx.vhd", "tb_mac_tx.vhd",
             "tb_mac_rx.vhd", "tb_mac_chk.vhd", "tb_mac_datapath.vhd",
@@ -35,8 +35,8 @@ TXB = ["-gVEC=tx_txb.txt", "-gLEN_MIN=20", "-gLEN_MAX=90", "-gSTEP=1", "-gNFR=71
 
 # (id, descripcion, fichero, texto original, texto mutado, tb, generics, PASS)
 MUTS = [
-    ("M01", "polinomio CRC alterado", "mac25g_pkg.vhd",
-     'x"EDB88320"', 'x"EDB88321"', "tb_mac_pkg", [], "LAYER1A_PASS"),
+    ("M01", "ecuacion CRC alterada (crc_d64 bit 0)", "mac25g_crc_pkg.vhd",
+     '    r(0) := (c(2) xor (c(8) xor d(2)));', '    r(0) := not (c(2) xor (c(8) xor d(2)));', "tb_mac_pkg", [], "LAYER1A_PASS"),
     ("M02", "tipo T3 erroneo (0xB4->0xB5)", "mac25g_pkg.vhd",
      'when 3 => t := x"B4";', 'when 3 => t := x"B5";', "tb_mac_tx", [], "LAYER2A_PASS"),
     ("M03", "un solo hueco tras la trama (IPG corto)", "mac25g_tx.vhd",
@@ -45,8 +45,8 @@ MUTS = [
     ("M04", "padding: umbral de la 8a palabra", "mac25g_tx.vhd",
      "(wcnt = 7 and n >= 4)", "(wcnt = 7 and n >= 3)", "tb_mac_tx", TXB, "LAYER2A_PASS"),
     ("M05", "FCS sin complementar", "mac25g_tx.vhd",
-     "c_fcs  <= not crc_nbytes(b_crc, b_data, b_n);",
-     "c_fcs  <= crc_nbytes(b_crc, b_data, b_n);", "tb_mac_tx", [], "LAYER2A_PASS"),
+     "when others => c_fcs <= not cv_var(8);",
+     "when others => c_fcs <= cv_var(8);", "tb_mac_tx", [], "LAYER2A_PASS"),
     ("M06", "inyeccion en el bloque de datos 0", "mac25g_tx.vhd",
      "if dblk = 1 and inj_arm = '1' then", "if dblk = 0 and inj_arm = '1' then",
      "tb_mac_tx", ["-gVEC=tx_txc.txt", "-gNFR=16", "-gINJ=true"], "LAYER2A_PASS"),
@@ -65,7 +65,7 @@ MUTS = [
      "MAX_FRAME     : natural := 1522;", "MAX_FRAME     : natural := 1534;",
      "tb_mac_rx", [], "LAYER2B_PASS"),
     ("M12", "checker no avanza el patron", "mac25g_chk.vhd",
-     "p <= xorshift64(p);\n            rem_r", "p <= p;\n            rem_r",
+     "          p <= xorshift64(p);", "          p <= p;",
      "tb_mac_datapath", [], "LAYER3_PASS"),
     ("M13", "checker sin comprobar longitud", "mac25g_chk.vhd",
      "if x_tot /= lexp then bad := '1'; end if;", "null;",
@@ -104,6 +104,16 @@ MUTS = [
      "pend <= '0'; busy <= '0';            -- req NO: ver cabecera",
      "pend <= '0'; busy <= '0'; req <= '0';",
      "tb_mac_sync", [], "LAYER1C_PASS"),
+    ("M25", "PCS 66b: sync header invertido solo en TX", "mac25g_pcs66.vhd",
+     "if in_is_data = '1' then sync_d1 <= \"01\"; else sync_d1 <= \"10\"; end if;",
+     "if in_is_data = '1' then sync_d1 <= \"10\"; else sync_d1 <= \"01\"; end if;",
+     "tb_mac_datapath", [], "LAYER3_PASS"),
+    ("M26", "register slice sin skid (pierde palabras)", "mac25g_datapath.vhd",
+     "rs_ready <= not rs_sv;", "rs_ready <= '1';",
+     "tb_mac_datapath", [], "LAYER3_PASS"),
+    ("M27", "sof no reinicia el CRC del RX", "mac25g_rx.vhd",
+     "v_crc := crc_acc or (31 downto 0 => r2_sof);", "v_crc := crc_acc;",
+     "tb_mac_rx", [], "LAYER2B_PASS"),
     ("M19", "evento IRQ con toggle simple (sin handshake)", "mac25g_sync.vhd",
      "if busy = '1' and a2 = req then busy <= '0'; end if;", "busy <= '0';",
      "tb_mac_sync", [], "LAYER1C_PASS"),

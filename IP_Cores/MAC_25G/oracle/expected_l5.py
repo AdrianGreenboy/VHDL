@@ -53,11 +53,14 @@ def main():
     ideal = clean["tx_bytes"] / float(clean["tx_bytes"] + 20 * n)
     cyc = slots * 33 / 32
     bench = clean["tx_bytes"] * 8 / (cyc / 390.625e6) / 1e9
+    line = clean["tx_bytes"] * 8 / (slots / 390.625e6) / 1e9
     print("N=%d firma=0x%08X tx_bytes=%d slots=%d" % (n, w[22], clean["tx_bytes"], slots))
     print("  MAC: %.2f%% de las ranuras con L2+FCS -> %.2f Gb/s en 25GBASE-R "
           "(ideal 802.3 %.2f Gb/s, el MAC logra el %.1f%% del ideal)" %
           (100 * eff, 25.0 * eff, 25.0 * ideal, 100 * eff / ideal))
-    print("  banco (gearbox fabric a 390.625 MHz): ciclos ~%.0f -> %.2f Gb/s" %
+    print("  build por defecto (GEARBOX=false, 66 b/ciclo como un GT): ciclos ~%d "
+          "-> %.2f Gb/s" % (slots, line))
+    print("  GEARBOX=true (gearbox de fabric del Core 19): ciclos ~%.0f -> %.2f Gb/s" %
           (cyc, bench))
 
 

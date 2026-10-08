@@ -15,8 +15,8 @@
 -- Tramas con tuser=1 (mala segun el MAC): solo cuentan como chk_rxerr y
 -- avanzan la secuencia esperada.
 --
--- Pipeline: X0 registra la entrada y decodifica tkeep, X1 calcula el
--- desajuste por byte (registrado), X2 acumula y emite el veredicto.
+-- Pipeline: X0 registra la entrada y decodifica tkeep, X1a forma la palabra
+-- esperada, X1b compara byte a byte, X2 acumula y emite el veredicto.
 --
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -56,7 +56,15 @@ architecture rtl of mac25g_chk is
   signal rem_r  : signed(15 downto 0) := (others => '0');    -- len - 8*w (w>=2)
   signal seq_r  : unsigned(31 downto 0) := (others => '0');
   signal p      : std_logic_vector(63 downto 0) := (others => '0');
-  -- X1 -> X2
+  signal w0f    : std_logic := '1';
+  signal w1f, w2f : std_logic := '0';
+  signal padz_r : std_logic_vector(7 downto 0) := (others => '0');
+  -- X1a -> X1b
+  signal ya_v, ya_last, ya_user : std_logic := '0';
+  signal ya_d, ya_e : std_logic_vector(63 downto 0) := (others => '0');
+  signal ya_cm  : std_logic_vector(7 downto 0) := (others => '0');
+  signal ya_tot : unsigned(15 downto 0) := (others => '0');
+  -- X1b -> X2
   signal x_v, x_last, x_user : std_logic := '0';
   signal x_mm   : std_logic_vector(7 downto 0) := (others => '0');
   signal x_tot  : unsigned(15 downto 0) := (others => '0');
@@ -84,64 +92,95 @@ begin
     end if;
   end process;
 
-  -- X1: desajuste por byte
+  -- X1a: palabra esperada (ya con el padding a cero) y mascara de bytes.
+  -- La mascara de padding de cada palabra se calcula en la palabra ANTERIOR
+  -- (padz_r) y la palabra en curso se identifica con flags one-hot: el camino
+  -- registro -> e es un mux de 4 entradas y un AND, sin comparadores.
   process(clk)
-    variable e    : std_logic_vector(63 downto 0);
-    variable n    : unsigned(3 downto 0);
-    variable padz : std_logic_vector(7 downto 0);   -- '1' = byte de padding (debe ser 0)
-    variable cmpm : std_logic_vector(7 downto 0);   -- '1' = byte a comparar
-    variable mm   : std_logic_vector(7 downto 0);
+    variable e      : std_logic_vector(63 downto 0);
+    variable rem_nx : signed(15 downto 0);
     variable seq_now : std_logic_vector(31 downto 0);
+
+    function pad_mask(r : signed(15 downto 0)) return std_logic_vector is
+      variable m : std_logic_vector(7 downto 0);
+    begin
+      for b in 0 to 7 loop
+        if r <= b then m(b) := '1'; else m(b) := '0'; end if;
+      end loop;
+      return m;
+    end function;
+  begin
+    if rising_edge(clk) then
+      ya_v <= '0';
+      if rst = '1' or restart = '1' then
+        w <= (others => '0');
+        w0f <= '1'; w1f <= '0'; w2f <= '0';
+        padz_r <= (others => '0');
+      elsif i_v = '1' then
+        if w0f = '1' then
+          e := src(15 downto 0) & dst;
+        elsif w1f = '1' then
+          e := i_d(63 downto 48) & ETHERTYPE_GEN(7 downto 0) &
+               ETHERTYPE_GEN(15 downto 8) & src(47 downto 16);
+        elsif w2f = '1' then
+          seq_now := i_d(31 downto 0);
+          e := (not seq_now) & seq_now;
+        else
+          e := p;
+        end if;
+        for b in 0 to 7 loop
+          if padz_r(b) = '1' then e(8*b+7 downto 8*b) := x"00"; end if;
+        end loop;
+        ya_v <= '1'; ya_d <= i_d; ya_e <= e; ya_cm <= n_to_keep(i_n);
+        ya_last <= i_last; ya_user <= i_user;
+        ya_tot <= shift_left(resize(w, 16), 3) + resize(i_n, 16);
+
+        -- estado para la palabra siguiente
+        if w1f = '1' then
+          len_r  <= unsigned(i_d(63 downto 48));
+          rem_nx := signed(resize(unsigned(i_d(63 downto 48)), 16)) - 16;
+          rem_r  <= rem_nx;
+          padz_r <= pad_mask(rem_nx);
+        elsif w0f = '0' then
+          rem_nx := rem_r - 8;
+          rem_r  <= rem_nx;
+          padz_r <= pad_mask(rem_nx);
+        end if;
+        if w2f = '1' then
+          seq_r <= unsigned(i_d(31 downto 0));
+          p <= seed_of(i_d(31 downto 0));
+        elsif w0f = '0' and w1f = '0' then
+          p <= xorshift64(p);
+        end if;
+        if i_last = '1' then
+          w <= (others => '0');
+          w0f <= '1'; w1f <= '0'; w2f <= '0';
+          padz_r <= (others => '0');
+        else
+          if w /= 511 then w <= w + 1; end if;
+          w0f <= '0'; w1f <= w0f; w2f <= w1f;
+        end if;
+      end if;
+    end if;
+  end process;
+
+  -- X1b: desajuste por byte (comparacion de 8 bits por byte)
+  process(clk)
+    variable mm : std_logic_vector(7 downto 0);
   begin
     if rising_edge(clk) then
       x_v <= '0';
       if rst = '1' or restart = '1' then
-        w <= (others => '0');
-      elsif i_v = '1' then
-        n := i_n;
-        cmpm := n_to_keep(n);
-        padz := (others => '0');
-        e := p;
-        case to_integer(w) is
-          when 0 =>
-            e := src(15 downto 0) & dst;
-          when 1 =>
-            e := i_d(63 downto 48) & ETHERTYPE_GEN(7 downto 0) &
-                 ETHERTYPE_GEN(15 downto 8) & src(47 downto 16);
-            len_r <= unsigned(i_d(63 downto 48));
-            rem_r <= signed(resize(unsigned(i_d(63 downto 48)), 16)) - 16;
-          when 2 =>
-            seq_now := i_d(31 downto 0);
-            e := (not seq_now) & seq_now;
-            seq_r <= unsigned(seq_now);
-            p <= seed_of(seq_now);
-            rem_r <= rem_r - 8;
-          when others =>
-            p <= xorshift64(p);
-            rem_r <= rem_r - 8;
-        end case;
-        if w >= 2 then
-          for b in 0 to 7 loop
-            if rem_r <= b then padz(b) := '1'; end if;
-          end loop;
-        end if;
+        x_v <= '0';
+      elsif ya_v = '1' then
         for b in 0 to 7 loop
-          if padz(b) = '1' then
-            e(8*b+7 downto 8*b) := x"00";
-          end if;
-          if cmpm(b) = '1' and i_d(8*b+7 downto 8*b) /= e(8*b+7 downto 8*b) then
+          if ya_cm(b) = '1' and ya_d(8*b+7 downto 8*b) /= ya_e(8*b+7 downto 8*b) then
             mm(b) := '1';
           else
             mm(b) := '0';
           end if;
         end loop;
-        x_v <= '1'; x_mm <= mm; x_last <= i_last; x_user <= i_user;
-        x_tot <= shift_left(resize(w, 16), 3) + resize(n, 16);
-        if i_last = '1' then
-          w <= (others => '0');
-        elsif w /= 511 then
-          w <= w + 1;
-        end if;
+        x_v <= '1'; x_mm <= mm; x_last <= ya_last; x_user <= ya_user; x_tot <= ya_tot;
       end if;
     end if;
   end process;

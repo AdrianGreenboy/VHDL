@@ -114,7 +114,9 @@ architecture rtl of soc_top_mac is
   attribute ASYNC_REG : string;
   attribute ASYNC_REG of rstn_meta, rstn_sync     : signal is "TRUE";
   attribute ASYNC_REG of locked_meta, locked_sync : signal is "TRUE";
-  signal rst_dp : std_logic;
+  signal rst_dp : std_logic := '1';
+  attribute MAX_FANOUT : integer;
+  attribute MAX_FANOUT of rst_dp : signal is 32;
 
   -- puente MMIO <-> AXI-Lite del MAC (pcs_mmio_bridge del Core 19)
   signal p_awaddr, p_araddr : std_logic_vector(7 downto 0);
@@ -140,7 +142,14 @@ begin
       locked_sync <= locked_meta;
     end if;
   end process;
-  rst_dp <= not (rstn_sync and locked_sync);
+  -- reset del dominio dp REGISTRADO (Core 20): era combinacional y su fanout
+  -- (sincronizadores, captura de configuracion, eventos) fallaba a 390.625 MHz
+  process(clk_dp)
+  begin
+    if rising_edge(clk_dp) then
+      rst_dp <= not (rstn_sync and locked_sync);
+    end if;
+  end process;
 
   -- decodificacion de la region MAC: addr[31:28] = "1101" -> 0xD000_0000
   is_mac  <= '1' when dmem_addr(31 downto 28) = "1101" else '0';
