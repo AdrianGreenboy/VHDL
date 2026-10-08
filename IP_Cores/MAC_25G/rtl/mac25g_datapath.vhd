@@ -91,9 +91,16 @@ architecture rtl of mac25g_datapath is
   signal rs_d, rs_sd : std_logic_vector(72 downto 0) := (others => '0');
   signal rs_ready, rs_take : std_logic;
   signal clr_r : std_logic := '1';
+  -- eventos registrados un ciclo antes de los contadores (corta el camino
+  -- evento -> suma de 32 bits); los incrementos dobles ya precalculados
+  signal q_txf, q_rxok, q_crc, q_over, q_filt, q_proto : std_logic := '0';
+  signal q_cok, q_cbad, q_cseq, q_crxe, q_busy, q_und : std_logic := '0';
+  signal q_txb, q_rxb : unsigned(15 downto 0) := (others => '0');
+  signal q_runt, q_abort : unsigned(1 downto 0) := (others => '0');
   attribute MAX_FANOUT : integer;
   attribute MAX_FANOUT of ce : signal is 32;
   attribute MAX_FANOUT of clr_r : signal is 64;
+  attribute MAX_FANOUT of rs_take : signal is 32;
   signal b_valid, b_isd : std_logic;
   signal b_pl     : std_logic_vector(63 downto 0);
   signal t_evf, t_evu : std_logic;
@@ -302,6 +309,18 @@ begin
   -- contadores y estado
   -----------------------------------------------------------------------------
   process(clk_dp)
+  begin
+    if rising_edge(clk_dp) then
+      q_txf <= t_evf; q_txb <= t_evb; q_rxok <= e_ok; q_rxb <= e_bytes;
+      q_crc <= e_crc; q_over <= e_over; q_filt <= e_filt; q_proto <= e_proto;
+      q_cok <= c_ok; q_cbad <= c_bad; q_cseq <= c_seq; q_crxe <= c_rxe;
+      q_busy <= g_busy; q_und <= t_evu;
+      q_runt  <= ('0' & e_runt) + ('0' & e_r0);
+      q_abort <= ('0' & e_ab) + ('0' & e_a0);
+    end if;
+  end process;
+
+  process(clk_dp)
     procedure inc(signal c : inout unsigned(31 downto 0); en : std_logic) is
     begin
       if en = '1' then c <= c + 1; end if;
@@ -315,31 +334,29 @@ begin
         rx_act <= '0'; tx_act <= '0';
         if rst_dp = '1' then lnk_d <= '0'; done_d <= '0'; end if;
       else
-        if t_evf = '1' then
+        if q_txf = '1' then
           cnt(0) <= cnt(0) + 1;
-          cnt(1) <= cnt(1) + resize(t_evb, 32);
+          cnt(1) <= cnt(1) + resize(q_txb, 32);
           tx_act <= '1';
         end if;
-        if e_ok = '1' then
+        if q_rxok = '1' then
           cnt(2) <= cnt(2) + 1;
-          cnt(3) <= cnt(3) + resize(e_bytes, 32);
+          cnt(3) <= cnt(3) + resize(q_rxb, 32);
           rx_act <= '1';
         end if;
-        inc(cnt(4), e_crc);
+        inc(cnt(4), q_crc);
         -- runt/aborto pueden llegar de dos fuentes en el mismo ciclo
-        if e_runt = '1' and e_r0 = '1' then cnt(5) <= cnt(5) + 2;
-        elsif e_runt = '1' or e_r0 = '1' then cnt(5) <= cnt(5) + 1; end if;
-        inc(cnt(6), e_over);
-        if e_ab = '1' and e_a0 = '1' then cnt(7) <= cnt(7) + 2;
-        elsif e_ab = '1' or e_a0 = '1' then cnt(7) <= cnt(7) + 1; end if;
-        inc(cnt(8), e_filt);
-        inc(cnt(9), e_proto);
-        inc(cnt(10), c_ok);
-        inc(cnt(11), c_bad);
-        inc(cnt(12), c_seq);
-        inc(cnt(13), c_rxe);
-        inc(cnt(14), g_busy);
-        inc(cnt(15), t_evu);
+        cnt(5) <= cnt(5) + resize(q_runt, 32);
+        inc(cnt(6), q_over);
+        cnt(7) <= cnt(7) + resize(q_abort, 32);
+        inc(cnt(8), q_filt);
+        inc(cnt(9), q_proto);
+        inc(cnt(10), q_cok);
+        inc(cnt(11), q_cbad);
+        inc(cnt(12), q_cseq);
+        inc(cnt(13), q_crxe);
+        inc(cnt(14), q_busy);
+        inc(cnt(15), q_und);
       end if;
       if rst_dp = '0' then
         lnk_d  <= lnk;

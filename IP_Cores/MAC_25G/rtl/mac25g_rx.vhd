@@ -108,7 +108,8 @@ architecture rtl of mac25g_rx is
   signal rv_v, rv_last, rv_ab, rv_acc : std_logic := '0';
   signal rv_d    : std_logic_vector(63 downto 0) := (others => '0');
   signal rv_n    : unsigned(3 downto 0) := (others => '0');
-  signal rv_var  : crc_var_t := (others => (others => '0'));
+  signal rv_a    : crc_var_t := (others => (others => '0'));   -- parte del estado
+  signal rv_b    : crc_var_t := (others => (others => '0'));   -- parte de los datos
   signal rv_len  : unsigned(15 downto 0) := (others => '0');
   -- R4b (residuo por variante)
   signal r4_v, r4_last, r4_ab, r4_acc : std_logic := '0';
@@ -314,7 +315,8 @@ begin
       if r3_v = '1' then
         rv_d <= r3_d; rv_n <= r3_n; rv_last <= r3_last; rv_ab <= r3_ab;
         rv_acc <= r3_acc; rv_len <= r3_len;
-        rv_var <= crc_variants(r3_crc, r3_d);
+        rv_a <= crc_var_c(r3_crc);
+        rv_b <= crc_var_d(r3_d);
       end if;
     end if;
   end process;
@@ -330,7 +332,7 @@ begin
         r4_d <= rv_d; r4_n <= rv_n; r4_last <= rv_last; r4_ab <= rv_ab;
         r4_acc <= rv_acc; r4_len <= rv_len;
         for k in 1 to 8 loop
-          if rv_var(k) = CRC_RESIDUE then r4_eq(k) <= '1'; else r4_eq(k) <= '0'; end if;
+          if (rv_a(k) xor rv_b(k)) = CRC_RESIDUE then r4_eq(k) <= '1'; else r4_eq(k) <= '0'; end if;
         end loop;
       end if;
     end if;

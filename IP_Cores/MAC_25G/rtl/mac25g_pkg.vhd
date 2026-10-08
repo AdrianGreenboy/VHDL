@@ -61,6 +61,11 @@ package mac25g_pkg is
   type crc_var_t is array (1 to 8) of std_logic_vector(31 downto 0);
   function crc_variants(crc : std_logic_vector(31 downto 0);
                         d   : std_logic_vector(63 downto 0)) return crc_var_t;
+  -- las mismas 8 variantes separadas por linealidad: variante(k) =
+  -- crc_var_c(crc)(k) xor crc_var_d(d)(k). Registrar las dos mitades por
+  -- separado deja arboles de <= 34 terminos (2 niveles de LUT6).
+  function crc_var_c(crc : std_logic_vector(31 downto 0)) return crc_var_t;
+  function crc_var_d(d   : std_logic_vector(63 downto 0)) return crc_var_t;
 
   -- CRC sobre los n bytes bajos de d, n = 1..8 (referencia, una etapa).
   function crc_nbytes(crc : std_logic_vector(31 downto 0);
@@ -128,6 +133,26 @@ package body mac25g_pkg is
     v(3) := crc_d24(crc, d); v(4) := crc_d32(crc, d);
     v(5) := crc_d40(crc, d); v(6) := crc_d48(crc, d);
     v(7) := crc_d56(crc, d); v(8) := crc_d64(crc, d);
+    return v;
+  end function;
+
+  function crc_var_c(crc : std_logic_vector(31 downto 0)) return crc_var_t is
+    variable v : crc_var_t;
+  begin
+    v(1) := crc_d8_c(crc);  v(2) := crc_d16_c(crc);
+    v(3) := crc_d24_c(crc); v(4) := crc_d32_c(crc);
+    v(5) := crc_d40_c(crc); v(6) := crc_d48_c(crc);
+    v(7) := crc_d56_c(crc); v(8) := crc_d64_c(crc);
+    return v;
+  end function;
+
+  function crc_var_d(d : std_logic_vector(63 downto 0)) return crc_var_t is
+    variable v : crc_var_t;
+  begin
+    v(1) := crc_d8_d(d);  v(2) := crc_d16_d(d);
+    v(3) := crc_d24_d(d); v(4) := crc_d32_d(d);
+    v(5) := crc_d40_d(d); v(6) := crc_d48_d(d);
+    v(7) := crc_d56_d(d); v(8) := crc_d64_d(d);
     return v;
   end function;
 

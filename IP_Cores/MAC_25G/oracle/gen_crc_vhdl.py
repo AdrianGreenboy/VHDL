@@ -55,6 +55,8 @@ def main():
 -- CRC-32 Ethernet (reflejado, 0xEDB88320), estado c sin complementar, datos
 -- d bit 0 primero, sobre 8*k bits (k = 1..8). Una ecuacion XOR balanceada e
 -- independiente por bit de salida: ~3 niveles de LUT6 por bit.
+-- crc_dN_c / crc_dN_d: parte del estado y parte de los datos por separado
+-- (crc_dN = crc_dN_c xor crc_dN_d).
 -- MIT License.
 -------------------------------------------------------------------------------
 library ieee;
@@ -64,6 +66,12 @@ package mac25g_crc_pkg is""")
     for k in range(1, 9):
         out.append("  function crc_d%d(c : std_logic_vector(31 downto 0);\n"
                    "                  d : std_logic_vector(63 downto 0)) return std_logic_vector;"
+                   % (8 * k))
+        # por linealidad crc_dN(c, d) = crc_dN_c(c) xor crc_dN_d(d): permite
+        # registrar las dos mitades por separado (arboles mas bajos)
+        out.append("  function crc_d%d_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;"
+                   % (8 * k))
+        out.append("  function crc_d%d_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;"
                    % (8 * k))
     out.append("end package mac25g_crc_pkg;\n\npackage body mac25g_crc_pkg is")
     for k in range(1, 9):
@@ -77,6 +85,16 @@ package mac25g_crc_pkg is""")
             expr = balanced(terms) if terms else "'0'"
             out.append("    r(%d) := %s;" % (j, expr))
         out.append("    return r;\n  end function;")
+        for part, arg, decl in (("c", "c", "c : std_logic_vector(31 downto 0)"),
+                                ("d", "d", "d : std_logic_vector(63 downto 0)")):
+            out.append("\n  function crc_d%d_%s(%s) return std_logic_vector is\n"
+                       "    variable r : std_logic_vector(31 downto 0);\n  begin"
+                       % (nb, part, decl))
+            for j in range(32):
+                terms = [vname(v) for v in sorted(s[j], key=key) if v[0] == arg]
+                expr = balanced(terms) if terms else "'0'"
+                out.append("    r(%d) := %s;" % (j, expr))
+            out.append("    return r;\n  end function;")
     out.append("\nend package body mac25g_crc_pkg;")
     print("\n".join(out))
 

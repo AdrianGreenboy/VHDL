@@ -4,6 +4,8 @@
 -- CRC-32 Ethernet (reflejado, 0xEDB88320), estado c sin complementar, datos
 -- d bit 0 primero, sobre 8*k bits (k = 1..8). Una ecuacion XOR balanceada e
 -- independiente por bit de salida: ~3 niveles de LUT6 por bit.
+-- crc_dN_c / crc_dN_d: parte del estado y parte de los datos por separado
+-- (crc_dN = crc_dN_c xor crc_dN_d).
 -- MIT License.
 -------------------------------------------------------------------------------
 library ieee;
@@ -12,20 +14,36 @@ use ieee.std_logic_1164.all;
 package mac25g_crc_pkg is
   function crc_d8(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d8_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d8_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d16(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d16_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d16_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d24(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d24_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d24_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d32(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d32_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d32_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d40(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d40_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d40_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d48(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d48_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d48_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d56(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d56_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d56_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
   function crc_d64(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector;
+  function crc_d64_c(c : std_logic_vector(31 downto 0)) return std_logic_vector;
+  function crc_d64_d(d : std_logic_vector(63 downto 0)) return std_logic_vector;
 end package mac25g_crc_pkg;
 
 package body mac25g_crc_pkg is
@@ -69,6 +87,82 @@ package body mac25g_crc_pkg is
     return r;
   end function;
 
+  function crc_d8_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (c(2) xor c(8));
+    r(1) := (c(0) xor (c(3) xor c(9)));
+    r(2) := ((c(0) xor c(1)) xor (c(4) xor c(10)));
+    r(3) := ((c(1) xor c(2)) xor (c(5) xor c(11)));
+    r(4) := ((c(0) xor c(2)) xor (c(3) xor (c(6) xor c(12))));
+    r(5) := ((c(1) xor c(3)) xor (c(4) xor (c(7) xor c(13))));
+    r(6) := (c(4) xor (c(5) xor c(14)));
+    r(7) := ((c(0) xor c(5)) xor (c(6) xor c(15)));
+    r(8) := ((c(1) xor c(6)) xor (c(7) xor c(16)));
+    r(9) := (c(7) xor c(17));
+    r(10) := (c(2) xor c(18));
+    r(11) := (c(3) xor c(19));
+    r(12) := (c(0) xor (c(4) xor c(20)));
+    r(13) := ((c(0) xor c(1)) xor (c(5) xor c(21)));
+    r(14) := ((c(1) xor c(2)) xor (c(6) xor c(22)));
+    r(15) := ((c(2) xor c(3)) xor (c(7) xor c(23)));
+    r(16) := ((c(0) xor c(2)) xor (c(3) xor (c(4) xor c(24))));
+    r(17) := ((c(0) xor (c(1) xor c(3))) xor (c(4) xor (c(5) xor c(25))));
+    r(18) := ((c(0) xor (c(1) xor c(2))) xor ((c(4) xor c(5)) xor (c(6) xor c(26))));
+    r(19) := ((c(1) xor (c(2) xor c(3))) xor ((c(5) xor c(6)) xor (c(7) xor c(27))));
+    r(20) := ((c(3) xor c(4)) xor (c(6) xor (c(7) xor c(28))));
+    r(21) := ((c(2) xor c(4)) xor (c(5) xor (c(7) xor c(29))));
+    r(22) := ((c(2) xor c(3)) xor (c(5) xor (c(6) xor c(30))));
+    r(23) := ((c(3) xor c(4)) xor (c(6) xor (c(7) xor c(31))));
+    r(24) := ((c(0) xor c(2)) xor (c(4) xor (c(5) xor c(7))));
+    r(25) := ((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(5) xor c(6))));
+    r(26) := ((c(0) xor (c(1) xor c(2))) xor ((c(3) xor c(4)) xor (c(6) xor c(7))));
+    r(27) := ((c(1) xor c(3)) xor (c(4) xor (c(5) xor c(7))));
+    r(28) := ((c(0) xor c(4)) xor (c(5) xor c(6)));
+    r(29) := ((c(0) xor c(1)) xor (c(5) xor (c(6) xor c(7))));
+    r(30) := ((c(0) xor c(1)) xor (c(6) xor c(7)));
+    r(31) := (c(1) xor c(7));
+    return r;
+  end function;
+
+  function crc_d8_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := d(2);
+    r(1) := (d(0) xor d(3));
+    r(2) := (d(0) xor (d(1) xor d(4)));
+    r(3) := (d(1) xor (d(2) xor d(5)));
+    r(4) := ((d(0) xor d(2)) xor (d(3) xor d(6)));
+    r(5) := ((d(1) xor d(3)) xor (d(4) xor d(7)));
+    r(6) := (d(4) xor d(5));
+    r(7) := (d(0) xor (d(5) xor d(6)));
+    r(8) := (d(1) xor (d(6) xor d(7)));
+    r(9) := d(7);
+    r(10) := d(2);
+    r(11) := d(3);
+    r(12) := (d(0) xor d(4));
+    r(13) := (d(0) xor (d(1) xor d(5)));
+    r(14) := (d(1) xor (d(2) xor d(6)));
+    r(15) := (d(2) xor (d(3) xor d(7)));
+    r(16) := ((d(0) xor d(2)) xor (d(3) xor d(4)));
+    r(17) := ((d(0) xor d(1)) xor (d(3) xor (d(4) xor d(5))));
+    r(18) := ((d(0) xor (d(1) xor d(2))) xor (d(4) xor (d(5) xor d(6))));
+    r(19) := ((d(1) xor (d(2) xor d(3))) xor (d(5) xor (d(6) xor d(7))));
+    r(20) := ((d(3) xor d(4)) xor (d(6) xor d(7)));
+    r(21) := ((d(2) xor d(4)) xor (d(5) xor d(7)));
+    r(22) := ((d(2) xor d(3)) xor (d(5) xor d(6)));
+    r(23) := ((d(3) xor d(4)) xor (d(6) xor d(7)));
+    r(24) := ((d(0) xor d(2)) xor (d(4) xor (d(5) xor d(7))));
+    r(25) := ((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(5) xor d(6))));
+    r(26) := ((d(0) xor (d(1) xor d(2))) xor ((d(3) xor d(4)) xor (d(6) xor d(7))));
+    r(27) := ((d(1) xor d(3)) xor (d(4) xor (d(5) xor d(7))));
+    r(28) := ((d(0) xor d(4)) xor (d(5) xor d(6)));
+    r(29) := ((d(0) xor d(1)) xor (d(5) xor (d(6) xor d(7))));
+    r(30) := ((d(0) xor d(1)) xor (d(6) xor d(7)));
+    r(31) := (d(1) xor d(7));
+    return r;
+  end function;
+
   function crc_d16(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector is
     variable r : std_logic_vector(31 downto 0);
@@ -105,6 +199,82 @@ package body mac25g_crc_pkg is
     r(29) := ((((c(1) xor c(2)) xor (c(6) xor c(7))) xor ((c(8) xor c(9)) xor (c(13) xor (c(14) xor c(15))))) xor (((d(1) xor d(2)) xor (d(6) xor d(7))) xor ((d(8) xor d(9)) xor (d(13) xor (d(14) xor d(15))))));
     r(30) := ((((c(2) xor c(3)) xor (c(4) xor c(6))) xor ((c(8) xor c(9)) xor (c(14) xor c(15)))) xor (((d(2) xor d(3)) xor (d(4) xor d(6))) xor ((d(8) xor d(9)) xor (d(14) xor d(15)))));
     r(31) := (((c(3) xor c(5)) xor (c(6) xor (c(9) xor c(15)))) xor ((d(3) xor d(5)) xor (d(6) xor (d(9) xor d(15)))));
+    return r;
+  end function;
+
+  function crc_d16_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((c(0) xor (c(4) xor c(6))) xor (c(7) xor (c(10) xor c(16))));
+    r(1) := ((c(1) xor (c(5) xor c(7))) xor (c(8) xor (c(11) xor c(17))));
+    r(2) := ((c(2) xor (c(6) xor c(8))) xor (c(9) xor (c(12) xor c(18))));
+    r(3) := ((c(3) xor (c(7) xor c(9))) xor (c(10) xor (c(13) xor c(19))));
+    r(4) := ((c(4) xor (c(8) xor c(10))) xor (c(11) xor (c(14) xor c(20))));
+    r(5) := ((c(5) xor (c(9) xor c(11))) xor (c(12) xor (c(15) xor c(21))));
+    r(6) := ((c(0) xor (c(4) xor c(7))) xor (c(12) xor (c(13) xor c(22))));
+    r(7) := ((c(1) xor (c(5) xor c(8))) xor (c(13) xor (c(14) xor c(23))));
+    r(8) := ((c(0) xor (c(2) xor c(6))) xor ((c(9) xor c(14)) xor (c(15) xor c(24))));
+    r(9) := ((c(1) xor (c(3) xor c(4))) xor (c(6) xor (c(15) xor c(25))));
+    r(10) := ((c(2) xor c(5)) xor (c(6) xor (c(10) xor c(26))));
+    r(11) := ((c(3) xor c(6)) xor (c(7) xor (c(11) xor c(27))));
+    r(12) := ((c(0) xor (c(4) xor c(7))) xor (c(8) xor (c(12) xor c(28))));
+    r(13) := ((c(0) xor (c(1) xor c(5))) xor ((c(8) xor c(9)) xor (c(13) xor c(29))));
+    r(14) := ((c(1) xor (c(2) xor c(6))) xor ((c(9) xor c(10)) xor (c(14) xor c(30))));
+    r(15) := ((c(2) xor (c(3) xor c(7))) xor ((c(10) xor c(11)) xor (c(15) xor c(31))));
+    r(16) := (((c(0) xor c(3)) xor (c(6) xor c(7))) xor ((c(8) xor c(10)) xor (c(11) xor c(12))));
+    r(17) := (((c(0) xor c(1)) xor (c(4) xor c(7))) xor ((c(8) xor c(9)) xor (c(11) xor (c(12) xor c(13)))));
+    r(18) := (((c(1) xor c(2)) xor (c(5) xor c(8))) xor ((c(9) xor c(10)) xor (c(12) xor (c(13) xor c(14)))));
+    r(19) := (((c(0) xor c(2)) xor (c(3) xor (c(6) xor c(9)))) xor ((c(10) xor c(11)) xor (c(13) xor (c(14) xor c(15)))));
+    r(20) := (((c(0) xor c(1)) xor (c(3) xor c(6))) xor ((c(11) xor c(12)) xor (c(14) xor c(15))));
+    r(21) := ((c(1) xor (c(2) xor c(6))) xor ((c(10) xor c(12)) xor (c(13) xor c(15))));
+    r(22) := (((c(2) xor c(3)) xor (c(4) xor c(6))) xor ((c(10) xor c(11)) xor (c(13) xor c(14))));
+    r(23) := (((c(3) xor c(4)) xor (c(5) xor c(7))) xor ((c(11) xor c(12)) xor (c(14) xor c(15))));
+    r(24) := (((c(0) xor c(5)) xor (c(7) xor c(8))) xor ((c(10) xor c(12)) xor (c(13) xor c(15))));
+    r(25) := (((c(1) xor c(4)) xor (c(7) xor c(8))) xor ((c(9) xor c(10)) xor (c(11) xor (c(13) xor c(14)))));
+    r(26) := (((c(2) xor c(5)) xor (c(8) xor c(9))) xor ((c(10) xor c(11)) xor (c(12) xor (c(14) xor c(15)))));
+    r(27) := (((c(0) xor c(3)) xor (c(4) xor c(7))) xor ((c(9) xor c(11)) xor (c(12) xor (c(13) xor c(15)))));
+    r(28) := (((c(0) xor c(1)) xor (c(5) xor c(6))) xor ((c(7) xor c(8)) xor (c(12) xor (c(13) xor c(14)))));
+    r(29) := (((c(1) xor c(2)) xor (c(6) xor c(7))) xor ((c(8) xor c(9)) xor (c(13) xor (c(14) xor c(15)))));
+    r(30) := (((c(2) xor c(3)) xor (c(4) xor c(6))) xor ((c(8) xor c(9)) xor (c(14) xor c(15))));
+    r(31) := ((c(3) xor c(5)) xor (c(6) xor (c(9) xor c(15))));
+    return r;
+  end function;
+
+  function crc_d16_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((d(0) xor d(4)) xor (d(6) xor (d(7) xor d(10))));
+    r(1) := ((d(1) xor d(5)) xor (d(7) xor (d(8) xor d(11))));
+    r(2) := ((d(2) xor d(6)) xor (d(8) xor (d(9) xor d(12))));
+    r(3) := ((d(3) xor d(7)) xor (d(9) xor (d(10) xor d(13))));
+    r(4) := ((d(4) xor d(8)) xor (d(10) xor (d(11) xor d(14))));
+    r(5) := ((d(5) xor d(9)) xor (d(11) xor (d(12) xor d(15))));
+    r(6) := ((d(0) xor d(4)) xor (d(7) xor (d(12) xor d(13))));
+    r(7) := ((d(1) xor d(5)) xor (d(8) xor (d(13) xor d(14))));
+    r(8) := ((d(0) xor (d(2) xor d(6))) xor (d(9) xor (d(14) xor d(15))));
+    r(9) := ((d(1) xor d(3)) xor (d(4) xor (d(6) xor d(15))));
+    r(10) := ((d(2) xor d(5)) xor (d(6) xor d(10)));
+    r(11) := ((d(3) xor d(6)) xor (d(7) xor d(11)));
+    r(12) := ((d(0) xor d(4)) xor (d(7) xor (d(8) xor d(12))));
+    r(13) := ((d(0) xor (d(1) xor d(5))) xor (d(8) xor (d(9) xor d(13))));
+    r(14) := ((d(1) xor (d(2) xor d(6))) xor (d(9) xor (d(10) xor d(14))));
+    r(15) := ((d(2) xor (d(3) xor d(7))) xor (d(10) xor (d(11) xor d(15))));
+    r(16) := (((d(0) xor d(3)) xor (d(6) xor d(7))) xor ((d(8) xor d(10)) xor (d(11) xor d(12))));
+    r(17) := (((d(0) xor d(1)) xor (d(4) xor d(7))) xor ((d(8) xor d(9)) xor (d(11) xor (d(12) xor d(13)))));
+    r(18) := (((d(1) xor d(2)) xor (d(5) xor d(8))) xor ((d(9) xor d(10)) xor (d(12) xor (d(13) xor d(14)))));
+    r(19) := (((d(0) xor d(2)) xor (d(3) xor (d(6) xor d(9)))) xor ((d(10) xor d(11)) xor (d(13) xor (d(14) xor d(15)))));
+    r(20) := (((d(0) xor d(1)) xor (d(3) xor d(6))) xor ((d(11) xor d(12)) xor (d(14) xor d(15))));
+    r(21) := ((d(1) xor (d(2) xor d(6))) xor ((d(10) xor d(12)) xor (d(13) xor d(15))));
+    r(22) := (((d(2) xor d(3)) xor (d(4) xor d(6))) xor ((d(10) xor d(11)) xor (d(13) xor d(14))));
+    r(23) := (((d(3) xor d(4)) xor (d(5) xor d(7))) xor ((d(11) xor d(12)) xor (d(14) xor d(15))));
+    r(24) := (((d(0) xor d(5)) xor (d(7) xor d(8))) xor ((d(10) xor d(12)) xor (d(13) xor d(15))));
+    r(25) := (((d(1) xor d(4)) xor (d(7) xor d(8))) xor ((d(9) xor d(10)) xor (d(11) xor (d(13) xor d(14)))));
+    r(26) := (((d(2) xor d(5)) xor (d(8) xor d(9))) xor ((d(10) xor d(11)) xor (d(12) xor (d(14) xor d(15)))));
+    r(27) := (((d(0) xor d(3)) xor (d(4) xor d(7))) xor ((d(9) xor d(11)) xor (d(12) xor (d(13) xor d(15)))));
+    r(28) := (((d(0) xor d(1)) xor (d(5) xor d(6))) xor ((d(7) xor d(8)) xor (d(12) xor (d(13) xor d(14)))));
+    r(29) := (((d(1) xor d(2)) xor (d(6) xor d(7))) xor ((d(8) xor d(9)) xor (d(13) xor (d(14) xor d(15)))));
+    r(30) := (((d(2) xor d(3)) xor (d(4) xor d(6))) xor ((d(8) xor d(9)) xor (d(14) xor d(15))));
+    r(31) := ((d(3) xor d(5)) xor (d(6) xor (d(9) xor d(15))));
     return r;
   end function;
 
@@ -147,6 +317,82 @@ package body mac25g_crc_pkg is
     return r;
   end function;
 
+  function crc_d24_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((c(0) xor (c(8) xor c(12))) xor ((c(14) xor c(15)) xor (c(18) xor c(24))));
+    r(1) := (((c(0) xor c(1)) xor (c(9) xor c(13))) xor ((c(15) xor c(16)) xor (c(19) xor c(25))));
+    r(2) := (((c(0) xor c(1)) xor (c(2) xor c(10))) xor ((c(14) xor c(16)) xor (c(17) xor (c(20) xor c(26)))));
+    r(3) := (((c(1) xor c(2)) xor (c(3) xor c(11))) xor ((c(15) xor c(17)) xor (c(18) xor (c(21) xor c(27)))));
+    r(4) := (((c(0) xor c(2)) xor (c(3) xor (c(4) xor c(12)))) xor ((c(16) xor c(18)) xor (c(19) xor (c(22) xor c(28)))));
+    r(5) := (((c(0) xor c(1)) xor (c(3) xor (c(4) xor c(5)))) xor ((c(13) xor (c(17) xor c(19))) xor (c(20) xor (c(23) xor c(29)))));
+    r(6) := (((c(1) xor c(2)) xor (c(4) xor (c(5) xor c(6)))) xor ((c(8) xor (c(12) xor c(15))) xor (c(20) xor (c(21) xor c(30)))));
+    r(7) := (((c(2) xor c(3)) xor (c(5) xor (c(6) xor c(7)))) xor ((c(9) xor (c(13) xor c(16))) xor (c(21) xor (c(22) xor c(31)))));
+    r(8) := (((c(3) xor c(4)) xor (c(6) xor (c(7) xor c(8)))) xor ((c(10) xor c(14)) xor (c(17) xor (c(22) xor c(23)))));
+    r(9) := (((c(0) xor c(4)) xor (c(5) xor c(7))) xor ((c(9) xor c(11)) xor (c(12) xor (c(14) xor c(23)))));
+    r(10) := ((c(1) xor (c(5) xor c(6))) xor ((c(10) xor c(13)) xor (c(14) xor c(18))));
+    r(11) := (((c(0) xor c(2)) xor (c(6) xor c(7))) xor ((c(11) xor c(14)) xor (c(15) xor c(19))));
+    r(12) := (((c(1) xor c(3)) xor (c(7) xor c(8))) xor ((c(12) xor c(15)) xor (c(16) xor c(20))));
+    r(13) := (((c(0) xor c(2)) xor (c(4) xor c(8))) xor ((c(9) xor c(13)) xor (c(16) xor (c(17) xor c(21)))));
+    r(14) := (((c(0) xor c(1)) xor (c(3) xor (c(5) xor c(9)))) xor ((c(10) xor c(14)) xor (c(17) xor (c(18) xor c(22)))));
+    r(15) := (((c(1) xor c(2)) xor (c(4) xor (c(6) xor c(10)))) xor ((c(11) xor c(15)) xor (c(18) xor (c(19) xor c(23)))));
+    r(16) := (((c(2) xor (c(3) xor c(5))) xor (c(7) xor (c(8) xor c(11)))) xor ((c(14) xor (c(15) xor c(16))) xor (c(18) xor (c(19) xor c(20)))));
+    r(17) := (((c(0) xor (c(3) xor c(4))) xor (c(6) xor (c(8) xor c(9)))) xor ((c(12) xor (c(15) xor c(16))) xor ((c(17) xor c(19)) xor (c(20) xor c(21)))));
+    r(18) := (((c(1) xor (c(4) xor c(5))) xor (c(7) xor (c(9) xor c(10)))) xor ((c(13) xor (c(16) xor c(17))) xor ((c(18) xor c(20)) xor (c(21) xor c(22)))));
+    r(19) := (((c(2) xor (c(5) xor c(6))) xor (c(8) xor (c(10) xor c(11)))) xor ((c(14) xor (c(17) xor c(18))) xor ((c(19) xor c(21)) xor (c(22) xor c(23)))));
+    r(20) := (((c(3) xor c(6)) xor (c(7) xor (c(8) xor c(9)))) xor ((c(11) xor (c(14) xor c(19))) xor (c(20) xor (c(22) xor c(23)))));
+    r(21) := (((c(4) xor c(7)) xor (c(9) xor c(10))) xor ((c(14) xor c(18)) xor (c(20) xor (c(21) xor c(23)))));
+    r(22) := (((c(0) xor c(5)) xor (c(10) xor (c(11) xor c(12)))) xor ((c(14) xor c(18)) xor (c(19) xor (c(21) xor c(22)))));
+    r(23) := (((c(0) xor c(1)) xor (c(6) xor (c(11) xor c(12)))) xor ((c(13) xor (c(15) xor c(19))) xor (c(20) xor (c(22) xor c(23)))));
+    r(24) := (((c(0) xor (c(1) xor c(2))) xor (c(7) xor (c(8) xor c(13)))) xor ((c(15) xor (c(16) xor c(18))) xor (c(20) xor (c(21) xor c(23)))));
+    r(25) := (((c(1) xor (c(2) xor c(3))) xor (c(9) xor (c(12) xor c(15)))) xor ((c(16) xor (c(17) xor c(18))) xor (c(19) xor (c(21) xor c(22)))));
+    r(26) := (((c(2) xor (c(3) xor c(4))) xor (c(10) xor (c(13) xor c(16)))) xor ((c(17) xor (c(18) xor c(19))) xor (c(20) xor (c(22) xor c(23)))));
+    r(27) := (((c(3) xor (c(4) xor c(5))) xor (c(8) xor (c(11) xor c(12)))) xor ((c(15) xor (c(17) xor c(19))) xor (c(20) xor (c(21) xor c(23)))));
+    r(28) := (((c(4) xor (c(5) xor c(6))) xor (c(8) xor (c(9) xor c(13)))) xor ((c(14) xor (c(15) xor c(16))) xor (c(20) xor (c(21) xor c(22)))));
+    r(29) := (((c(5) xor (c(6) xor c(7))) xor (c(9) xor (c(10) xor c(14)))) xor ((c(15) xor (c(16) xor c(17))) xor (c(21) xor (c(22) xor c(23)))));
+    r(30) := (((c(6) xor c(7)) xor (c(10) xor (c(11) xor c(12)))) xor ((c(14) xor c(16)) xor (c(17) xor (c(22) xor c(23)))));
+    r(31) := ((c(7) xor (c(11) xor c(13))) xor (c(14) xor (c(17) xor c(23))));
+    return r;
+  end function;
+
+  function crc_d24_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((d(0) xor (d(8) xor d(12))) xor (d(14) xor (d(15) xor d(18))));
+    r(1) := ((d(0) xor (d(1) xor d(9))) xor ((d(13) xor d(15)) xor (d(16) xor d(19))));
+    r(2) := (((d(0) xor d(1)) xor (d(2) xor d(10))) xor ((d(14) xor d(16)) xor (d(17) xor d(20))));
+    r(3) := (((d(1) xor d(2)) xor (d(3) xor d(11))) xor ((d(15) xor d(17)) xor (d(18) xor d(21))));
+    r(4) := (((d(0) xor d(2)) xor (d(3) xor d(4))) xor ((d(12) xor d(16)) xor (d(18) xor (d(19) xor d(22)))));
+    r(5) := (((d(0) xor d(1)) xor (d(3) xor (d(4) xor d(5)))) xor ((d(13) xor d(17)) xor (d(19) xor (d(20) xor d(23)))));
+    r(6) := (((d(1) xor d(2)) xor (d(4) xor (d(5) xor d(6)))) xor ((d(8) xor d(12)) xor (d(15) xor (d(20) xor d(21)))));
+    r(7) := (((d(2) xor d(3)) xor (d(5) xor (d(6) xor d(7)))) xor ((d(9) xor d(13)) xor (d(16) xor (d(21) xor d(22)))));
+    r(8) := (((d(3) xor d(4)) xor (d(6) xor (d(7) xor d(8)))) xor ((d(10) xor d(14)) xor (d(17) xor (d(22) xor d(23)))));
+    r(9) := (((d(0) xor d(4)) xor (d(5) xor d(7))) xor ((d(9) xor d(11)) xor (d(12) xor (d(14) xor d(23)))));
+    r(10) := ((d(1) xor (d(5) xor d(6))) xor ((d(10) xor d(13)) xor (d(14) xor d(18))));
+    r(11) := (((d(0) xor d(2)) xor (d(6) xor d(7))) xor ((d(11) xor d(14)) xor (d(15) xor d(19))));
+    r(12) := (((d(1) xor d(3)) xor (d(7) xor d(8))) xor ((d(12) xor d(15)) xor (d(16) xor d(20))));
+    r(13) := (((d(0) xor d(2)) xor (d(4) xor d(8))) xor ((d(9) xor d(13)) xor (d(16) xor (d(17) xor d(21)))));
+    r(14) := (((d(0) xor d(1)) xor (d(3) xor (d(5) xor d(9)))) xor ((d(10) xor d(14)) xor (d(17) xor (d(18) xor d(22)))));
+    r(15) := (((d(1) xor d(2)) xor (d(4) xor (d(6) xor d(10)))) xor ((d(11) xor d(15)) xor (d(18) xor (d(19) xor d(23)))));
+    r(16) := (((d(2) xor (d(3) xor d(5))) xor (d(7) xor (d(8) xor d(11)))) xor ((d(14) xor (d(15) xor d(16))) xor (d(18) xor (d(19) xor d(20)))));
+    r(17) := (((d(0) xor (d(3) xor d(4))) xor (d(6) xor (d(8) xor d(9)))) xor ((d(12) xor (d(15) xor d(16))) xor ((d(17) xor d(19)) xor (d(20) xor d(21)))));
+    r(18) := (((d(1) xor (d(4) xor d(5))) xor (d(7) xor (d(9) xor d(10)))) xor ((d(13) xor (d(16) xor d(17))) xor ((d(18) xor d(20)) xor (d(21) xor d(22)))));
+    r(19) := (((d(2) xor (d(5) xor d(6))) xor (d(8) xor (d(10) xor d(11)))) xor ((d(14) xor (d(17) xor d(18))) xor ((d(19) xor d(21)) xor (d(22) xor d(23)))));
+    r(20) := (((d(3) xor d(6)) xor (d(7) xor (d(8) xor d(9)))) xor ((d(11) xor (d(14) xor d(19))) xor (d(20) xor (d(22) xor d(23)))));
+    r(21) := (((d(4) xor d(7)) xor (d(9) xor d(10))) xor ((d(14) xor d(18)) xor (d(20) xor (d(21) xor d(23)))));
+    r(22) := (((d(0) xor d(5)) xor (d(10) xor (d(11) xor d(12)))) xor ((d(14) xor d(18)) xor (d(19) xor (d(21) xor d(22)))));
+    r(23) := (((d(0) xor d(1)) xor (d(6) xor (d(11) xor d(12)))) xor ((d(13) xor (d(15) xor d(19))) xor (d(20) xor (d(22) xor d(23)))));
+    r(24) := (((d(0) xor (d(1) xor d(2))) xor (d(7) xor (d(8) xor d(13)))) xor ((d(15) xor (d(16) xor d(18))) xor (d(20) xor (d(21) xor d(23)))));
+    r(25) := (((d(1) xor (d(2) xor d(3))) xor (d(9) xor (d(12) xor d(15)))) xor ((d(16) xor (d(17) xor d(18))) xor (d(19) xor (d(21) xor d(22)))));
+    r(26) := (((d(2) xor (d(3) xor d(4))) xor (d(10) xor (d(13) xor d(16)))) xor ((d(17) xor (d(18) xor d(19))) xor (d(20) xor (d(22) xor d(23)))));
+    r(27) := (((d(3) xor (d(4) xor d(5))) xor (d(8) xor (d(11) xor d(12)))) xor ((d(15) xor (d(17) xor d(19))) xor (d(20) xor (d(21) xor d(23)))));
+    r(28) := (((d(4) xor (d(5) xor d(6))) xor (d(8) xor (d(9) xor d(13)))) xor ((d(14) xor (d(15) xor d(16))) xor (d(20) xor (d(21) xor d(22)))));
+    r(29) := (((d(5) xor (d(6) xor d(7))) xor (d(9) xor (d(10) xor d(14)))) xor ((d(15) xor (d(16) xor d(17))) xor (d(21) xor (d(22) xor d(23)))));
+    r(30) := (((d(6) xor d(7)) xor (d(10) xor (d(11) xor d(12)))) xor ((d(14) xor d(16)) xor (d(17) xor (d(22) xor d(23)))));
+    r(31) := ((d(7) xor (d(11) xor d(13))) xor (d(14) xor (d(17) xor d(23))));
+    return r;
+  end function;
+
   function crc_d32(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector is
     variable r : std_logic_vector(31 downto 0);
@@ -183,6 +429,82 @@ package body mac25g_crc_pkg is
     r(29) := (((((c(0) xor c(1)) xor (c(5) xor c(7))) xor ((c(13) xor c(14)) xor (c(15) xor c(17)))) xor (((c(18) xor c(22)) xor (c(23) xor c(24))) xor ((c(25) xor c(29)) xor (c(30) xor c(31))))) xor ((((d(0) xor d(1)) xor (d(5) xor d(7))) xor ((d(13) xor d(14)) xor (d(15) xor d(17)))) xor (((d(18) xor d(22)) xor (d(23) xor d(24))) xor ((d(25) xor d(29)) xor (d(30) xor d(31))))));
     r(30) := ((((c(3) xor (c(4) xor c(7))) xor (c(14) xor (c(15) xor c(18)))) xor ((c(19) xor (c(20) xor c(22))) xor ((c(24) xor c(25)) xor (c(30) xor c(31))))) xor (((d(3) xor (d(4) xor d(7))) xor (d(14) xor (d(15) xor d(18)))) xor ((d(19) xor (d(20) xor d(22))) xor ((d(24) xor d(25)) xor (d(30) xor d(31))))));
     r(31) := ((((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(5) xor c(6)))) xor ((c(7) xor (c(15) xor c(19))) xor ((c(21) xor c(22)) xor (c(25) xor c(31))))) xor (((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(5) xor d(6)))) xor ((d(7) xor (d(15) xor d(19))) xor ((d(21) xor d(22)) xor (d(25) xor d(31))))));
+    return r;
+  end function;
+
+  function crc_d32_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(4) xor c(6)))) xor ((c(7) xor (c(8) xor c(16))) xor ((c(20) xor c(22)) xor (c(23) xor c(26)))));
+    r(1) := (((c(1) xor (c(2) xor c(3))) xor (c(4) xor (c(5) xor c(7)))) xor ((c(8) xor (c(9) xor c(17))) xor ((c(21) xor c(23)) xor (c(24) xor c(27)))));
+    r(2) := (((c(0) xor (c(2) xor c(3))) xor ((c(4) xor c(5)) xor (c(6) xor c(8)))) xor ((c(9) xor (c(10) xor c(18))) xor ((c(22) xor c(24)) xor (c(25) xor c(28)))));
+    r(3) := (((c(1) xor (c(3) xor c(4))) xor ((c(5) xor c(6)) xor (c(7) xor c(9)))) xor ((c(10) xor (c(11) xor c(19))) xor ((c(23) xor c(25)) xor (c(26) xor c(29)))));
+    r(4) := (((c(2) xor (c(4) xor c(5))) xor ((c(6) xor c(7)) xor (c(8) xor c(10)))) xor ((c(11) xor (c(12) xor c(20))) xor ((c(24) xor c(26)) xor (c(27) xor c(30)))));
+    r(5) := (((c(0) xor (c(3) xor c(5))) xor ((c(6) xor c(7)) xor (c(8) xor c(9)))) xor (((c(11) xor c(12)) xor (c(13) xor c(21))) xor ((c(25) xor c(27)) xor (c(28) xor c(31)))));
+    r(6) := (((c(0) xor (c(2) xor c(3))) xor (c(9) xor (c(10) xor c(12)))) xor ((c(13) xor (c(14) xor c(16))) xor ((c(20) xor c(23)) xor (c(28) xor c(29)))));
+    r(7) := (((c(1) xor (c(3) xor c(4))) xor (c(10) xor (c(11) xor c(13)))) xor ((c(14) xor (c(15) xor c(17))) xor ((c(21) xor c(24)) xor (c(29) xor c(30)))));
+    r(8) := (((c(0) xor (c(2) xor c(4))) xor ((c(5) xor c(11)) xor (c(12) xor c(14)))) xor ((c(15) xor (c(16) xor c(18))) xor ((c(22) xor c(25)) xor (c(30) xor c(31)))));
+    r(9) := (((c(0) xor (c(2) xor c(4))) xor ((c(5) xor c(7)) xor (c(8) xor c(12)))) xor ((c(13) xor (c(15) xor c(17))) xor ((c(19) xor c(20)) xor (c(22) xor c(31)))));
+    r(10) := (((c(0) xor (c(2) xor c(4))) xor (c(5) xor (c(7) xor c(9)))) xor ((c(13) xor (c(14) xor c(18))) xor (c(21) xor (c(22) xor c(26)))));
+    r(11) := (((c(1) xor (c(3) xor c(5))) xor (c(6) xor (c(8) xor c(10)))) xor ((c(14) xor (c(15) xor c(19))) xor (c(22) xor (c(23) xor c(27)))));
+    r(12) := (((c(2) xor (c(4) xor c(6))) xor (c(7) xor (c(9) xor c(11)))) xor ((c(15) xor (c(16) xor c(20))) xor (c(23) xor (c(24) xor c(28)))));
+    r(13) := (((c(0) xor (c(3) xor c(5))) xor (c(7) xor (c(8) xor c(10)))) xor ((c(12) xor (c(16) xor c(17))) xor ((c(21) xor c(24)) xor (c(25) xor c(29)))));
+    r(14) := (((c(0) xor (c(1) xor c(4))) xor ((c(6) xor c(8)) xor (c(9) xor c(11)))) xor ((c(13) xor (c(17) xor c(18))) xor ((c(22) xor c(25)) xor (c(26) xor c(30)))));
+    r(15) := (((c(1) xor (c(2) xor c(5))) xor ((c(7) xor c(9)) xor (c(10) xor c(12)))) xor ((c(14) xor (c(18) xor c(19))) xor ((c(23) xor c(26)) xor (c(27) xor c(31)))));
+    r(16) := (((c(1) xor (c(4) xor c(7))) xor ((c(10) xor c(11)) xor (c(13) xor c(15)))) xor (((c(16) xor c(19)) xor (c(22) xor c(23))) xor ((c(24) xor c(26)) xor (c(27) xor c(28)))));
+    r(17) := (((c(2) xor (c(5) xor c(8))) xor ((c(11) xor c(12)) xor (c(14) xor c(16)))) xor (((c(17) xor c(20)) xor (c(23) xor c(24))) xor ((c(25) xor c(27)) xor (c(28) xor c(29)))));
+    r(18) := ((((c(0) xor c(3)) xor (c(6) xor c(9))) xor ((c(12) xor c(13)) xor (c(15) xor c(17)))) xor (((c(18) xor c(21)) xor (c(24) xor c(25))) xor ((c(26) xor c(28)) xor (c(29) xor c(30)))));
+    r(19) := ((((c(0) xor c(1)) xor (c(4) xor c(7))) xor ((c(10) xor c(13)) xor (c(14) xor c(16)))) xor (((c(18) xor c(19)) xor (c(22) xor c(25))) xor ((c(26) xor c(27)) xor (c(29) xor (c(30) xor c(31))))));
+    r(20) := ((((c(0) xor c(3)) xor (c(4) xor c(5))) xor ((c(6) xor c(7)) xor (c(11) xor c(14)))) xor (((c(15) xor c(16)) xor (c(17) xor c(19))) xor ((c(22) xor c(27)) xor (c(28) xor (c(30) xor c(31))))));
+    r(21) := (((c(0) xor (c(2) xor c(3))) xor (c(5) xor (c(12) xor c(15)))) xor ((c(17) xor (c(18) xor c(22))) xor ((c(26) xor c(28)) xor (c(29) xor c(31)))));
+    r(22) := (((c(2) xor (c(7) xor c(8))) xor (c(13) xor (c(18) xor c(19)))) xor ((c(20) xor (c(22) xor c(26))) xor (c(27) xor (c(29) xor c(30)))));
+    r(23) := (((c(0) xor (c(3) xor c(8))) xor (c(9) xor (c(14) xor c(19)))) xor ((c(20) xor (c(21) xor c(23))) xor ((c(27) xor c(28)) xor (c(30) xor c(31)))));
+    r(24) := ((((c(2) xor c(3)) xor (c(6) xor c(7))) xor ((c(8) xor c(9)) xor (c(10) xor c(15)))) xor (((c(16) xor c(21)) xor (c(23) xor c(24))) xor ((c(26) xor c(28)) xor (c(29) xor c(31)))));
+    r(25) := (((c(1) xor (c(2) xor c(6))) xor ((c(9) xor c(10)) xor (c(11) xor c(17)))) xor (((c(20) xor c(23)) xor (c(24) xor c(25))) xor ((c(26) xor c(27)) xor (c(29) xor c(30)))));
+    r(26) := (((c(2) xor (c(3) xor c(7))) xor ((c(10) xor c(11)) xor (c(12) xor c(18)))) xor (((c(21) xor c(24)) xor (c(25) xor c(26))) xor ((c(27) xor c(28)) xor (c(30) xor c(31)))));
+    r(27) := ((((c(0) xor c(1)) xor (c(2) xor c(6))) xor ((c(7) xor c(11)) xor (c(12) xor c(13)))) xor (((c(16) xor c(19)) xor (c(20) xor c(23))) xor ((c(25) xor c(27)) xor (c(28) xor (c(29) xor c(31))))));
+    r(28) := (((c(0) xor (c(4) xor c(6))) xor ((c(12) xor c(13)) xor (c(14) xor c(16)))) xor (((c(17) xor c(21)) xor (c(22) xor c(23))) xor ((c(24) xor c(28)) xor (c(29) xor c(30)))));
+    r(29) := ((((c(0) xor c(1)) xor (c(5) xor c(7))) xor ((c(13) xor c(14)) xor (c(15) xor c(17)))) xor (((c(18) xor c(22)) xor (c(23) xor c(24))) xor ((c(25) xor c(29)) xor (c(30) xor c(31)))));
+    r(30) := (((c(3) xor (c(4) xor c(7))) xor (c(14) xor (c(15) xor c(18)))) xor ((c(19) xor (c(20) xor c(22))) xor ((c(24) xor c(25)) xor (c(30) xor c(31)))));
+    r(31) := (((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(5) xor c(6)))) xor ((c(7) xor (c(15) xor c(19))) xor ((c(21) xor c(22)) xor (c(25) xor c(31)))));
+    return r;
+  end function;
+
+  function crc_d32_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(4) xor d(6)))) xor ((d(7) xor (d(8) xor d(16))) xor ((d(20) xor d(22)) xor (d(23) xor d(26)))));
+    r(1) := (((d(1) xor (d(2) xor d(3))) xor (d(4) xor (d(5) xor d(7)))) xor ((d(8) xor (d(9) xor d(17))) xor ((d(21) xor d(23)) xor (d(24) xor d(27)))));
+    r(2) := (((d(0) xor (d(2) xor d(3))) xor ((d(4) xor d(5)) xor (d(6) xor d(8)))) xor ((d(9) xor (d(10) xor d(18))) xor ((d(22) xor d(24)) xor (d(25) xor d(28)))));
+    r(3) := (((d(1) xor (d(3) xor d(4))) xor ((d(5) xor d(6)) xor (d(7) xor d(9)))) xor ((d(10) xor (d(11) xor d(19))) xor ((d(23) xor d(25)) xor (d(26) xor d(29)))));
+    r(4) := (((d(2) xor (d(4) xor d(5))) xor ((d(6) xor d(7)) xor (d(8) xor d(10)))) xor ((d(11) xor (d(12) xor d(20))) xor ((d(24) xor d(26)) xor (d(27) xor d(30)))));
+    r(5) := (((d(0) xor (d(3) xor d(5))) xor ((d(6) xor d(7)) xor (d(8) xor d(9)))) xor (((d(11) xor d(12)) xor (d(13) xor d(21))) xor ((d(25) xor d(27)) xor (d(28) xor d(31)))));
+    r(6) := (((d(0) xor (d(2) xor d(3))) xor (d(9) xor (d(10) xor d(12)))) xor ((d(13) xor (d(14) xor d(16))) xor ((d(20) xor d(23)) xor (d(28) xor d(29)))));
+    r(7) := (((d(1) xor (d(3) xor d(4))) xor (d(10) xor (d(11) xor d(13)))) xor ((d(14) xor (d(15) xor d(17))) xor ((d(21) xor d(24)) xor (d(29) xor d(30)))));
+    r(8) := (((d(0) xor (d(2) xor d(4))) xor ((d(5) xor d(11)) xor (d(12) xor d(14)))) xor ((d(15) xor (d(16) xor d(18))) xor ((d(22) xor d(25)) xor (d(30) xor d(31)))));
+    r(9) := (((d(0) xor (d(2) xor d(4))) xor ((d(5) xor d(7)) xor (d(8) xor d(12)))) xor ((d(13) xor (d(15) xor d(17))) xor ((d(19) xor d(20)) xor (d(22) xor d(31)))));
+    r(10) := (((d(0) xor (d(2) xor d(4))) xor (d(5) xor (d(7) xor d(9)))) xor ((d(13) xor (d(14) xor d(18))) xor (d(21) xor (d(22) xor d(26)))));
+    r(11) := (((d(1) xor (d(3) xor d(5))) xor (d(6) xor (d(8) xor d(10)))) xor ((d(14) xor (d(15) xor d(19))) xor (d(22) xor (d(23) xor d(27)))));
+    r(12) := (((d(2) xor (d(4) xor d(6))) xor (d(7) xor (d(9) xor d(11)))) xor ((d(15) xor (d(16) xor d(20))) xor (d(23) xor (d(24) xor d(28)))));
+    r(13) := (((d(0) xor (d(3) xor d(5))) xor (d(7) xor (d(8) xor d(10)))) xor ((d(12) xor (d(16) xor d(17))) xor ((d(21) xor d(24)) xor (d(25) xor d(29)))));
+    r(14) := (((d(0) xor (d(1) xor d(4))) xor ((d(6) xor d(8)) xor (d(9) xor d(11)))) xor ((d(13) xor (d(17) xor d(18))) xor ((d(22) xor d(25)) xor (d(26) xor d(30)))));
+    r(15) := (((d(1) xor (d(2) xor d(5))) xor ((d(7) xor d(9)) xor (d(10) xor d(12)))) xor ((d(14) xor (d(18) xor d(19))) xor ((d(23) xor d(26)) xor (d(27) xor d(31)))));
+    r(16) := (((d(1) xor (d(4) xor d(7))) xor ((d(10) xor d(11)) xor (d(13) xor d(15)))) xor (((d(16) xor d(19)) xor (d(22) xor d(23))) xor ((d(24) xor d(26)) xor (d(27) xor d(28)))));
+    r(17) := (((d(2) xor (d(5) xor d(8))) xor ((d(11) xor d(12)) xor (d(14) xor d(16)))) xor (((d(17) xor d(20)) xor (d(23) xor d(24))) xor ((d(25) xor d(27)) xor (d(28) xor d(29)))));
+    r(18) := ((((d(0) xor d(3)) xor (d(6) xor d(9))) xor ((d(12) xor d(13)) xor (d(15) xor d(17)))) xor (((d(18) xor d(21)) xor (d(24) xor d(25))) xor ((d(26) xor d(28)) xor (d(29) xor d(30)))));
+    r(19) := ((((d(0) xor d(1)) xor (d(4) xor d(7))) xor ((d(10) xor d(13)) xor (d(14) xor d(16)))) xor (((d(18) xor d(19)) xor (d(22) xor d(25))) xor ((d(26) xor d(27)) xor (d(29) xor (d(30) xor d(31))))));
+    r(20) := ((((d(0) xor d(3)) xor (d(4) xor d(5))) xor ((d(6) xor d(7)) xor (d(11) xor d(14)))) xor (((d(15) xor d(16)) xor (d(17) xor d(19))) xor ((d(22) xor d(27)) xor (d(28) xor (d(30) xor d(31))))));
+    r(21) := (((d(0) xor (d(2) xor d(3))) xor (d(5) xor (d(12) xor d(15)))) xor ((d(17) xor (d(18) xor d(22))) xor ((d(26) xor d(28)) xor (d(29) xor d(31)))));
+    r(22) := (((d(2) xor (d(7) xor d(8))) xor (d(13) xor (d(18) xor d(19)))) xor ((d(20) xor (d(22) xor d(26))) xor (d(27) xor (d(29) xor d(30)))));
+    r(23) := (((d(0) xor (d(3) xor d(8))) xor (d(9) xor (d(14) xor d(19)))) xor ((d(20) xor (d(21) xor d(23))) xor ((d(27) xor d(28)) xor (d(30) xor d(31)))));
+    r(24) := ((((d(2) xor d(3)) xor (d(6) xor d(7))) xor ((d(8) xor d(9)) xor (d(10) xor d(15)))) xor (((d(16) xor d(21)) xor (d(23) xor d(24))) xor ((d(26) xor d(28)) xor (d(29) xor d(31)))));
+    r(25) := (((d(1) xor (d(2) xor d(6))) xor ((d(9) xor d(10)) xor (d(11) xor d(17)))) xor (((d(20) xor d(23)) xor (d(24) xor d(25))) xor ((d(26) xor d(27)) xor (d(29) xor d(30)))));
+    r(26) := (((d(2) xor (d(3) xor d(7))) xor ((d(10) xor d(11)) xor (d(12) xor d(18)))) xor (((d(21) xor d(24)) xor (d(25) xor d(26))) xor ((d(27) xor d(28)) xor (d(30) xor d(31)))));
+    r(27) := ((((d(0) xor d(1)) xor (d(2) xor d(6))) xor ((d(7) xor d(11)) xor (d(12) xor d(13)))) xor (((d(16) xor d(19)) xor (d(20) xor d(23))) xor ((d(25) xor d(27)) xor (d(28) xor (d(29) xor d(31))))));
+    r(28) := (((d(0) xor (d(4) xor d(6))) xor ((d(12) xor d(13)) xor (d(14) xor d(16)))) xor (((d(17) xor d(21)) xor (d(22) xor d(23))) xor ((d(24) xor d(28)) xor (d(29) xor d(30)))));
+    r(29) := ((((d(0) xor d(1)) xor (d(5) xor d(7))) xor ((d(13) xor d(14)) xor (d(15) xor d(17)))) xor (((d(18) xor d(22)) xor (d(23) xor d(24))) xor ((d(25) xor d(29)) xor (d(30) xor d(31)))));
+    r(30) := (((d(3) xor (d(4) xor d(7))) xor (d(14) xor (d(15) xor d(18)))) xor ((d(19) xor (d(20) xor d(22))) xor ((d(24) xor d(25)) xor (d(30) xor d(31)))));
+    r(31) := (((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(5) xor d(6)))) xor ((d(7) xor (d(15) xor d(19))) xor ((d(21) xor d(22)) xor (d(25) xor d(31)))));
     return r;
   end function;
 
@@ -225,6 +547,82 @@ package body mac25g_crc_pkg is
     return r;
   end function;
 
+  function crc_d40_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((c(3) xor (c(6) xor c(8))) xor ((c(9) xor c(10)) xor (c(11) xor c(12)))) xor ((c(14) xor (c(15) xor c(16))) xor ((c(24) xor c(28)) xor (c(30) xor c(31)))));
+    r(1) := (((c(4) xor (c(7) xor c(9))) xor (c(10) xor (c(11) xor c(12)))) xor ((c(13) xor (c(15) xor c(16))) xor ((c(17) xor c(25)) xor (c(29) xor c(31)))));
+    r(2) := (((c(5) xor (c(8) xor c(10))) xor (c(11) xor (c(12) xor c(13)))) xor ((c(14) xor (c(16) xor c(17))) xor (c(18) xor (c(26) xor c(30)))));
+    r(3) := (((c(6) xor (c(9) xor c(11))) xor (c(12) xor (c(13) xor c(14)))) xor ((c(15) xor (c(17) xor c(18))) xor (c(19) xor (c(27) xor c(31)))));
+    r(4) := (((c(0) xor (c(7) xor c(10))) xor (c(12) xor (c(13) xor c(14)))) xor ((c(15) xor (c(16) xor c(18))) xor (c(19) xor (c(20) xor c(28)))));
+    r(5) := (((c(0) xor (c(1) xor c(8))) xor (c(11) xor (c(13) xor c(14)))) xor ((c(15) xor (c(16) xor c(17))) xor ((c(19) xor c(20)) xor (c(21) xor c(29)))));
+    r(6) := (((c(1) xor (c(2) xor c(3))) xor ((c(6) xor c(8)) xor (c(10) xor c(11)))) xor (((c(17) xor c(18)) xor (c(20) xor c(21))) xor ((c(22) xor c(24)) xor (c(28) xor c(31)))));
+    r(7) := (((c(0) xor (c(2) xor c(3))) xor ((c(4) xor c(7)) xor (c(9) xor c(11)))) xor (((c(12) xor c(18)) xor (c(19) xor c(21))) xor ((c(22) xor c(23)) xor (c(25) xor c(29)))));
+    r(8) := ((((c(0) xor c(1)) xor (c(3) xor c(4))) xor ((c(5) xor c(8)) xor (c(10) xor c(12)))) xor (((c(13) xor c(19)) xor (c(20) xor c(22))) xor ((c(23) xor c(24)) xor (c(26) xor c(30)))));
+    r(9) := ((((c(1) xor c(2)) xor (c(3) xor c(4))) xor ((c(5) xor c(8)) xor (c(10) xor (c(12) xor c(13))))) xor (((c(15) xor c(16)) xor (c(20) xor c(21))) xor ((c(23) xor c(25)) xor (c(27) xor (c(28) xor c(30))))));
+    r(10) := (((c(2) xor (c(4) xor c(5))) xor ((c(8) xor c(10)) xor (c(12) xor c(13)))) xor ((c(15) xor (c(17) xor c(21))) xor ((c(22) xor c(26)) xor (c(29) xor c(30)))));
+    r(11) := (((c(0) xor (c(3) xor c(5))) xor ((c(6) xor c(9)) xor (c(11) xor c(13)))) xor (((c(14) xor c(16)) xor (c(18) xor c(22))) xor ((c(23) xor c(27)) xor (c(30) xor c(31)))));
+    r(12) := (((c(1) xor (c(4) xor c(6))) xor ((c(7) xor c(10)) xor (c(12) xor c(14)))) xor ((c(15) xor (c(17) xor c(19))) xor ((c(23) xor c(24)) xor (c(28) xor c(31)))));
+    r(13) := (((c(0) xor (c(2) xor c(5))) xor ((c(7) xor c(8)) xor (c(11) xor c(13)))) xor ((c(15) xor (c(16) xor c(18))) xor ((c(20) xor c(24)) xor (c(25) xor c(29)))));
+    r(14) := (((c(1) xor (c(3) xor c(6))) xor ((c(8) xor c(9)) xor (c(12) xor c(14)))) xor ((c(16) xor (c(17) xor c(19))) xor ((c(21) xor c(25)) xor (c(26) xor c(30)))));
+    r(15) := (((c(2) xor (c(4) xor c(7))) xor ((c(9) xor c(10)) xor (c(13) xor c(15)))) xor ((c(17) xor (c(18) xor c(20))) xor ((c(22) xor c(26)) xor (c(27) xor c(31)))));
+    r(16) := (((c(5) xor (c(6) xor c(9))) xor (c(12) xor (c(15) xor c(18)))) xor ((c(19) xor (c(21) xor c(23))) xor ((c(24) xor c(27)) xor (c(30) xor c(31)))));
+    r(17) := (((c(6) xor (c(7) xor c(10))) xor (c(13) xor (c(16) xor c(19)))) xor ((c(20) xor (c(22) xor c(24))) xor (c(25) xor (c(28) xor c(31)))));
+    r(18) := (((c(7) xor c(8)) xor (c(11) xor (c(14) xor c(17)))) xor ((c(20) xor (c(21) xor c(23))) xor (c(25) xor (c(26) xor c(29)))));
+    r(19) := (((c(8) xor c(9)) xor (c(12) xor (c(15) xor c(18)))) xor ((c(21) xor (c(22) xor c(24))) xor (c(26) xor (c(27) xor c(30)))));
+    r(20) := (((c(3) xor (c(6) xor c(8))) xor ((c(11) xor c(12)) xor (c(13) xor c(14)))) xor (((c(15) xor c(19)) xor (c(22) xor c(23))) xor ((c(24) xor c(25)) xor (c(27) xor c(30)))));
+    r(21) := (((c(0) xor (c(3) xor c(4))) xor ((c(6) xor c(7)) xor (c(8) xor c(10)))) xor ((c(11) xor (c(13) xor c(20))) xor ((c(23) xor c(25)) xor (c(26) xor c(30)))));
+    r(22) := (((c(0) xor (c(1) xor c(3))) xor ((c(4) xor c(5)) xor (c(6) xor c(7)))) xor (((c(10) xor c(15)) xor (c(16) xor c(21))) xor ((c(26) xor c(27)) xor (c(28) xor c(30)))));
+    r(23) := (((c(1) xor (c(2) xor c(4))) xor ((c(5) xor c(6)) xor (c(7) xor c(8)))) xor (((c(11) xor c(16)) xor (c(17) xor c(22))) xor ((c(27) xor c(28)) xor (c(29) xor c(31)))));
+    r(24) := (((c(0) xor (c(2) xor c(5))) xor ((c(7) xor c(10)) xor (c(11) xor c(14)))) xor (((c(15) xor c(16)) xor (c(17) xor c(18))) xor ((c(23) xor c(24)) xor (c(29) xor c(31)))));
+    r(25) := (((c(1) xor c(9)) xor (c(10) xor (c(14) xor c(17)))) xor ((c(18) xor c(19)) xor (c(25) xor (c(28) xor c(31)))));
+    r(26) := (((c(0) xor c(2)) xor (c(10) xor (c(11) xor c(15)))) xor ((c(18) xor c(19)) xor (c(20) xor (c(26) xor c(29)))));
+    r(27) := (((c(0) xor (c(1) xor c(6))) xor ((c(8) xor c(9)) xor (c(10) xor c(14)))) xor (((c(15) xor c(19)) xor (c(20) xor c(21))) xor ((c(24) xor c(27)) xor (c(28) xor c(31)))));
+    r(28) := ((((c(0) xor c(1)) xor (c(2) xor c(3))) xor ((c(6) xor c(7)) xor (c(8) xor c(12)))) xor (((c(14) xor c(20)) xor (c(21) xor c(22))) xor ((c(24) xor c(25)) xor (c(29) xor (c(30) xor c(31))))));
+    r(29) := ((((c(0) xor c(1)) xor (c(2) xor c(3))) xor ((c(4) xor c(7)) xor (c(8) xor c(9)))) xor (((c(13) xor c(15)) xor (c(21) xor c(22))) xor ((c(23) xor c(25)) xor (c(26) xor (c(30) xor c(31))))));
+    r(30) := (((c(1) xor (c(2) xor c(4))) xor ((c(5) xor c(6)) xor (c(11) xor c(12)))) xor ((c(15) xor (c(22) xor c(23))) xor ((c(26) xor c(27)) xor (c(28) xor c(30)))));
+    r(31) := (((c(2) xor (c(5) xor c(7))) xor ((c(8) xor c(9)) xor (c(10) xor c(11)))) xor ((c(13) xor (c(14) xor c(15))) xor ((c(23) xor c(27)) xor (c(29) xor c(30)))));
+    return r;
+  end function;
+
+  function crc_d40_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((d(3) xor (d(6) xor d(8))) xor ((d(9) xor d(10)) xor (d(11) xor d(12)))) xor (((d(14) xor d(15)) xor (d(16) xor d(24))) xor ((d(28) xor d(30)) xor (d(31) xor d(34)))));
+    r(1) := (((d(4) xor (d(7) xor d(9))) xor ((d(10) xor d(11)) xor (d(12) xor d(13)))) xor (((d(15) xor d(16)) xor (d(17) xor d(25))) xor ((d(29) xor d(31)) xor (d(32) xor d(35)))));
+    r(2) := (((d(5) xor (d(8) xor d(10))) xor ((d(11) xor d(12)) xor (d(13) xor d(14)))) xor (((d(16) xor d(17)) xor (d(18) xor d(26))) xor ((d(30) xor d(32)) xor (d(33) xor d(36)))));
+    r(3) := (((d(6) xor (d(9) xor d(11))) xor ((d(12) xor d(13)) xor (d(14) xor d(15)))) xor (((d(17) xor d(18)) xor (d(19) xor d(27))) xor ((d(31) xor d(33)) xor (d(34) xor d(37)))));
+    r(4) := ((((d(0) xor d(7)) xor (d(10) xor d(12))) xor ((d(13) xor d(14)) xor (d(15) xor d(16)))) xor (((d(18) xor d(19)) xor (d(20) xor d(28))) xor ((d(32) xor d(34)) xor (d(35) xor d(38)))));
+    r(5) := ((((d(0) xor d(1)) xor (d(8) xor d(11))) xor ((d(13) xor d(14)) xor (d(15) xor d(16)))) xor (((d(17) xor d(19)) xor (d(20) xor d(21))) xor ((d(29) xor d(33)) xor (d(35) xor (d(36) xor d(39))))));
+    r(6) := ((((d(1) xor d(2)) xor (d(3) xor d(6))) xor ((d(8) xor d(10)) xor (d(11) xor d(17)))) xor (((d(18) xor d(20)) xor (d(21) xor d(22))) xor ((d(24) xor d(28)) xor (d(31) xor (d(36) xor d(37))))));
+    r(7) := ((((d(0) xor d(2)) xor (d(3) xor d(4))) xor ((d(7) xor d(9)) xor (d(11) xor (d(12) xor d(18))))) xor (((d(19) xor d(21)) xor (d(22) xor d(23))) xor ((d(25) xor d(29)) xor (d(32) xor (d(37) xor d(38))))));
+    r(8) := ((((d(0) xor d(1)) xor (d(3) xor d(4))) xor ((d(5) xor d(8)) xor (d(10) xor (d(12) xor d(13))))) xor (((d(19) xor d(20)) xor (d(22) xor (d(23) xor d(24)))) xor ((d(26) xor d(30)) xor (d(33) xor (d(38) xor d(39))))));
+    r(9) := ((((d(1) xor d(2)) xor (d(3) xor d(4))) xor ((d(5) xor d(8)) xor (d(10) xor (d(12) xor d(13))))) xor (((d(15) xor d(16)) xor (d(20) xor (d(21) xor d(23)))) xor ((d(25) xor d(27)) xor (d(28) xor (d(30) xor d(39))))));
+    r(10) := (((d(2) xor (d(4) xor d(5))) xor ((d(8) xor d(10)) xor (d(12) xor d(13)))) xor (((d(15) xor d(17)) xor (d(21) xor d(22))) xor ((d(26) xor d(29)) xor (d(30) xor d(34)))));
+    r(11) := ((((d(0) xor d(3)) xor (d(5) xor d(6))) xor ((d(9) xor d(11)) xor (d(13) xor d(14)))) xor (((d(16) xor d(18)) xor (d(22) xor d(23))) xor ((d(27) xor d(30)) xor (d(31) xor d(35)))));
+    r(12) := ((((d(1) xor d(4)) xor (d(6) xor d(7))) xor ((d(10) xor d(12)) xor (d(14) xor d(15)))) xor (((d(17) xor d(19)) xor (d(23) xor d(24))) xor ((d(28) xor d(31)) xor (d(32) xor d(36)))));
+    r(13) := ((((d(0) xor d(2)) xor (d(5) xor d(7))) xor ((d(8) xor d(11)) xor (d(13) xor d(15)))) xor (((d(16) xor d(18)) xor (d(20) xor d(24))) xor ((d(25) xor d(29)) xor (d(32) xor (d(33) xor d(37))))));
+    r(14) := ((((d(1) xor d(3)) xor (d(6) xor d(8))) xor ((d(9) xor d(12)) xor (d(14) xor d(16)))) xor (((d(17) xor d(19)) xor (d(21) xor d(25))) xor ((d(26) xor d(30)) xor (d(33) xor (d(34) xor d(38))))));
+    r(15) := ((((d(2) xor d(4)) xor (d(7) xor d(9))) xor ((d(10) xor d(13)) xor (d(15) xor d(17)))) xor (((d(18) xor d(20)) xor (d(22) xor d(26))) xor ((d(27) xor d(31)) xor (d(34) xor (d(35) xor d(39))))));
+    r(16) := ((((d(5) xor d(6)) xor (d(9) xor d(12))) xor ((d(15) xor d(18)) xor (d(19) xor d(21)))) xor (((d(23) xor d(24)) xor (d(27) xor d(30))) xor ((d(31) xor d(32)) xor (d(34) xor (d(35) xor d(36))))));
+    r(17) := ((((d(6) xor d(7)) xor (d(10) xor d(13))) xor ((d(16) xor d(19)) xor (d(20) xor d(22)))) xor (((d(24) xor d(25)) xor (d(28) xor d(31))) xor ((d(32) xor d(33)) xor (d(35) xor (d(36) xor d(37))))));
+    r(18) := ((((d(7) xor d(8)) xor (d(11) xor d(14))) xor ((d(17) xor d(20)) xor (d(21) xor d(23)))) xor (((d(25) xor d(26)) xor (d(29) xor d(32))) xor ((d(33) xor d(34)) xor (d(36) xor (d(37) xor d(38))))));
+    r(19) := ((((d(8) xor d(9)) xor (d(12) xor d(15))) xor ((d(18) xor d(21)) xor (d(22) xor d(24)))) xor (((d(26) xor d(27)) xor (d(30) xor d(33))) xor ((d(34) xor d(35)) xor (d(37) xor (d(38) xor d(39))))));
+    r(20) := ((((d(3) xor d(6)) xor (d(8) xor d(11))) xor ((d(12) xor d(13)) xor (d(14) xor (d(15) xor d(19))))) xor (((d(22) xor d(23)) xor (d(24) xor (d(25) xor d(27)))) xor ((d(30) xor d(35)) xor (d(36) xor (d(38) xor d(39))))));
+    r(21) := ((((d(0) xor d(3)) xor (d(4) xor d(6))) xor ((d(7) xor d(8)) xor (d(10) xor (d(11) xor d(13))))) xor (((d(20) xor d(23)) xor (d(25) xor d(26))) xor ((d(30) xor d(34)) xor (d(36) xor (d(37) xor d(39))))));
+    r(22) := ((((d(0) xor d(1)) xor (d(3) xor d(4))) xor ((d(5) xor d(6)) xor (d(7) xor (d(10) xor d(15))))) xor (((d(16) xor d(21)) xor (d(26) xor (d(27) xor d(28)))) xor ((d(30) xor d(34)) xor (d(35) xor (d(37) xor d(38))))));
+    r(23) := ((((d(1) xor d(2)) xor (d(4) xor d(5))) xor ((d(6) xor d(7)) xor (d(8) xor (d(11) xor d(16))))) xor (((d(17) xor d(22)) xor (d(27) xor (d(28) xor d(29)))) xor ((d(31) xor d(35)) xor (d(36) xor (d(38) xor d(39))))));
+    r(24) := ((((d(0) xor d(2)) xor (d(5) xor (d(7) xor d(10)))) xor ((d(11) xor d(14)) xor (d(15) xor (d(16) xor d(17))))) xor (((d(18) xor d(23)) xor (d(24) xor (d(29) xor d(31)))) xor ((d(32) xor d(34)) xor (d(36) xor (d(37) xor d(39))))));
+    r(25) := ((((d(1) xor d(9)) xor (d(10) xor d(14))) xor ((d(17) xor d(18)) xor (d(19) xor d(25)))) xor (((d(28) xor d(31)) xor (d(32) xor d(33))) xor ((d(34) xor d(35)) xor (d(37) xor d(38)))));
+    r(26) := ((((d(0) xor d(2)) xor (d(10) xor d(11))) xor ((d(15) xor d(18)) xor (d(19) xor d(20)))) xor (((d(26) xor d(29)) xor (d(32) xor d(33))) xor ((d(34) xor d(35)) xor (d(36) xor (d(38) xor d(39))))));
+    r(27) := ((((d(0) xor d(1)) xor (d(6) xor (d(8) xor d(9)))) xor ((d(10) xor d(14)) xor (d(15) xor (d(19) xor d(20))))) xor (((d(21) xor d(24)) xor (d(27) xor (d(28) xor d(31)))) xor ((d(33) xor d(35)) xor (d(36) xor (d(37) xor d(39))))));
+    r(28) := ((((d(0) xor d(1)) xor (d(2) xor (d(3) xor d(6)))) xor ((d(7) xor d(8)) xor (d(12) xor (d(14) xor d(20))))) xor (((d(21) xor d(22)) xor (d(24) xor (d(25) xor d(29)))) xor ((d(30) xor (d(31) xor d(32))) xor (d(36) xor (d(37) xor d(38))))));
+    r(29) := ((((d(0) xor d(1)) xor (d(2) xor (d(3) xor d(4)))) xor ((d(7) xor (d(8) xor d(9))) xor (d(13) xor (d(15) xor d(21))))) xor (((d(22) xor d(23)) xor (d(25) xor (d(26) xor d(30)))) xor ((d(31) xor (d(32) xor d(33))) xor (d(37) xor (d(38) xor d(39))))));
+    r(30) := ((((d(1) xor d(2)) xor (d(4) xor d(5))) xor ((d(6) xor d(11)) xor (d(12) xor (d(15) xor d(22))))) xor (((d(23) xor d(26)) xor (d(27) xor d(28))) xor ((d(30) xor d(32)) xor (d(33) xor (d(38) xor d(39))))));
+    r(31) := ((((d(2) xor d(5)) xor (d(7) xor d(8))) xor ((d(9) xor d(10)) xor (d(11) xor d(13)))) xor (((d(14) xor d(15)) xor (d(23) xor d(27))) xor ((d(29) xor d(30)) xor (d(33) xor d(39)))));
+    return r;
+  end function;
+
   function crc_d48(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector is
     variable r : std_logic_vector(31 downto 0);
@@ -261,6 +659,82 @@ package body mac25g_crc_pkg is
     r(29) := (((((c(3) xor c(8)) xor (c(9) xor c(10))) xor ((c(11) xor c(12)) xor (c(15) xor (c(16) xor c(17))))) xor (((c(21) xor c(23)) xor (c(29) xor c(30))) xor ((c(31) xor d(3)) xor (d(8) xor (d(9) xor d(10)))))) xor ((((d(11) xor d(12)) xor (d(15) xor d(16))) xor ((d(17) xor d(21)) xor (d(23) xor (d(29) xor d(30))))) xor (((d(31) xor d(33)) xor (d(34) xor (d(38) xor d(39)))) xor ((d(40) xor d(41)) xor (d(45) xor (d(46) xor d(47)))))));
     r(30) := (((((c(0) xor c(1)) xor (c(3) xor c(9))) xor ((c(10) xor c(12)) xor (c(13) xor c(14)))) xor (((c(19) xor c(20)) xor (c(23) xor c(30))) xor ((c(31) xor d(0)) xor (d(1) xor (d(3) xor d(9)))))) xor ((((d(10) xor d(12)) xor (d(13) xor d(14))) xor ((d(19) xor d(20)) xor (d(23) xor d(30)))) xor (((d(31) xor d(34)) xor (d(35) xor d(36))) xor ((d(38) xor d(40)) xor (d(41) xor (d(46) xor d(47)))))));
     r(31) := (((((c(0) xor c(2)) xor (c(3) xor c(10))) xor ((c(13) xor c(15)) xor (c(16) xor c(17)))) xor (((c(18) xor c(19)) xor (c(21) xor c(22))) xor ((c(23) xor c(31)) xor (d(0) xor d(2))))) xor ((((d(3) xor d(10)) xor (d(13) xor d(15))) xor ((d(16) xor d(17)) xor (d(18) xor d(19)))) xor (((d(21) xor d(22)) xor (d(23) xor d(31))) xor ((d(35) xor d(37)) xor (d(38) xor (d(41) xor d(47)))))));
+    return r;
+  end function;
+
+  function crc_d48_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((c(0) xor (c(1) xor c(3))) xor ((c(4) xor c(11)) xor (c(14) xor c(16)))) xor ((c(17) xor (c(18) xor c(19))) xor ((c(20) xor c(22)) xor (c(23) xor c(24)))));
+    r(1) := (((c(1) xor (c(2) xor c(4))) xor ((c(5) xor c(12)) xor (c(15) xor c(17)))) xor ((c(18) xor (c(19) xor c(20))) xor ((c(21) xor c(23)) xor (c(24) xor c(25)))));
+    r(2) := (((c(0) xor (c(2) xor c(3))) xor ((c(5) xor c(6)) xor (c(13) xor c(16)))) xor (((c(18) xor c(19)) xor (c(20) xor c(21))) xor ((c(22) xor c(24)) xor (c(25) xor c(26)))));
+    r(3) := (((c(1) xor (c(3) xor c(4))) xor ((c(6) xor c(7)) xor (c(14) xor c(17)))) xor (((c(19) xor c(20)) xor (c(21) xor c(22))) xor ((c(23) xor c(25)) xor (c(26) xor c(27)))));
+    r(4) := (((c(2) xor (c(4) xor c(5))) xor ((c(7) xor c(8)) xor (c(15) xor c(18)))) xor (((c(20) xor c(21)) xor (c(22) xor c(23))) xor ((c(24) xor c(26)) xor (c(27) xor c(28)))));
+    r(5) := ((((c(0) xor c(3)) xor (c(5) xor c(6))) xor ((c(8) xor c(9)) xor (c(16) xor c(19)))) xor (((c(21) xor c(22)) xor (c(23) xor c(24))) xor ((c(25) xor c(27)) xor (c(28) xor c(29)))));
+    r(6) := (((c(3) xor (c(6) xor c(7))) xor ((c(9) xor c(10)) xor (c(11) xor c(14)))) xor (((c(16) xor c(18)) xor (c(19) xor c(25))) xor ((c(26) xor c(28)) xor (c(29) xor c(30)))));
+    r(7) := ((((c(0) xor c(4)) xor (c(7) xor c(8))) xor ((c(10) xor c(11)) xor (c(12) xor c(15)))) xor (((c(17) xor c(19)) xor (c(20) xor c(26))) xor ((c(27) xor c(29)) xor (c(30) xor c(31)))));
+    r(8) := ((((c(0) xor c(1)) xor (c(5) xor c(8))) xor ((c(9) xor c(11)) xor (c(12) xor c(13)))) xor (((c(16) xor c(18)) xor (c(20) xor c(21))) xor ((c(27) xor c(28)) xor (c(30) xor c(31)))));
+    r(9) := ((((c(0) xor c(2)) xor (c(3) xor c(4))) xor ((c(6) xor c(9)) xor (c(10) xor (c(11) xor c(12))))) xor (((c(13) xor c(16)) xor (c(18) xor (c(20) xor c(21)))) xor ((c(23) xor c(24)) xor (c(28) xor (c(29) xor c(31))))));
+    r(10) := (((c(5) xor (c(7) xor c(10))) xor (c(12) xor (c(13) xor c(16)))) xor ((c(18) xor (c(20) xor c(21))) xor ((c(23) xor c(25)) xor (c(29) xor c(30)))));
+    r(11) := (((c(6) xor (c(8) xor c(11))) xor (c(13) xor (c(14) xor c(17)))) xor ((c(19) xor (c(21) xor c(22))) xor ((c(24) xor c(26)) xor (c(30) xor c(31)))));
+    r(12) := (((c(0) xor (c(7) xor c(9))) xor (c(12) xor (c(14) xor c(15)))) xor ((c(18) xor (c(20) xor c(22))) xor ((c(23) xor c(25)) xor (c(27) xor c(31)))));
+    r(13) := (((c(1) xor (c(8) xor c(10))) xor (c(13) xor (c(15) xor c(16)))) xor ((c(19) xor (c(21) xor c(23))) xor (c(24) xor (c(26) xor c(28)))));
+    r(14) := (((c(0) xor (c(2) xor c(9))) xor (c(11) xor (c(14) xor c(16)))) xor ((c(17) xor (c(20) xor c(22))) xor ((c(24) xor c(25)) xor (c(27) xor c(29)))));
+    r(15) := (((c(0) xor (c(1) xor c(3))) xor ((c(10) xor c(12)) xor (c(15) xor c(17)))) xor ((c(18) xor (c(21) xor c(23))) xor ((c(25) xor c(26)) xor (c(28) xor c(30)))));
+    r(16) := (((c(2) xor c(3)) xor (c(13) xor (c(14) xor c(17)))) xor ((c(20) xor (c(23) xor c(26))) xor (c(27) xor (c(29) xor c(31)))));
+    r(17) := (((c(3) xor c(4)) xor (c(14) xor (c(15) xor c(18)))) xor ((c(21) xor c(24)) xor (c(27) xor (c(28) xor c(30)))));
+    r(18) := (((c(0) xor c(4)) xor (c(5) xor (c(15) xor c(16)))) xor ((c(19) xor (c(22) xor c(25))) xor (c(28) xor (c(29) xor c(31)))));
+    r(19) := (((c(0) xor c(1)) xor (c(5) xor (c(6) xor c(16)))) xor ((c(17) xor (c(20) xor c(23))) xor (c(26) xor (c(29) xor c(30)))));
+    r(20) := ((((c(0) xor c(2)) xor (c(3) xor c(4))) xor ((c(6) xor c(7)) xor (c(11) xor c(14)))) xor (((c(16) xor c(19)) xor (c(20) xor c(21))) xor ((c(22) xor c(23)) xor (c(27) xor (c(30) xor c(31))))));
+    r(21) := (((c(5) xor (c(7) xor c(8))) xor (c(11) xor (c(12) xor c(14)))) xor ((c(15) xor (c(16) xor c(18))) xor ((c(19) xor c(21)) xor (c(28) xor c(31)))));
+    r(22) := ((((c(0) xor c(1)) xor (c(3) xor c(4))) xor ((c(6) xor c(8)) xor (c(9) xor c(11)))) xor (((c(12) xor c(13)) xor (c(14) xor c(15))) xor ((c(18) xor c(23)) xor (c(24) xor c(29)))));
+    r(23) := ((((c(1) xor c(2)) xor (c(4) xor c(5))) xor ((c(7) xor c(9)) xor (c(10) xor c(12)))) xor (((c(13) xor c(14)) xor (c(15) xor c(16))) xor ((c(19) xor c(24)) xor (c(25) xor c(30)))));
+    r(24) := ((((c(0) xor c(1)) xor (c(2) xor c(4))) xor ((c(5) xor c(6)) xor (c(8) xor (c(10) xor c(13))))) xor (((c(15) xor c(18)) xor (c(19) xor c(22))) xor ((c(23) xor c(24)) xor (c(25) xor (c(26) xor c(31))))));
+    r(25) := (((c(0) xor (c(2) xor c(4))) xor (c(5) xor (c(6) xor c(7)))) xor ((c(9) xor (c(17) xor c(18))) xor ((c(22) xor c(25)) xor (c(26) xor c(27)))));
+    r(26) := (((c(1) xor (c(3) xor c(5))) xor (c(6) xor (c(7) xor c(8)))) xor ((c(10) xor (c(18) xor c(19))) xor ((c(23) xor c(26)) xor (c(27) xor c(28)))));
+    r(27) := ((((c(0) xor c(1)) xor (c(2) xor c(3))) xor ((c(6) xor c(7)) xor (c(8) xor c(9)))) xor (((c(14) xor c(16)) xor (c(17) xor c(18))) xor ((c(22) xor c(23)) xor (c(27) xor (c(28) xor c(29))))));
+    r(28) := (((c(2) xor (c(7) xor c(8))) xor ((c(9) xor c(10)) xor (c(11) xor c(14)))) xor ((c(15) xor (c(16) xor c(20))) xor ((c(22) xor c(28)) xor (c(29) xor c(30)))));
+    r(29) := (((c(3) xor (c(8) xor c(9))) xor ((c(10) xor c(11)) xor (c(12) xor c(15)))) xor ((c(16) xor (c(17) xor c(21))) xor ((c(23) xor c(29)) xor (c(30) xor c(31)))));
+    r(30) := (((c(0) xor (c(1) xor c(3))) xor (c(9) xor (c(10) xor c(12)))) xor ((c(13) xor (c(14) xor c(19))) xor ((c(20) xor c(23)) xor (c(30) xor c(31)))));
+    r(31) := (((c(0) xor (c(2) xor c(3))) xor ((c(10) xor c(13)) xor (c(15) xor c(16)))) xor ((c(17) xor (c(18) xor c(19))) xor ((c(21) xor c(22)) xor (c(23) xor c(31)))));
+    return r;
+  end function;
+
+  function crc_d48_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((((d(0) xor d(1)) xor (d(3) xor d(4))) xor ((d(11) xor d(14)) xor (d(16) xor (d(17) xor d(18))))) xor (((d(19) xor d(20)) xor (d(22) xor (d(23) xor d(24)))) xor ((d(32) xor d(36)) xor (d(38) xor (d(39) xor d(42))))));
+    r(1) := ((((d(1) xor d(2)) xor (d(4) xor d(5))) xor ((d(12) xor d(15)) xor (d(17) xor (d(18) xor d(19))))) xor (((d(20) xor d(21)) xor (d(23) xor (d(24) xor d(25)))) xor ((d(33) xor d(37)) xor (d(39) xor (d(40) xor d(43))))));
+    r(2) := ((((d(0) xor d(2)) xor (d(3) xor (d(5) xor d(6)))) xor ((d(13) xor d(16)) xor (d(18) xor (d(19) xor d(20))))) xor (((d(21) xor d(22)) xor (d(24) xor (d(25) xor d(26)))) xor ((d(34) xor d(38)) xor (d(40) xor (d(41) xor d(44))))));
+    r(3) := ((((d(1) xor d(3)) xor (d(4) xor (d(6) xor d(7)))) xor ((d(14) xor d(17)) xor (d(19) xor (d(20) xor d(21))))) xor (((d(22) xor d(23)) xor (d(25) xor (d(26) xor d(27)))) xor ((d(35) xor d(39)) xor (d(41) xor (d(42) xor d(45))))));
+    r(4) := ((((d(2) xor d(4)) xor (d(5) xor (d(7) xor d(8)))) xor ((d(15) xor d(18)) xor (d(20) xor (d(21) xor d(22))))) xor (((d(23) xor d(24)) xor (d(26) xor (d(27) xor d(28)))) xor ((d(36) xor d(40)) xor (d(42) xor (d(43) xor d(46))))));
+    r(5) := ((((d(0) xor d(3)) xor (d(5) xor (d(6) xor d(8)))) xor ((d(9) xor d(16)) xor (d(19) xor (d(21) xor d(22))))) xor (((d(23) xor d(24)) xor (d(25) xor (d(27) xor d(28)))) xor ((d(29) xor (d(37) xor d(41))) xor (d(43) xor (d(44) xor d(47))))));
+    r(6) := ((((d(3) xor d(6)) xor (d(7) xor (d(9) xor d(10)))) xor ((d(11) xor d(14)) xor (d(16) xor (d(18) xor d(19))))) xor (((d(25) xor d(26)) xor (d(28) xor (d(29) xor d(30)))) xor ((d(32) xor d(36)) xor (d(39) xor (d(44) xor d(45))))));
+    r(7) := ((((d(0) xor d(4)) xor (d(7) xor (d(8) xor d(10)))) xor ((d(11) xor d(12)) xor (d(15) xor (d(17) xor d(19))))) xor (((d(20) xor d(26)) xor (d(27) xor (d(29) xor d(30)))) xor ((d(31) xor (d(33) xor d(37))) xor (d(40) xor (d(45) xor d(46))))));
+    r(8) := ((((d(0) xor d(1)) xor (d(5) xor (d(8) xor d(9)))) xor ((d(11) xor (d(12) xor d(13))) xor (d(16) xor (d(18) xor d(20))))) xor (((d(21) xor d(27)) xor (d(28) xor (d(30) xor d(31)))) xor ((d(32) xor (d(34) xor d(38))) xor (d(41) xor (d(46) xor d(47))))));
+    r(9) := ((((d(0) xor (d(2) xor d(3))) xor (d(4) xor (d(6) xor d(9)))) xor ((d(10) xor (d(11) xor d(12))) xor (d(13) xor (d(16) xor d(18))))) xor (((d(20) xor (d(21) xor d(23))) xor (d(24) xor (d(28) xor d(29)))) xor ((d(31) xor (d(33) xor d(35))) xor (d(36) xor (d(38) xor d(47))))));
+    r(10) := ((((d(5) xor d(7)) xor (d(10) xor d(12))) xor ((d(13) xor d(16)) xor (d(18) xor d(20)))) xor (((d(21) xor d(23)) xor (d(25) xor d(29))) xor ((d(30) xor d(34)) xor (d(37) xor (d(38) xor d(42))))));
+    r(11) := ((((d(6) xor d(8)) xor (d(11) xor d(13))) xor ((d(14) xor d(17)) xor (d(19) xor d(21)))) xor (((d(22) xor d(24)) xor (d(26) xor d(30))) xor ((d(31) xor d(35)) xor (d(38) xor (d(39) xor d(43))))));
+    r(12) := ((((d(0) xor d(7)) xor (d(9) xor d(12))) xor ((d(14) xor d(15)) xor (d(18) xor (d(20) xor d(22))))) xor (((d(23) xor d(25)) xor (d(27) xor d(31))) xor ((d(32) xor d(36)) xor (d(39) xor (d(40) xor d(44))))));
+    r(13) := ((((d(1) xor d(8)) xor (d(10) xor d(13))) xor ((d(15) xor d(16)) xor (d(19) xor (d(21) xor d(23))))) xor (((d(24) xor d(26)) xor (d(28) xor d(32))) xor ((d(33) xor d(37)) xor (d(40) xor (d(41) xor d(45))))));
+    r(14) := ((((d(0) xor d(2)) xor (d(9) xor d(11))) xor ((d(14) xor d(16)) xor (d(17) xor (d(20) xor d(22))))) xor (((d(24) xor d(25)) xor (d(27) xor (d(29) xor d(33)))) xor ((d(34) xor d(38)) xor (d(41) xor (d(42) xor d(46))))));
+    r(15) := ((((d(0) xor d(1)) xor (d(3) xor (d(10) xor d(12)))) xor ((d(15) xor d(17)) xor (d(18) xor (d(21) xor d(23))))) xor (((d(25) xor d(26)) xor (d(28) xor (d(30) xor d(34)))) xor ((d(35) xor d(39)) xor (d(42) xor (d(43) xor d(47))))));
+    r(16) := ((((d(2) xor d(3)) xor (d(13) xor d(14))) xor ((d(17) xor d(20)) xor (d(23) xor (d(26) xor d(27))))) xor (((d(29) xor d(31)) xor (d(32) xor (d(35) xor d(38)))) xor ((d(39) xor d(40)) xor (d(42) xor (d(43) xor d(44))))));
+    r(17) := ((((d(3) xor d(4)) xor (d(14) xor d(15))) xor ((d(18) xor d(21)) xor (d(24) xor (d(27) xor d(28))))) xor (((d(30) xor d(32)) xor (d(33) xor (d(36) xor d(39)))) xor ((d(40) xor d(41)) xor (d(43) xor (d(44) xor d(45))))));
+    r(18) := ((((d(0) xor d(4)) xor (d(5) xor (d(15) xor d(16)))) xor ((d(19) xor d(22)) xor (d(25) xor (d(28) xor d(29))))) xor (((d(31) xor d(33)) xor (d(34) xor (d(37) xor d(40)))) xor ((d(41) xor d(42)) xor (d(44) xor (d(45) xor d(46))))));
+    r(19) := ((((d(0) xor d(1)) xor (d(5) xor (d(6) xor d(16)))) xor ((d(17) xor d(20)) xor (d(23) xor (d(26) xor d(29))))) xor (((d(30) xor d(32)) xor (d(34) xor (d(35) xor d(38)))) xor ((d(41) xor (d(42) xor d(43))) xor (d(45) xor (d(46) xor d(47))))));
+    r(20) := ((((d(0) xor (d(2) xor d(3))) xor (d(4) xor (d(6) xor d(7)))) xor ((d(11) xor (d(14) xor d(16))) xor (d(19) xor (d(20) xor d(21))))) xor (((d(22) xor (d(23) xor d(27))) xor (d(30) xor (d(31) xor d(32)))) xor ((d(33) xor (d(35) xor d(38))) xor ((d(43) xor d(44)) xor (d(46) xor d(47))))));
+    r(21) := ((((d(5) xor d(7)) xor (d(8) xor (d(11) xor d(12)))) xor ((d(14) xor d(15)) xor (d(16) xor (d(18) xor d(19))))) xor (((d(21) xor d(28)) xor (d(31) xor (d(33) xor d(34)))) xor ((d(38) xor d(42)) xor (d(44) xor (d(45) xor d(47))))));
+    r(22) := ((((d(0) xor (d(1) xor d(3))) xor (d(4) xor (d(6) xor d(8)))) xor ((d(9) xor (d(11) xor d(12))) xor (d(13) xor (d(14) xor d(15))))) xor (((d(18) xor (d(23) xor d(24))) xor (d(29) xor (d(34) xor d(35)))) xor ((d(36) xor (d(38) xor d(42))) xor (d(43) xor (d(45) xor d(46))))));
+    r(23) := ((((d(1) xor (d(2) xor d(4))) xor (d(5) xor (d(7) xor d(9)))) xor ((d(10) xor (d(12) xor d(13))) xor (d(14) xor (d(15) xor d(16))))) xor (((d(19) xor (d(24) xor d(25))) xor (d(30) xor (d(35) xor d(36)))) xor ((d(37) xor (d(39) xor d(43))) xor (d(44) xor (d(46) xor d(47))))));
+    r(24) := ((((d(0) xor (d(1) xor d(2))) xor (d(4) xor (d(5) xor d(6)))) xor ((d(8) xor (d(10) xor d(13))) xor ((d(15) xor d(18)) xor (d(19) xor d(22))))) xor (((d(23) xor (d(24) xor d(25))) xor (d(26) xor (d(31) xor d(32)))) xor ((d(37) xor (d(39) xor d(40))) xor ((d(42) xor d(44)) xor (d(45) xor d(47))))));
+    r(25) := ((((d(0) xor d(2)) xor (d(4) xor (d(5) xor d(6)))) xor ((d(7) xor (d(9) xor d(17))) xor (d(18) xor (d(22) xor d(25))))) xor (((d(26) xor d(27)) xor (d(33) xor (d(36) xor d(39)))) xor ((d(40) xor (d(41) xor d(42))) xor (d(43) xor (d(45) xor d(46))))));
+    r(26) := ((((d(1) xor d(3)) xor (d(5) xor (d(6) xor d(7)))) xor ((d(8) xor (d(10) xor d(18))) xor (d(19) xor (d(23) xor d(26))))) xor (((d(27) xor d(28)) xor (d(34) xor (d(37) xor d(40)))) xor ((d(41) xor (d(42) xor d(43))) xor (d(44) xor (d(46) xor d(47))))));
+    r(27) := ((((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(6) xor d(7)))) xor ((d(8) xor (d(9) xor d(14))) xor ((d(16) xor d(17)) xor (d(18) xor d(22))))) xor (((d(23) xor (d(27) xor d(28))) xor (d(29) xor (d(32) xor d(35)))) xor ((d(36) xor (d(39) xor d(41))) xor ((d(43) xor d(44)) xor (d(45) xor d(47))))));
+    r(28) := ((((d(2) xor d(7)) xor (d(8) xor (d(9) xor d(10)))) xor ((d(11) xor (d(14) xor d(15))) xor (d(16) xor (d(20) xor d(22))))) xor (((d(28) xor (d(29) xor d(30))) xor (d(32) xor (d(33) xor d(37)))) xor ((d(38) xor (d(39) xor d(40))) xor (d(44) xor (d(45) xor d(46))))));
+    r(29) := ((((d(3) xor d(8)) xor (d(9) xor (d(10) xor d(11)))) xor ((d(12) xor (d(15) xor d(16))) xor (d(17) xor (d(21) xor d(23))))) xor (((d(29) xor (d(30) xor d(31))) xor (d(33) xor (d(34) xor d(38)))) xor ((d(39) xor (d(40) xor d(41))) xor (d(45) xor (d(46) xor d(47))))));
+    r(30) := ((((d(0) xor d(1)) xor (d(3) xor (d(9) xor d(10)))) xor ((d(12) xor d(13)) xor (d(14) xor (d(19) xor d(20))))) xor (((d(23) xor d(30)) xor (d(31) xor (d(34) xor d(35)))) xor ((d(36) xor (d(38) xor d(40))) xor (d(41) xor (d(46) xor d(47))))));
+    r(31) := ((((d(0) xor d(2)) xor (d(3) xor d(10))) xor ((d(13) xor d(15)) xor (d(16) xor (d(17) xor d(18))))) xor (((d(19) xor d(21)) xor (d(22) xor (d(23) xor d(31)))) xor ((d(35) xor d(37)) xor (d(38) xor (d(41) xor d(47))))));
     return r;
   end function;
 
@@ -303,6 +777,82 @@ package body mac25g_crc_pkg is
     return r;
   end function;
 
+  function crc_d56_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((((c(1) xor c(2)) xor (c(3) xor c(6))) xor ((c(8) xor c(9)) xor (c(11) xor c(12)))) xor (((c(19) xor c(22)) xor (c(24) xor c(25))) xor ((c(26) xor c(27)) xor (c(28) xor (c(30) xor c(31))))));
+    r(1) := ((((c(2) xor c(3)) xor (c(4) xor c(7))) xor ((c(9) xor c(10)) xor (c(12) xor c(13)))) xor (((c(20) xor c(23)) xor (c(25) xor c(26))) xor ((c(27) xor c(28)) xor (c(29) xor c(31)))));
+    r(2) := ((((c(0) xor c(3)) xor (c(4) xor c(5))) xor ((c(8) xor c(10)) xor (c(11) xor c(13)))) xor (((c(14) xor c(21)) xor (c(24) xor c(26))) xor ((c(27) xor c(28)) xor (c(29) xor c(30)))));
+    r(3) := ((((c(1) xor c(4)) xor (c(5) xor c(6))) xor ((c(9) xor c(11)) xor (c(12) xor c(14)))) xor (((c(15) xor c(22)) xor (c(25) xor c(27))) xor ((c(28) xor c(29)) xor (c(30) xor c(31)))));
+    r(4) := ((((c(0) xor c(2)) xor (c(5) xor c(6))) xor ((c(7) xor c(10)) xor (c(12) xor c(13)))) xor (((c(15) xor c(16)) xor (c(23) xor c(26))) xor ((c(28) xor c(29)) xor (c(30) xor c(31)))));
+    r(5) := ((((c(0) xor c(1)) xor (c(3) xor c(6))) xor ((c(7) xor c(8)) xor (c(11) xor c(13)))) xor (((c(14) xor c(16)) xor (c(17) xor c(24))) xor ((c(27) xor c(29)) xor (c(30) xor c(31)))));
+    r(6) := (((c(3) xor (c(4) xor c(6))) xor ((c(7) xor c(11)) xor (c(14) xor c(15)))) xor ((c(17) xor (c(18) xor c(19))) xor ((c(22) xor c(24)) xor (c(26) xor c(27)))));
+    r(7) := (((c(0) xor (c(4) xor c(5))) xor ((c(7) xor c(8)) xor (c(12) xor c(15)))) xor (((c(16) xor c(18)) xor (c(19) xor c(20))) xor ((c(23) xor c(25)) xor (c(27) xor c(28)))));
+    r(8) := ((((c(0) xor c(1)) xor (c(5) xor c(6))) xor ((c(8) xor c(9)) xor (c(13) xor c(16)))) xor (((c(17) xor c(19)) xor (c(20) xor c(21))) xor ((c(24) xor c(26)) xor (c(28) xor c(29)))));
+    r(9) := ((((c(0) xor c(3)) xor (c(7) xor c(8))) xor ((c(10) xor c(11)) xor (c(12) xor (c(14) xor c(17))))) xor (((c(18) xor c(19)) xor (c(20) xor c(21))) xor ((c(24) xor c(26)) xor (c(28) xor (c(29) xor c(31))))));
+    r(10) := (((c(2) xor (c(3) xor c(4))) xor ((c(6) xor c(13)) xor (c(15) xor c(18)))) xor ((c(20) xor (c(21) xor c(24))) xor ((c(26) xor c(28)) xor (c(29) xor c(31)))));
+    r(11) := (((c(0) xor (c(3) xor c(4))) xor ((c(5) xor c(7)) xor (c(14) xor c(16)))) xor ((c(19) xor (c(21) xor c(22))) xor ((c(25) xor c(27)) xor (c(29) xor c(30)))));
+    r(12) := (((c(1) xor (c(4) xor c(5))) xor ((c(6) xor c(8)) xor (c(15) xor c(17)))) xor ((c(20) xor (c(22) xor c(23))) xor ((c(26) xor c(28)) xor (c(30) xor c(31)))));
+    r(13) := (((c(2) xor (c(5) xor c(6))) xor (c(7) xor (c(9) xor c(16)))) xor ((c(18) xor (c(21) xor c(23))) xor ((c(24) xor c(27)) xor (c(29) xor c(31)))));
+    r(14) := (((c(3) xor (c(6) xor c(7))) xor (c(8) xor (c(10) xor c(17)))) xor ((c(19) xor (c(22) xor c(24))) xor (c(25) xor (c(28) xor c(30)))));
+    r(15) := (((c(4) xor (c(7) xor c(8))) xor (c(9) xor (c(11) xor c(18)))) xor ((c(20) xor (c(23) xor c(25))) xor (c(26) xor (c(29) xor c(31)))));
+    r(16) := (((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(5) xor c(6)))) xor ((c(10) xor (c(11) xor c(21))) xor ((c(22) xor c(25)) xor (c(28) xor c(31)))));
+    r(17) := (((c(0) xor (c(1) xor c(2))) xor (c(3) xor (c(4) xor c(6)))) xor ((c(7) xor (c(11) xor c(12))) xor ((c(22) xor c(23)) xor (c(26) xor c(29)))));
+    r(18) := (((c(0) xor (c(1) xor c(2))) xor ((c(3) xor c(4)) xor (c(5) xor c(7)))) xor ((c(8) xor (c(12) xor c(13))) xor ((c(23) xor c(24)) xor (c(27) xor c(30)))));
+    r(19) := (((c(1) xor (c(2) xor c(3))) xor ((c(4) xor c(5)) xor (c(6) xor c(8)))) xor ((c(9) xor (c(13) xor c(14))) xor ((c(24) xor c(25)) xor (c(28) xor c(31)))));
+    r(20) := ((((c(0) xor c(1)) xor (c(4) xor c(5))) xor ((c(7) xor c(8)) xor (c(10) xor (c(11) xor c(12))))) xor (((c(14) xor c(15)) xor (c(19) xor (c(22) xor c(24)))) xor ((c(27) xor c(28)) xor (c(29) xor (c(30) xor c(31))))));
+    r(21) := (((c(0) xor (c(3) xor c(5))) xor ((c(13) xor c(15)) xor (c(16) xor c(19)))) xor ((c(20) xor (c(22) xor c(23))) xor ((c(24) xor c(26)) xor (c(27) xor c(29)))));
+    r(22) := ((((c(0) xor c(2)) xor (c(3) xor c(4))) xor ((c(8) xor c(9)) xor (c(11) xor (c(12) xor c(14))))) xor (((c(16) xor c(17)) xor (c(19) xor c(20))) xor ((c(21) xor c(22)) xor (c(23) xor (c(26) xor c(31))))));
+    r(23) := ((((c(1) xor c(3)) xor (c(4) xor c(5))) xor ((c(9) xor c(10)) xor (c(12) xor c(13)))) xor (((c(15) xor c(17)) xor (c(18) xor c(20))) xor ((c(21) xor c(22)) xor (c(23) xor (c(24) xor c(27))))));
+    r(24) := ((((c(1) xor c(3)) xor (c(4) xor c(5))) xor ((c(8) xor c(9)) xor (c(10) xor (c(12) xor c(13))))) xor (((c(14) xor c(16)) xor (c(18) xor c(21))) xor ((c(23) xor c(26)) xor (c(27) xor (c(30) xor c(31))))));
+    r(25) := (((c(0) xor (c(1) xor c(3))) xor ((c(4) xor c(5)) xor (c(8) xor c(10)))) xor (((c(12) xor c(13)) xor (c(14) xor c(15))) xor ((c(17) xor c(25)) xor (c(26) xor c(30)))));
+    r(26) := ((((c(0) xor c(1)) xor (c(2) xor c(4))) xor ((c(5) xor c(6)) xor (c(9) xor c(11)))) xor (((c(13) xor c(14)) xor (c(15) xor c(16))) xor ((c(18) xor c(26)) xor (c(27) xor c(31)))));
+    r(27) := ((((c(5) xor c(7)) xor (c(8) xor c(9))) xor ((c(10) xor c(11)) xor (c(14) xor c(15)))) xor (((c(16) xor c(17)) xor (c(22) xor c(24))) xor ((c(25) xor c(26)) xor (c(30) xor c(31)))));
+    r(28) := (((c(1) xor (c(2) xor c(3))) xor ((c(10) xor c(15)) xor (c(16) xor c(17)))) xor ((c(18) xor (c(19) xor c(22))) xor ((c(23) xor c(24)) xor (c(28) xor c(30)))));
+    r(29) := (((c(0) xor (c(2) xor c(3))) xor ((c(4) xor c(11)) xor (c(16) xor c(17)))) xor (((c(18) xor c(19)) xor (c(20) xor c(23))) xor ((c(24) xor c(25)) xor (c(29) xor c(31)))));
+    r(30) := (((c(2) xor (c(4) xor c(5))) xor ((c(6) xor c(8)) xor (c(9) xor c(11)))) xor (((c(17) xor c(18)) xor (c(20) xor c(21))) xor ((c(22) xor c(27)) xor (c(28) xor c(31)))));
+    r(31) := ((((c(0) xor c(1)) xor (c(2) xor c(5))) xor ((c(7) xor c(8)) xor (c(10) xor (c(11) xor c(18))))) xor (((c(21) xor c(23)) xor (c(24) xor c(25))) xor ((c(26) xor c(27)) xor (c(29) xor (c(30) xor c(31))))));
+    return r;
+  end function;
+
+  function crc_d56_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((((d(1) xor d(2)) xor (d(3) xor (d(6) xor d(8)))) xor ((d(9) xor (d(11) xor d(12))) xor (d(19) xor (d(22) xor d(24))))) xor (((d(25) xor (d(26) xor d(27))) xor (d(28) xor (d(30) xor d(31)))) xor ((d(32) xor (d(40) xor d(44))) xor (d(46) xor (d(47) xor d(50))))));
+    r(1) := ((((d(2) xor d(3)) xor (d(4) xor (d(7) xor d(9)))) xor ((d(10) xor (d(12) xor d(13))) xor (d(20) xor (d(23) xor d(25))))) xor (((d(26) xor (d(27) xor d(28))) xor (d(29) xor (d(31) xor d(32)))) xor ((d(33) xor (d(41) xor d(45))) xor (d(47) xor (d(48) xor d(51))))));
+    r(2) := ((((d(0) xor (d(3) xor d(4))) xor (d(5) xor (d(8) xor d(10)))) xor ((d(11) xor (d(13) xor d(14))) xor (d(21) xor (d(24) xor d(26))))) xor (((d(27) xor (d(28) xor d(29))) xor (d(30) xor (d(32) xor d(33)))) xor ((d(34) xor (d(42) xor d(46))) xor (d(48) xor (d(49) xor d(52))))));
+    r(3) := ((((d(1) xor (d(4) xor d(5))) xor (d(6) xor (d(9) xor d(11)))) xor ((d(12) xor (d(14) xor d(15))) xor (d(22) xor (d(25) xor d(27))))) xor (((d(28) xor (d(29) xor d(30))) xor (d(31) xor (d(33) xor d(34)))) xor ((d(35) xor (d(43) xor d(47))) xor (d(49) xor (d(50) xor d(53))))));
+    r(4) := ((((d(0) xor (d(2) xor d(5))) xor (d(6) xor (d(7) xor d(10)))) xor ((d(12) xor (d(13) xor d(15))) xor (d(16) xor (d(23) xor d(26))))) xor (((d(28) xor (d(29) xor d(30))) xor (d(31) xor (d(32) xor d(34)))) xor ((d(35) xor (d(36) xor d(44))) xor ((d(48) xor d(50)) xor (d(51) xor d(54))))));
+    r(5) := ((((d(0) xor (d(1) xor d(3))) xor (d(6) xor (d(7) xor d(8)))) xor ((d(11) xor (d(13) xor d(14))) xor ((d(16) xor d(17)) xor (d(24) xor d(27))))) xor (((d(29) xor (d(30) xor d(31))) xor (d(32) xor (d(33) xor d(35)))) xor ((d(36) xor (d(37) xor d(45))) xor ((d(49) xor d(51)) xor (d(52) xor d(55))))));
+    r(6) := ((((d(3) xor (d(4) xor d(6))) xor (d(7) xor (d(11) xor d(14)))) xor ((d(15) xor (d(17) xor d(18))) xor (d(19) xor (d(22) xor d(24))))) xor (((d(26) xor (d(27) xor d(33))) xor (d(34) xor (d(36) xor d(37)))) xor ((d(38) xor (d(40) xor d(44))) xor (d(47) xor (d(52) xor d(53))))));
+    r(7) := ((((d(0) xor (d(4) xor d(5))) xor (d(7) xor (d(8) xor d(12)))) xor ((d(15) xor (d(16) xor d(18))) xor (d(19) xor (d(20) xor d(23))))) xor (((d(25) xor (d(27) xor d(28))) xor (d(34) xor (d(35) xor d(37)))) xor ((d(38) xor (d(39) xor d(41))) xor ((d(45) xor d(48)) xor (d(53) xor d(54))))));
+    r(8) := ((((d(0) xor (d(1) xor d(5))) xor (d(6) xor (d(8) xor d(9)))) xor ((d(13) xor (d(16) xor d(17))) xor ((d(19) xor d(20)) xor (d(21) xor d(24))))) xor (((d(26) xor (d(28) xor d(29))) xor (d(35) xor (d(36) xor d(38)))) xor ((d(39) xor (d(40) xor d(42))) xor ((d(46) xor d(49)) xor (d(54) xor d(55))))));
+    r(9) := ((((d(0) xor (d(3) xor d(7))) xor (d(8) xor (d(10) xor d(11)))) xor ((d(12) xor (d(14) xor d(17))) xor ((d(18) xor d(19)) xor (d(20) xor d(21))))) xor (((d(24) xor (d(26) xor d(28))) xor ((d(29) xor d(31)) xor (d(32) xor d(36)))) xor ((d(37) xor (d(39) xor d(41))) xor ((d(43) xor d(44)) xor (d(46) xor d(55))))));
+    r(10) := ((((d(2) xor d(3)) xor (d(4) xor (d(6) xor d(13)))) xor ((d(15) xor d(18)) xor (d(20) xor (d(21) xor d(24))))) xor (((d(26) xor d(28)) xor (d(29) xor (d(31) xor d(33)))) xor ((d(37) xor (d(38) xor d(42))) xor (d(45) xor (d(46) xor d(50))))));
+    r(11) := ((((d(0) xor d(3)) xor (d(4) xor (d(5) xor d(7)))) xor ((d(14) xor (d(16) xor d(19))) xor (d(21) xor (d(22) xor d(25))))) xor (((d(27) xor d(29)) xor (d(30) xor (d(32) xor d(34)))) xor ((d(38) xor (d(39) xor d(43))) xor (d(46) xor (d(47) xor d(51))))));
+    r(12) := ((((d(1) xor d(4)) xor (d(5) xor (d(6) xor d(8)))) xor ((d(15) xor (d(17) xor d(20))) xor (d(22) xor (d(23) xor d(26))))) xor (((d(28) xor d(30)) xor (d(31) xor (d(33) xor d(35)))) xor ((d(39) xor (d(40) xor d(44))) xor (d(47) xor (d(48) xor d(52))))));
+    r(13) := ((((d(2) xor d(5)) xor (d(6) xor (d(7) xor d(9)))) xor ((d(16) xor (d(18) xor d(21))) xor (d(23) xor (d(24) xor d(27))))) xor (((d(29) xor d(31)) xor (d(32) xor (d(34) xor d(36)))) xor ((d(40) xor (d(41) xor d(45))) xor (d(48) xor (d(49) xor d(53))))));
+    r(14) := ((((d(3) xor d(6)) xor (d(7) xor (d(8) xor d(10)))) xor ((d(17) xor (d(19) xor d(22))) xor (d(24) xor (d(25) xor d(28))))) xor (((d(30) xor d(32)) xor (d(33) xor (d(35) xor d(37)))) xor ((d(41) xor (d(42) xor d(46))) xor (d(49) xor (d(50) xor d(54))))));
+    r(15) := ((((d(4) xor d(7)) xor (d(8) xor (d(9) xor d(11)))) xor ((d(18) xor (d(20) xor d(23))) xor (d(25) xor (d(26) xor d(29))))) xor (((d(31) xor d(33)) xor (d(34) xor (d(36) xor d(38)))) xor ((d(42) xor (d(43) xor d(47))) xor (d(50) xor (d(51) xor d(55))))));
+    r(16) := ((((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(5) xor d(6)))) xor ((d(10) xor (d(11) xor d(21))) xor (d(22) xor (d(25) xor d(28))))) xor (((d(31) xor (d(34) xor d(35))) xor (d(37) xor (d(39) xor d(40)))) xor ((d(43) xor (d(46) xor d(47))) xor ((d(48) xor d(50)) xor (d(51) xor d(52))))));
+    r(17) := ((((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(4) xor d(6)))) xor ((d(7) xor (d(11) xor d(12))) xor ((d(22) xor d(23)) xor (d(26) xor d(29))))) xor (((d(32) xor (d(35) xor d(36))) xor (d(38) xor (d(40) xor d(41)))) xor ((d(44) xor (d(47) xor d(48))) xor ((d(49) xor d(51)) xor (d(52) xor d(53))))));
+    r(18) := ((((d(0) xor (d(1) xor d(2))) xor (d(3) xor (d(4) xor d(5)))) xor ((d(7) xor (d(8) xor d(12))) xor ((d(13) xor d(23)) xor (d(24) xor d(27))))) xor (((d(30) xor (d(33) xor d(36))) xor ((d(37) xor d(39)) xor (d(41) xor d(42)))) xor ((d(45) xor (d(48) xor d(49))) xor ((d(50) xor d(52)) xor (d(53) xor d(54))))));
+    r(19) := ((((d(1) xor (d(2) xor d(3))) xor (d(4) xor (d(5) xor d(6)))) xor ((d(8) xor (d(9) xor d(13))) xor ((d(14) xor d(24)) xor (d(25) xor d(28))))) xor (((d(31) xor (d(34) xor d(37))) xor ((d(38) xor d(40)) xor (d(42) xor d(43)))) xor ((d(46) xor (d(49) xor d(50))) xor ((d(51) xor d(53)) xor (d(54) xor d(55))))));
+    r(20) := ((((d(0) xor (d(1) xor d(4))) xor ((d(5) xor d(7)) xor (d(8) xor d(10)))) xor (((d(11) xor d(12)) xor (d(14) xor d(15))) xor ((d(19) xor d(22)) xor (d(24) xor d(27))))) xor (((d(28) xor (d(29) xor d(30))) xor ((d(31) xor d(35)) xor (d(38) xor d(39)))) xor (((d(40) xor d(41)) xor (d(43) xor d(46))) xor ((d(51) xor d(52)) xor (d(54) xor d(55))))));
+    r(21) := ((((d(0) xor d(3)) xor (d(5) xor (d(13) xor d(15)))) xor ((d(16) xor (d(19) xor d(20))) xor (d(22) xor (d(23) xor d(24))))) xor (((d(26) xor (d(27) xor d(29))) xor (d(36) xor (d(39) xor d(41)))) xor ((d(42) xor (d(46) xor d(50))) xor (d(52) xor (d(53) xor d(55))))));
+    r(22) := ((((d(0) xor (d(2) xor d(3))) xor ((d(4) xor d(8)) xor (d(9) xor d(11)))) xor ((d(12) xor (d(14) xor d(16))) xor ((d(17) xor d(19)) xor (d(20) xor d(21))))) xor (((d(22) xor (d(23) xor d(26))) xor ((d(31) xor d(32)) xor (d(37) xor d(42)))) xor ((d(43) xor (d(44) xor d(46))) xor ((d(50) xor d(51)) xor (d(53) xor d(54))))));
+    r(23) := ((((d(1) xor (d(3) xor d(4))) xor ((d(5) xor d(9)) xor (d(10) xor d(12)))) xor ((d(13) xor (d(15) xor d(17))) xor ((d(18) xor d(20)) xor (d(21) xor d(22))))) xor (((d(23) xor (d(24) xor d(27))) xor ((d(32) xor d(33)) xor (d(38) xor d(43)))) xor ((d(44) xor (d(45) xor d(47))) xor ((d(51) xor d(52)) xor (d(54) xor d(55))))));
+    r(24) := ((((d(1) xor (d(3) xor d(4))) xor ((d(5) xor d(8)) xor (d(9) xor d(10)))) xor (((d(12) xor d(13)) xor (d(14) xor d(16))) xor ((d(18) xor d(21)) xor (d(23) xor d(26))))) xor (((d(27) xor (d(30) xor d(31))) xor ((d(32) xor d(33)) xor (d(34) xor d(39)))) xor (((d(40) xor d(45)) xor (d(47) xor d(48))) xor ((d(50) xor d(52)) xor (d(53) xor d(55))))));
+    r(25) := ((((d(0) xor (d(1) xor d(3))) xor (d(4) xor (d(5) xor d(8)))) xor ((d(10) xor (d(12) xor d(13))) xor ((d(14) xor d(15)) xor (d(17) xor d(25))))) xor (((d(26) xor (d(30) xor d(33))) xor ((d(34) xor d(35)) xor (d(41) xor d(44)))) xor ((d(47) xor (d(48) xor d(49))) xor ((d(50) xor d(51)) xor (d(53) xor d(54))))));
+    r(26) := ((((d(0) xor (d(1) xor d(2))) xor ((d(4) xor d(5)) xor (d(6) xor d(9)))) xor ((d(11) xor (d(13) xor d(14))) xor ((d(15) xor d(16)) xor (d(18) xor d(26))))) xor (((d(27) xor (d(31) xor d(34))) xor ((d(35) xor d(36)) xor (d(42) xor d(45)))) xor ((d(48) xor (d(49) xor d(50))) xor ((d(51) xor d(52)) xor (d(54) xor d(55))))));
+    r(27) := ((((d(5) xor (d(7) xor d(8))) xor ((d(9) xor d(10)) xor (d(11) xor d(14)))) xor ((d(15) xor (d(16) xor d(17))) xor ((d(22) xor d(24)) xor (d(25) xor d(26))))) xor (((d(30) xor (d(31) xor d(35))) xor ((d(36) xor d(37)) xor (d(40) xor d(43)))) xor ((d(44) xor (d(47) xor d(49))) xor ((d(51) xor d(52)) xor (d(53) xor d(55))))));
+    r(28) := ((((d(1) xor (d(2) xor d(3))) xor (d(10) xor (d(15) xor d(16)))) xor ((d(17) xor (d(18) xor d(19))) xor ((d(22) xor d(23)) xor (d(24) xor d(28))))) xor (((d(30) xor (d(36) xor d(37))) xor (d(38) xor (d(40) xor d(41)))) xor ((d(45) xor (d(46) xor d(47))) xor ((d(48) xor d(52)) xor (d(53) xor d(54))))));
+    r(29) := ((((d(0) xor (d(2) xor d(3))) xor (d(4) xor (d(11) xor d(16)))) xor ((d(17) xor (d(18) xor d(19))) xor ((d(20) xor d(23)) xor (d(24) xor d(25))))) xor (((d(29) xor (d(31) xor d(37))) xor ((d(38) xor d(39)) xor (d(41) xor d(42)))) xor ((d(46) xor (d(47) xor d(48))) xor ((d(49) xor d(53)) xor (d(54) xor d(55))))));
+    r(30) := ((((d(2) xor (d(4) xor d(5))) xor (d(6) xor (d(8) xor d(9)))) xor ((d(11) xor (d(17) xor d(18))) xor (d(20) xor (d(21) xor d(22))))) xor (((d(27) xor (d(28) xor d(31))) xor (d(38) xor (d(39) xor d(42)))) xor ((d(43) xor (d(44) xor d(46))) xor ((d(48) xor d(49)) xor (d(54) xor d(55))))));
+    r(31) := ((((d(0) xor (d(1) xor d(2))) xor (d(5) xor (d(7) xor d(8)))) xor ((d(10) xor (d(11) xor d(18))) xor (d(21) xor (d(23) xor d(24))))) xor (((d(25) xor (d(26) xor d(27))) xor (d(29) xor (d(30) xor d(31)))) xor ((d(39) xor (d(43) xor d(45))) xor (d(46) xor (d(49) xor d(55))))));
+    return r;
+  end function;
+
   function crc_d64(c : std_logic_vector(31 downto 0);
                   d : std_logic_vector(63 downto 0)) return std_logic_vector is
     variable r : std_logic_vector(31 downto 0);
@@ -339,6 +889,82 @@ package body mac25g_crc_pkg is
     r(29) := (((((c(4) xor c(5)) xor (c(6) xor (c(8) xor c(10)))) xor ((c(11) xor (c(12) xor c(19))) xor (c(24) xor (c(25) xor c(26))))) xor (((c(27) xor c(28)) xor (c(31) xor (d(4) xor d(5)))) xor ((d(6) xor (d(8) xor d(10))) xor (d(11) xor (d(12) xor d(19)))))) xor ((((d(24) xor d(25)) xor (d(26) xor (d(27) xor d(28)))) xor ((d(31) xor (d(32) xor d(33))) xor (d(37) xor (d(39) xor d(45))))) xor (((d(46) xor d(47)) xor (d(49) xor (d(50) xor d(54)))) xor ((d(55) xor (d(56) xor d(57))) xor (d(61) xor (d(62) xor d(63)))))));
     r(30) := (((((c(0) xor (c(1) xor c(3))) xor (c(4) xor (c(5) xor c(7)))) xor ((c(10) xor (c(12) xor c(13))) xor (c(14) xor (c(16) xor c(17))))) xor (((c(19) xor (c(25) xor c(26))) xor (c(28) xor (c(29) xor c(30)))) xor ((d(0) xor (d(1) xor d(3))) xor (d(4) xor (d(5) xor d(7)))))) xor ((((d(10) xor (d(12) xor d(13))) xor (d(14) xor (d(16) xor d(17)))) xor ((d(19) xor (d(25) xor d(26))) xor (d(28) xor (d(29) xor d(30))))) xor (((d(35) xor (d(36) xor d(39))) xor (d(46) xor (d(47) xor d(50)))) xor ((d(51) xor (d(52) xor d(54))) xor ((d(56) xor d(57)) xor (d(62) xor d(63)))))));
     r(31) := (((((c(0) xor c(2)) xor (c(3) xor (c(5) xor c(8)))) xor ((c(9) xor c(10)) xor (c(13) xor (c(15) xor c(16))))) xor (((c(18) xor c(19)) xor (c(26) xor (c(29) xor c(31)))) xor ((d(0) xor (d(2) xor d(3))) xor (d(5) xor (d(8) xor d(9)))))) xor ((((d(10) xor d(13)) xor (d(15) xor (d(16) xor d(18)))) xor ((d(19) xor (d(26) xor d(29))) xor (d(31) xor (d(32) xor d(33))))) xor (((d(34) xor d(35)) xor (d(37) xor (d(38) xor d(39)))) xor ((d(47) xor (d(51) xor d(53))) xor (d(54) xor (d(57) xor d(63)))))));
+    return r;
+  end function;
+
+  function crc_d64_c(c : std_logic_vector(31 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := (((c(1) xor (c(3) xor c(4))) xor ((c(6) xor c(9)) xor (c(10) xor c(11)))) xor ((c(14) xor (c(16) xor c(17))) xor ((c(19) xor c(20)) xor (c(27) xor c(30)))));
+    r(1) := (((c(0) xor (c(2) xor c(4))) xor ((c(5) xor c(7)) xor (c(10) xor c(11)))) xor (((c(12) xor c(15)) xor (c(17) xor c(18))) xor ((c(20) xor c(21)) xor (c(28) xor c(31)))));
+    r(2) := (((c(0) xor (c(1) xor c(3))) xor ((c(5) xor c(6)) xor (c(8) xor c(11)))) xor (((c(12) xor c(13)) xor (c(16) xor c(18))) xor ((c(19) xor c(21)) xor (c(22) xor c(29)))));
+    r(3) := ((((c(0) xor c(1)) xor (c(2) xor c(4))) xor ((c(6) xor c(7)) xor (c(9) xor c(12)))) xor (((c(13) xor c(14)) xor (c(17) xor c(19))) xor ((c(20) xor c(22)) xor (c(23) xor c(30)))));
+    r(4) := ((((c(0) xor c(1)) xor (c(2) xor c(3))) xor ((c(5) xor c(7)) xor (c(8) xor c(10)))) xor (((c(13) xor c(14)) xor (c(15) xor c(18))) xor ((c(20) xor c(21)) xor (c(23) xor (c(24) xor c(31))))));
+    r(5) := ((((c(1) xor c(2)) xor (c(3) xor c(4))) xor ((c(6) xor c(8)) xor (c(9) xor c(11)))) xor (((c(14) xor c(15)) xor (c(16) xor c(19))) xor ((c(21) xor c(22)) xor (c(24) xor c(25)))));
+    r(6) := ((((c(1) xor c(2)) xor (c(5) xor c(6))) xor ((c(7) xor c(11)) xor (c(12) xor c(14)))) xor (((c(15) xor c(19)) xor (c(22) xor c(23))) xor ((c(25) xor c(26)) xor (c(27) xor c(30)))));
+    r(7) := ((((c(0) xor c(2)) xor (c(3) xor c(6))) xor ((c(7) xor c(8)) xor (c(12) xor c(13)))) xor (((c(15) xor c(16)) xor (c(20) xor c(23))) xor ((c(24) xor c(26)) xor (c(27) xor (c(28) xor c(31))))));
+    r(8) := ((((c(1) xor c(3)) xor (c(4) xor c(7))) xor ((c(8) xor c(9)) xor (c(13) xor c(14)))) xor (((c(16) xor c(17)) xor (c(21) xor c(24))) xor ((c(25) xor c(27)) xor (c(28) xor c(29)))));
+    r(9) := ((((c(1) xor c(2)) xor (c(3) xor c(5))) xor ((c(6) xor c(8)) xor (c(11) xor (c(15) xor c(16))))) xor (((c(18) xor c(19)) xor (c(20) xor c(22))) xor ((c(25) xor c(26)) xor (c(27) xor (c(28) xor c(29))))));
+    r(10) := (((c(1) xor (c(2) xor c(7))) xor (c(10) xor (c(11) xor c(12)))) xor ((c(14) xor (c(21) xor c(23))) xor (c(26) xor (c(28) xor c(29)))));
+    r(11) := (((c(2) xor (c(3) xor c(8))) xor (c(11) xor (c(12) xor c(13)))) xor ((c(15) xor (c(22) xor c(24))) xor (c(27) xor (c(29) xor c(30)))));
+    r(12) := (((c(3) xor (c(4) xor c(9))) xor (c(12) xor (c(13) xor c(14)))) xor ((c(16) xor (c(23) xor c(25))) xor (c(28) xor (c(30) xor c(31)))));
+    r(13) := (((c(4) xor c(5)) xor (c(10) xor (c(13) xor c(14)))) xor ((c(15) xor (c(17) xor c(24))) xor (c(26) xor (c(29) xor c(31)))));
+    r(14) := (((c(5) xor c(6)) xor (c(11) xor (c(14) xor c(15)))) xor ((c(16) xor c(18)) xor (c(25) xor (c(27) xor c(30)))));
+    r(15) := (((c(6) xor c(7)) xor (c(12) xor (c(15) xor c(16)))) xor ((c(17) xor c(19)) xor (c(26) xor (c(28) xor c(31)))));
+    r(16) := (((c(1) xor (c(3) xor c(4))) xor ((c(6) xor c(7)) xor (c(8) xor c(9)))) xor (((c(10) xor c(11)) xor (c(13) xor c(14))) xor ((c(18) xor c(19)) xor (c(29) xor c(30)))));
+    r(17) := ((((c(0) xor c(2)) xor (c(4) xor c(5))) xor ((c(7) xor c(8)) xor (c(9) xor c(10)))) xor (((c(11) xor c(12)) xor (c(14) xor c(15))) xor ((c(19) xor c(20)) xor (c(30) xor c(31)))));
+    r(18) := (((c(1) xor (c(3) xor c(5))) xor ((c(6) xor c(8)) xor (c(9) xor c(10)))) xor (((c(11) xor c(12)) xor (c(13) xor c(15))) xor ((c(16) xor c(20)) xor (c(21) xor c(31)))));
+    r(19) := (((c(0) xor (c(2) xor c(4))) xor ((c(6) xor c(7)) xor (c(9) xor c(10)))) xor (((c(11) xor c(12)) xor (c(13) xor c(14))) xor ((c(16) xor c(17)) xor (c(21) xor c(22)))));
+    r(20) := ((((c(4) xor c(5)) xor (c(6) xor c(7))) xor ((c(8) xor c(9)) xor (c(12) xor c(13)))) xor (((c(15) xor c(16)) xor (c(18) xor c(19))) xor ((c(20) xor c(22)) xor (c(23) xor (c(27) xor c(30))))));
+    r(21) := ((((c(0) xor c(1)) xor (c(3) xor c(4))) xor ((c(5) xor c(7)) xor (c(8) xor c(11)))) xor (((c(13) xor c(21)) xor (c(23) xor c(24))) xor ((c(27) xor c(28)) xor (c(30) xor c(31)))));
+    r(22) := ((((c(2) xor c(3)) xor (c(5) xor c(8))) xor ((c(10) xor c(11)) xor (c(12) xor (c(16) xor c(17))))) xor (((c(19) xor c(20)) xor (c(22) xor (c(24) xor c(25)))) xor ((c(27) xor c(28)) xor (c(29) xor (c(30) xor c(31))))));
+    r(23) := ((((c(0) xor c(3)) xor (c(4) xor c(6))) xor ((c(9) xor c(11)) xor (c(12) xor (c(13) xor c(17))))) xor (((c(18) xor c(20)) xor (c(21) xor (c(23) xor c(25)))) xor ((c(26) xor c(28)) xor (c(29) xor (c(30) xor c(31))))));
+    r(24) := ((((c(3) xor c(5)) xor (c(6) xor c(7))) xor ((c(9) xor c(11)) xor (c(12) xor (c(13) xor c(16))))) xor (((c(17) xor c(18)) xor (c(20) xor c(21))) xor ((c(22) xor c(24)) xor (c(26) xor (c(29) xor c(31))))));
+    r(25) := (((c(1) xor (c(3) xor c(7))) xor ((c(8) xor c(9)) xor (c(11) xor c(12)))) xor (((c(13) xor c(16)) xor (c(18) xor c(20))) xor ((c(21) xor c(22)) xor (c(23) xor c(25)))));
+    r(26) := ((((c(0) xor c(2)) xor (c(4) xor c(8))) xor ((c(9) xor c(10)) xor (c(12) xor c(13)))) xor (((c(14) xor c(17)) xor (c(19) xor c(21))) xor ((c(22) xor c(23)) xor (c(24) xor c(26)))));
+    r(27) := (((c(0) xor (c(4) xor c(5))) xor ((c(6) xor c(13)) xor (c(15) xor c(16)))) xor (((c(17) xor c(18)) xor (c(19) xor c(22))) xor ((c(23) xor c(24)) xor (c(25) xor c(30)))));
+    r(28) := (((c(3) xor (c(4) xor c(5))) xor ((c(7) xor c(9)) xor (c(10) xor c(11)))) xor (((c(18) xor c(23)) xor (c(24) xor c(25))) xor ((c(26) xor c(27)) xor (c(30) xor c(31)))));
+    r(29) := (((c(4) xor (c(5) xor c(6))) xor ((c(8) xor c(10)) xor (c(11) xor c(12)))) xor ((c(19) xor (c(24) xor c(25))) xor ((c(26) xor c(27)) xor (c(28) xor c(31)))));
+    r(30) := ((((c(0) xor c(1)) xor (c(3) xor c(4))) xor ((c(5) xor c(7)) xor (c(10) xor (c(12) xor c(13))))) xor (((c(14) xor c(16)) xor (c(17) xor c(19))) xor ((c(25) xor c(26)) xor (c(28) xor (c(29) xor c(30))))));
+    r(31) := (((c(0) xor (c(2) xor c(3))) xor ((c(5) xor c(8)) xor (c(9) xor c(10)))) xor (((c(13) xor c(15)) xor (c(16) xor c(18))) xor ((c(19) xor c(26)) xor (c(29) xor c(31)))));
+    return r;
+  end function;
+
+  function crc_d64_d(d : std_logic_vector(63 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0);
+  begin
+    r(0) := ((((d(1) xor (d(3) xor d(4))) xor (d(6) xor (d(9) xor d(10)))) xor ((d(11) xor (d(14) xor d(16))) xor ((d(17) xor d(19)) xor (d(20) xor d(27))))) xor (((d(30) xor (d(32) xor d(33))) xor ((d(34) xor d(35)) xor (d(36) xor d(38)))) xor ((d(39) xor (d(40) xor d(48))) xor ((d(52) xor d(54)) xor (d(55) xor d(58))))));
+    r(1) := ((((d(0) xor (d(2) xor d(4))) xor ((d(5) xor d(7)) xor (d(10) xor d(11)))) xor ((d(12) xor (d(15) xor d(17))) xor ((d(18) xor d(20)) xor (d(21) xor d(28))))) xor (((d(31) xor (d(33) xor d(34))) xor ((d(35) xor d(36)) xor (d(37) xor d(39)))) xor ((d(40) xor (d(41) xor d(49))) xor ((d(53) xor d(55)) xor (d(56) xor d(59))))));
+    r(2) := ((((d(0) xor (d(1) xor d(3))) xor ((d(5) xor d(6)) xor (d(8) xor d(11)))) xor ((d(12) xor (d(13) xor d(16))) xor ((d(18) xor d(19)) xor (d(21) xor d(22))))) xor (((d(29) xor (d(32) xor d(34))) xor ((d(35) xor d(36)) xor (d(37) xor d(38)))) xor (((d(40) xor d(41)) xor (d(42) xor d(50))) xor ((d(54) xor d(56)) xor (d(57) xor d(60))))));
+    r(3) := ((((d(0) xor (d(1) xor d(2))) xor ((d(4) xor d(6)) xor (d(7) xor d(9)))) xor (((d(12) xor d(13)) xor (d(14) xor d(17))) xor ((d(19) xor d(20)) xor (d(22) xor d(23))))) xor (((d(30) xor (d(33) xor d(35))) xor ((d(36) xor d(37)) xor (d(38) xor d(39)))) xor (((d(41) xor d(42)) xor (d(43) xor d(51))) xor ((d(55) xor d(57)) xor (d(58) xor d(61))))));
+    r(4) := ((((d(0) xor (d(1) xor d(2))) xor ((d(3) xor d(5)) xor (d(7) xor d(8)))) xor (((d(10) xor d(13)) xor (d(14) xor d(15))) xor ((d(18) xor d(20)) xor (d(21) xor d(23))))) xor ((((d(24) xor d(31)) xor (d(34) xor d(36))) xor ((d(37) xor d(38)) xor (d(39) xor d(40)))) xor (((d(42) xor d(43)) xor (d(44) xor d(52))) xor ((d(56) xor d(58)) xor (d(59) xor d(62))))));
+    r(5) := ((((d(1) xor (d(2) xor d(3))) xor ((d(4) xor d(6)) xor (d(8) xor d(9)))) xor (((d(11) xor d(14)) xor (d(15) xor d(16))) xor ((d(19) xor d(21)) xor (d(22) xor d(24))))) xor ((((d(25) xor d(32)) xor (d(35) xor d(37))) xor ((d(38) xor d(39)) xor (d(40) xor d(41)))) xor (((d(43) xor d(44)) xor (d(45) xor d(53))) xor ((d(57) xor d(59)) xor (d(60) xor d(63))))));
+    r(6) := ((((d(1) xor (d(2) xor d(5))) xor ((d(6) xor d(7)) xor (d(11) xor d(12)))) xor ((d(14) xor (d(15) xor d(19))) xor ((d(22) xor d(23)) xor (d(25) xor d(26))))) xor (((d(27) xor (d(30) xor d(32))) xor ((d(34) xor d(35)) xor (d(41) xor d(42)))) xor (((d(44) xor d(45)) xor (d(46) xor d(48))) xor ((d(52) xor d(55)) xor (d(60) xor d(61))))));
+    r(7) := ((((d(0) xor (d(2) xor d(3))) xor ((d(6) xor d(7)) xor (d(8) xor d(12)))) xor (((d(13) xor d(15)) xor (d(16) xor d(20))) xor ((d(23) xor d(24)) xor (d(26) xor d(27))))) xor (((d(28) xor (d(31) xor d(33))) xor ((d(35) xor d(36)) xor (d(42) xor d(43)))) xor (((d(45) xor d(46)) xor (d(47) xor d(49))) xor ((d(53) xor d(56)) xor (d(61) xor d(62))))));
+    r(8) := ((((d(1) xor (d(3) xor d(4))) xor ((d(7) xor d(8)) xor (d(9) xor d(13)))) xor (((d(14) xor d(16)) xor (d(17) xor d(21))) xor ((d(24) xor d(25)) xor (d(27) xor d(28))))) xor (((d(29) xor (d(32) xor d(34))) xor ((d(36) xor d(37)) xor (d(43) xor d(44)))) xor (((d(46) xor d(47)) xor (d(48) xor d(50))) xor ((d(54) xor d(57)) xor (d(62) xor d(63))))));
+    r(9) := (((((d(1) xor d(2)) xor (d(3) xor d(5))) xor ((d(6) xor d(8)) xor (d(11) xor d(15)))) xor (((d(16) xor d(18)) xor (d(19) xor d(20))) xor ((d(22) xor d(25)) xor (d(26) xor d(27))))) xor ((((d(28) xor d(29)) xor (d(32) xor d(34))) xor ((d(36) xor d(37)) xor (d(39) xor d(40)))) xor (((d(44) xor d(45)) xor (d(47) xor d(49))) xor ((d(51) xor d(52)) xor (d(54) xor d(63))))));
+    r(10) := ((((d(1) xor (d(2) xor d(7))) xor (d(10) xor (d(11) xor d(12)))) xor ((d(14) xor (d(21) xor d(23))) xor (d(26) xor (d(28) xor d(29))))) xor (((d(32) xor (d(34) xor d(36))) xor (d(37) xor (d(39) xor d(41)))) xor ((d(45) xor (d(46) xor d(50))) xor (d(53) xor (d(54) xor d(58))))));
+    r(11) := ((((d(2) xor (d(3) xor d(8))) xor (d(11) xor (d(12) xor d(13)))) xor ((d(15) xor (d(22) xor d(24))) xor (d(27) xor (d(29) xor d(30))))) xor (((d(33) xor (d(35) xor d(37))) xor (d(38) xor (d(40) xor d(42)))) xor ((d(46) xor (d(47) xor d(51))) xor (d(54) xor (d(55) xor d(59))))));
+    r(12) := ((((d(3) xor (d(4) xor d(9))) xor (d(12) xor (d(13) xor d(14)))) xor ((d(16) xor (d(23) xor d(25))) xor (d(28) xor (d(30) xor d(31))))) xor (((d(34) xor (d(36) xor d(38))) xor (d(39) xor (d(41) xor d(43)))) xor ((d(47) xor (d(48) xor d(52))) xor (d(55) xor (d(56) xor d(60))))));
+    r(13) := ((((d(4) xor (d(5) xor d(10))) xor (d(13) xor (d(14) xor d(15)))) xor ((d(17) xor (d(24) xor d(26))) xor (d(29) xor (d(31) xor d(32))))) xor (((d(35) xor (d(37) xor d(39))) xor (d(40) xor (d(42) xor d(44)))) xor ((d(48) xor (d(49) xor d(53))) xor (d(56) xor (d(57) xor d(61))))));
+    r(14) := ((((d(5) xor (d(6) xor d(11))) xor (d(14) xor (d(15) xor d(16)))) xor ((d(18) xor (d(25) xor d(27))) xor (d(30) xor (d(32) xor d(33))))) xor (((d(36) xor (d(38) xor d(40))) xor (d(41) xor (d(43) xor d(45)))) xor ((d(49) xor (d(50) xor d(54))) xor (d(57) xor (d(58) xor d(62))))));
+    r(15) := ((((d(6) xor (d(7) xor d(12))) xor (d(15) xor (d(16) xor d(17)))) xor ((d(19) xor (d(26) xor d(28))) xor (d(31) xor (d(33) xor d(34))))) xor (((d(37) xor (d(39) xor d(41))) xor (d(42) xor (d(44) xor d(46)))) xor ((d(50) xor (d(51) xor d(55))) xor (d(58) xor (d(59) xor d(63))))));
+    r(16) := ((((d(1) xor (d(3) xor d(4))) xor ((d(6) xor d(7)) xor (d(8) xor d(9)))) xor (((d(10) xor d(11)) xor (d(13) xor d(14))) xor ((d(18) xor d(19)) xor (d(29) xor d(30))))) xor (((d(33) xor (d(36) xor d(39))) xor ((d(42) xor d(43)) xor (d(45) xor d(47)))) xor (((d(48) xor d(51)) xor (d(54) xor d(55))) xor ((d(56) xor d(58)) xor (d(59) xor d(60))))));
+    r(17) := ((((d(0) xor (d(2) xor d(4))) xor ((d(5) xor d(7)) xor (d(8) xor d(9)))) xor (((d(10) xor d(11)) xor (d(12) xor d(14))) xor ((d(15) xor d(19)) xor (d(20) xor d(30))))) xor ((((d(31) xor d(34)) xor (d(37) xor d(40))) xor ((d(43) xor d(44)) xor (d(46) xor d(48)))) xor (((d(49) xor d(52)) xor (d(55) xor d(56))) xor ((d(57) xor d(59)) xor (d(60) xor d(61))))));
+    r(18) := ((((d(1) xor (d(3) xor d(5))) xor ((d(6) xor d(8)) xor (d(9) xor d(10)))) xor (((d(11) xor d(12)) xor (d(13) xor d(15))) xor ((d(16) xor d(20)) xor (d(21) xor d(31))))) xor ((((d(32) xor d(35)) xor (d(38) xor d(41))) xor ((d(44) xor d(45)) xor (d(47) xor d(49)))) xor (((d(50) xor d(53)) xor (d(56) xor d(57))) xor ((d(58) xor d(60)) xor (d(61) xor d(62))))));
+    r(19) := (((((d(0) xor d(2)) xor (d(4) xor d(6))) xor ((d(7) xor d(9)) xor (d(10) xor d(11)))) xor (((d(12) xor d(13)) xor (d(14) xor d(16))) xor ((d(17) xor d(21)) xor (d(22) xor d(32))))) xor ((((d(33) xor d(36)) xor (d(39) xor d(42))) xor ((d(45) xor d(46)) xor (d(48) xor d(50)))) xor (((d(51) xor d(54)) xor (d(57) xor d(58))) xor ((d(59) xor d(61)) xor (d(62) xor d(63))))));
+    r(20) := (((((d(4) xor d(5)) xor (d(6) xor d(7))) xor ((d(8) xor d(9)) xor (d(12) xor d(13)))) xor (((d(15) xor d(16)) xor (d(18) xor d(19))) xor ((d(20) xor d(22)) xor (d(23) xor (d(27) xor d(30)))))) xor ((((d(32) xor d(35)) xor (d(36) xor d(37))) xor ((d(38) xor d(39)) xor (d(43) xor d(46)))) xor (((d(47) xor d(48)) xor (d(49) xor d(51))) xor ((d(54) xor d(59)) xor (d(60) xor (d(62) xor d(63)))))));
+    r(21) := ((((d(0) xor (d(1) xor d(3))) xor ((d(4) xor d(5)) xor (d(7) xor d(8)))) xor ((d(11) xor (d(13) xor d(21))) xor ((d(23) xor d(24)) xor (d(27) xor d(28))))) xor (((d(30) xor (d(31) xor d(32))) xor ((d(34) xor d(35)) xor (d(37) xor d(44)))) xor (((d(47) xor d(49)) xor (d(50) xor d(54))) xor ((d(58) xor d(60)) xor (d(61) xor d(63))))));
+    r(22) := ((((d(2) xor (d(3) xor d(5))) xor ((d(8) xor d(10)) xor (d(11) xor d(12)))) xor (((d(16) xor d(17)) xor (d(19) xor d(20))) xor ((d(22) xor d(24)) xor (d(25) xor d(27))))) xor ((((d(28) xor d(29)) xor (d(30) xor d(31))) xor ((d(34) xor d(39)) xor (d(40) xor d(45)))) xor (((d(50) xor d(51)) xor (d(52) xor d(54))) xor ((d(58) xor d(59)) xor (d(61) xor d(62))))));
+    r(23) := (((((d(0) xor d(3)) xor (d(4) xor d(6))) xor ((d(9) xor d(11)) xor (d(12) xor d(13)))) xor (((d(17) xor d(18)) xor (d(20) xor d(21))) xor ((d(23) xor d(25)) xor (d(26) xor d(28))))) xor ((((d(29) xor d(30)) xor (d(31) xor d(32))) xor ((d(35) xor d(40)) xor (d(41) xor d(46)))) xor (((d(51) xor d(52)) xor (d(53) xor d(55))) xor ((d(59) xor d(60)) xor (d(62) xor d(63))))));
+    r(24) := (((((d(3) xor d(5)) xor (d(6) xor d(7))) xor ((d(9) xor d(11)) xor (d(12) xor d(13)))) xor (((d(16) xor d(17)) xor (d(18) xor d(20))) xor ((d(21) xor d(22)) xor (d(24) xor (d(26) xor d(29)))))) xor ((((d(31) xor d(34)) xor (d(35) xor d(38))) xor ((d(39) xor d(40)) xor (d(41) xor d(42)))) xor (((d(47) xor d(48)) xor (d(53) xor d(55))) xor ((d(56) xor d(58)) xor (d(60) xor (d(61) xor d(63)))))));
+    r(25) := ((((d(1) xor (d(3) xor d(7))) xor ((d(8) xor d(9)) xor (d(11) xor d(12)))) xor (((d(13) xor d(16)) xor (d(18) xor d(20))) xor ((d(21) xor d(22)) xor (d(23) xor d(25))))) xor (((d(33) xor (d(34) xor d(38))) xor ((d(41) xor d(42)) xor (d(43) xor d(49)))) xor (((d(52) xor d(55)) xor (d(56) xor d(57))) xor ((d(58) xor d(59)) xor (d(61) xor d(62))))));
+    r(26) := ((((d(0) xor (d(2) xor d(4))) xor ((d(8) xor d(9)) xor (d(10) xor d(12)))) xor (((d(13) xor d(14)) xor (d(17) xor d(19))) xor ((d(21) xor d(22)) xor (d(23) xor d(24))))) xor ((((d(26) xor d(34)) xor (d(35) xor d(39))) xor ((d(42) xor d(43)) xor (d(44) xor d(50)))) xor (((d(53) xor d(56)) xor (d(57) xor d(58))) xor ((d(59) xor d(60)) xor (d(62) xor d(63))))));
+    r(27) := (((((d(0) xor d(4)) xor (d(5) xor d(6))) xor ((d(13) xor d(15)) xor (d(16) xor d(17)))) xor (((d(18) xor d(19)) xor (d(22) xor d(23))) xor ((d(24) xor d(25)) xor (d(30) xor d(32))))) xor ((((d(33) xor d(34)) xor (d(38) xor d(39))) xor ((d(43) xor d(44)) xor (d(45) xor d(48)))) xor (((d(51) xor d(52)) xor (d(55) xor d(57))) xor ((d(59) xor d(60)) xor (d(61) xor d(63))))));
+    r(28) := ((((d(3) xor (d(4) xor d(5))) xor ((d(7) xor d(9)) xor (d(10) xor d(11)))) xor (((d(18) xor d(23)) xor (d(24) xor d(25))) xor ((d(26) xor d(27)) xor (d(30) xor d(31))))) xor (((d(32) xor (d(36) xor d(38))) xor ((d(44) xor d(45)) xor (d(46) xor d(48)))) xor (((d(49) xor d(53)) xor (d(54) xor d(55))) xor ((d(56) xor d(60)) xor (d(61) xor d(62))))));
+    r(29) := ((((d(4) xor (d(5) xor d(6))) xor ((d(8) xor d(10)) xor (d(11) xor d(12)))) xor (((d(19) xor d(24)) xor (d(25) xor d(26))) xor ((d(27) xor d(28)) xor (d(31) xor d(32))))) xor (((d(33) xor (d(37) xor d(39))) xor ((d(45) xor d(46)) xor (d(47) xor d(49)))) xor (((d(50) xor d(54)) xor (d(55) xor d(56))) xor ((d(57) xor d(61)) xor (d(62) xor d(63))))));
+    r(30) := ((((d(0) xor (d(1) xor d(3))) xor ((d(4) xor d(5)) xor (d(7) xor d(10)))) xor (((d(12) xor d(13)) xor (d(14) xor d(16))) xor ((d(17) xor d(19)) xor (d(25) xor d(26))))) xor ((((d(28) xor d(29)) xor (d(30) xor d(35))) xor ((d(36) xor d(39)) xor (d(46) xor d(47)))) xor (((d(50) xor d(51)) xor (d(52) xor d(54))) xor ((d(56) xor d(57)) xor (d(62) xor d(63))))));
+    r(31) := ((((d(0) xor (d(2) xor d(3))) xor ((d(5) xor d(8)) xor (d(9) xor d(10)))) xor ((d(13) xor (d(15) xor d(16))) xor ((d(18) xor d(19)) xor (d(26) xor d(29))))) xor (((d(31) xor (d(32) xor d(33))) xor ((d(34) xor d(35)) xor (d(37) xor d(38)))) xor ((d(39) xor (d(47) xor d(51))) xor ((d(53) xor d(54)) xor (d(57) xor d(63))))));
     return r;
   end function;
 

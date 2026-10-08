@@ -70,6 +70,10 @@ architecture rtl of mac25g_tx is
   type a_st_t is (SA_IDLE, SA_DATA, SA_PAD, SA_GAP1, SA_GAP2, SA_DRAIN);
   signal a_st : a_st_t := SA_IDLE;
   signal wcnt : unsigned(11 downto 0) := (others => '0');  -- palabras emitidas (satura 4095)
+  signal wsm  : unsigned(3 downto 0) := (others => '0');   -- mismo contador, satura en 8
+  signal ev_p : std_logic := '0';
+  signal ev_w : unsigned(11 downto 0) := (others => '0');
+  signal ev_n : unsigned(3 downto 0) := (others => '0');
 
   -- token etapa A
   signal a_kind : std_logic_vector(1 downto 0) := K_BUB;
@@ -88,7 +92,8 @@ architecture rtl of mac25g_tx is
   signal cv_data : std_logic_vector(63 downto 0) := (others => '0');
   signal cv_n    : unsigned(3 downto 0) := (others => '0');
   signal cv_last : std_logic := '0';
-  signal cv_var  : crc_var_t := (others => (others => '0'));
+  signal cv_a    : crc_var_t := (others => (others => '0'));   -- parte del estado
+  signal cv_b    : crc_var_t := (others => (others => '0'));   -- parte de los datos
   -- etapa C2 (eleccion)
   signal c_kind  : std_logic_vector(1 downto 0) := K_BUB;
   signal c_data  : std_logic_vector(63 downto 0) := (others => '0');
@@ -122,15 +127,19 @@ begin
   -----------------------------------------------------------------------------
   -- Etapa A: framer
   -----------------------------------------------------------------------------
+  -- Timing: la decision de padding y el enmascarado NO pasan por keep_to_n
+  -- ni por una suma: la mascara sale directa de tkeep (contiguo), n >= 4 es
+  -- tkeep(3), y las comparaciones de longitud usan un contador pequeno
+  -- (wsm, satura en 8). Los bytes de estadistica se suman un ciclo despues.
   process(clk)
-    variable n   : unsigned(3 downto 0);
     variable dm  : std_logic_vector(63 downto 0);
+    variable n4  : boolean;
   begin
     if rising_edge(clk) then
-      r_evf <= '0';
+      ev_p <= '0';
       r_evu <= '0';
       if rst = '1' then
-        a_st <= SA_IDLE; wcnt <= (others => '0');
+        a_st <= SA_IDLE; wcnt <= (others => '0'); wsm <= (others => '0');
         a_kind <= K_BUB; a_last <= '0';
       elsif ce = '1' then
         -- por defecto: hueco
@@ -142,32 +151,39 @@ begin
             if s_tvalid = '1' then
               a_kind <= K_STRT;
               wcnt   <= (others => '0');
+              wsm    <= (others => '0');
               a_st   <= SA_DATA;
             end if;
 
           when SA_DATA =>
             if s_tvalid = '1' then
-              if s_tlast = '1' then n := keep_to_n(s_tkeep);
-              else n := to_unsigned(8, 4); end if;
-              dm := s_tdata and byte_mask(n);
+              -- mascara de bytes validos directa de tkeep (contiguo, LSB)
+              for b in 0 to 7 loop
+                if s_tlast = '0' or s_tkeep(b) = '1' then
+                  dm(8*b+7 downto 8*b) := s_tdata(8*b+7 downto 8*b);
+                else
+                  dm(8*b+7 downto 8*b) := x"00";
+                end if;
+              end loop;
+              n4 := s_tkeep(3) = '1';                 -- n >= 4
               a_kind <= K_DATA;
               a_data <= dm;
               if s_tlast = '0' then
                 if wcnt /= 4095 then wcnt <= wcnt + 1; end if;
-              elsif wcnt >= 8 or (wcnt = 7 and n >= 4) then
+                if wsm(3) = '0' then wsm <= wsm + 1; end if;
+              elsif wsm(3) = '1' or (wsm = 7 and n4) then
                 -- trama >= 60 bytes: sin padding
-                a_last <= '1'; a_n <= n;
-                r_evf <= '1';
-                r_evb <= shift_left(resize(wcnt, 16), 3) + resize(n, 16) + 4;
+                a_last <= '1'; a_n <= keep_to_n(s_tkeep);
+                ev_p <= '1'; ev_w <= wcnt; ev_n <= keep_to_n(s_tkeep);
                 a_st <= SA_GAP1;
-              elsif wcnt = 7 then
+              elsif wsm = 7 then
                 -- ultima palabra ya es la 8a: completar hasta 60 (n=4)
                 a_last <= '1'; a_n <= to_unsigned(4, 4);
-                r_evf <= '1'; r_evb <= to_unsigned(64, 16);
+                ev_p <= '1'; ev_w <= wcnt; ev_n <= to_unsigned(4, 4);
                 a_st <= SA_GAP1;
               else
                 -- padding: esta palabra sale completa (ceros tras n)
-                wcnt <= wcnt + 1;
+                wcnt <= wcnt + 1; wsm <= wsm + 1;
                 a_st <= SA_PAD;
               end if;
             else
@@ -180,12 +196,12 @@ begin
           when SA_PAD =>
             a_kind <= K_DATA;
             a_data <= (others => '0');
-            if wcnt = 7 then
+            if wsm = 7 then
               a_last <= '1'; a_n <= to_unsigned(4, 4);
-              r_evf <= '1'; r_evb <= to_unsigned(64, 16);
+              ev_p <= '1'; ev_w <= wcnt; ev_n <= to_unsigned(4, 4);
               a_st <= SA_GAP1;
             else
-              wcnt <= wcnt + 1;
+              wcnt <= wcnt + 1; wsm <= wsm + 1;
             end if;
 
           when SA_GAP1 =>
@@ -200,6 +216,17 @@ begin
               a_st <= SA_IDLE;
             end if;
         end case;
+      end if;
+    end if;
+  end process;
+
+  -- estadistica de la trama, un ciclo despues (fuera del camino de decision)
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      r_evf <= ev_p;
+      if ev_p = '1' then
+        r_evb <= shift_left(resize(ev_w, 16), 3) + resize(ev_n, 16) + 4;
       end if;
     end if;
   end process;
@@ -240,7 +267,8 @@ begin
       end if;
       if ce = '1' then
         cv_data <= b_data; cv_n <= b_n;
-        cv_var  <= crc_variants(b_crc, b_data);
+        cv_a    <= crc_var_c(b_crc);
+        cv_b    <= crc_var_d(b_data);
       end if;
     end if;
   end process;
@@ -259,14 +287,14 @@ begin
       if ce = '1' then
         c_data <= cv_data; c_n <= cv_n;
         case to_integer(cv_n) is
-          when 1      => c_fcs <= not cv_var(1);
-          when 2      => c_fcs <= not cv_var(2);
-          when 3      => c_fcs <= not cv_var(3);
-          when 4      => c_fcs <= not cv_var(4);
-          when 5      => c_fcs <= not cv_var(5);
-          when 6      => c_fcs <= not cv_var(6);
-          when 7      => c_fcs <= not cv_var(7);
-          when others => c_fcs <= not cv_var(8);
+          when 1      => c_fcs <= not (cv_a(1) xor cv_b(1));
+          when 2      => c_fcs <= not (cv_a(2) xor cv_b(2));
+          when 3      => c_fcs <= not (cv_a(3) xor cv_b(3));
+          when 4      => c_fcs <= not (cv_a(4) xor cv_b(4));
+          when 5      => c_fcs <= not (cv_a(5) xor cv_b(5));
+          when 6      => c_fcs <= not (cv_a(6) xor cv_b(6));
+          when 7      => c_fcs <= not (cv_a(7) xor cv_b(7));
+          when others => c_fcs <= not (cv_a(8) xor cv_b(8));
         end case;
       end if;
     end if;

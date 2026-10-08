@@ -306,8 +306,23 @@ it:
 | `u_gen` | −0.788 | 7 | next sweep length (add + compare) in one cycle | two stages; AXI-Stream register slice between generator and MAC |
 | counters, `shadow`, `c_*`, `u_ev*` | −0.02 … −0.23 | 1–2 | fanout of the combinational fast-domain reset and of the capture strobes | reset, counter clear and strobes registered with `MAX_FANOUT`; no reset on wide data registers |
 
-The new implementation is pending. Resource usage is in
-`vivado/utilization.txt` after each build.
+**Second implementation, with those changes: WNS +0.001 ns, WHS +0.003 ns,
+all constraints met**, 0 critical warnings; CDC report: 228 crossing
+endpoints, all `Safe` (0 unsafe, 0 unknown). The CRC was no longer limiting;
+the 673 paths under 0.3 ns of slack were control and statistics logic. A third
+round targets them (implementation pending):
+
+| Path (slack, LUT levels) | Change |
+|--------------------------|--------|
+| TX `tlast` → frame byte count (0.001, 9) and → `a_data` (8) | byte mask straight from `tkeep`, `n ≥ 4` = `tkeep(3)`, length compares on a 4-bit saturating counter; byte statistics added one cycle later |
+| RX `r3_d` → partial-CRC variants (0.006, 5) | variants split by linearity into a state half and a data half (≤ 19 / ≤ 34 terms), XOR-ed in the next stage |
+| generator `lastw` → pattern register (0.015, 5) | end of frame taken from the registered `o_last` instead of comparing `w = lastw` |
+| `cnt[5]` (0.088, 7) | counter events registered one cycle before the 32-bit adds |
+| checker → padding mask (0.090, 8) | mask compares a register with constants, no subtraction in front |
+| AXI-Stream slice clock-enable (0.085, 2) | `MAX_FANOUT` on the take signal |
+
+Resource usage of the second implementation: 7 242 LUTs for the whole RV32 +
+MAC SoC (TX 1 559, RX 1 586, generator 653, checker 523, PCS 252).
 
 ## 9. Risks and what is not proven yet
 

@@ -98,17 +98,8 @@ begin
   -- registro -> e es un mux de 4 entradas y un AND, sin comparadores.
   process(clk)
     variable e      : std_logic_vector(63 downto 0);
-    variable rem_nx : signed(15 downto 0);
     variable seq_now : std_logic_vector(31 downto 0);
 
-    function pad_mask(r : signed(15 downto 0)) return std_logic_vector is
-      variable m : std_logic_vector(7 downto 0);
-    begin
-      for b in 0 to 7 loop
-        if r <= b then m(b) := '1'; else m(b) := '0'; end if;
-      end loop;
-      return m;
-    end function;
   begin
     if rising_edge(clk) then
       ya_v <= '0';
@@ -135,16 +126,21 @@ begin
         ya_last <= i_last; ya_user <= i_user;
         ya_tot <= shift_left(resize(w, 16), 3) + resize(i_n, 16);
 
-        -- estado para la palabra siguiente
+        -- estado para la palabra siguiente. La mascara se obtiene comparando
+        -- un registro con constantes (sin restar antes): byte b de la palabra
+        -- 2 es padding si len <= 16+b; de la palabra w+1 si rem_r <= 8+b.
         if w1f = '1' then
           len_r  <= unsigned(i_d(63 downto 48));
-          rem_nx := signed(resize(unsigned(i_d(63 downto 48)), 16)) - 16;
-          rem_r  <= rem_nx;
-          padz_r <= pad_mask(rem_nx);
+          rem_r  <= signed(resize(unsigned(i_d(63 downto 48)), 16)) - 16;
+          for b in 0 to 7 loop
+            if unsigned(i_d(63 downto 48)) <= 16 + b then padz_r(b) <= '1';
+            else padz_r(b) <= '0'; end if;
+          end loop;
         elsif w0f = '0' then
-          rem_nx := rem_r - 8;
-          rem_r  <= rem_nx;
-          padz_r <= pad_mask(rem_nx);
+          rem_r  <= rem_r - 8;
+          for b in 0 to 7 loop
+            if rem_r <= 8 + b then padz_r(b) <= '1'; else padz_r(b) <= '0'; end if;
+          end loop;
         end if;
         if w2f = '1' then
           seq_r <= unsigned(i_d(31 downto 0));

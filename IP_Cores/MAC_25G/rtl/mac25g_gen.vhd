@@ -131,7 +131,8 @@ begin
       else
         if stop = '1' and r_busy = '1' then stop_req <= '1'; end if;
         if r_busy = '1' and m_tready = '1' then
-        fin_frame := (w = lastw);
+        -- o_last registrado == (w = lastw): sin comparador en el handshake
+        fin_frame := (o_last = '1');
         if fin_frame then
           -- siguiente trama (o fin de rafaga: cuenta agotada o stop pedido)
           if (cont = '0' and left = 1) or stop_req = '1' or stop = '1' then
