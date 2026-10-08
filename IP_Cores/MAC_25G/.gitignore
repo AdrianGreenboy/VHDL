@@ -1,0 +1,8 @@
+# generados por fw/build_fw_rv32.sh
+fw/*.elf
+fw/crt0.S
+fw/fw_rv32.ld
+# generados por Vivado (vivado/build_mac_soc.tcl)
+vivado/mac_soc/
+vivado/*.txt
+__pycache__/

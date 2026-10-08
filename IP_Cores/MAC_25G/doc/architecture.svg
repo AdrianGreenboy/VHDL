@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+    <style>
+      .dom   { fill: none; stroke: #888; stroke-dasharray: 6 4; }
+      .blk   { fill: #ffffff; stroke: #333; stroke-width: 1.4; }
+      .mac   { fill: #e8f1fb; stroke: #1f5fa8; stroke-width: 1.6; }
+      .pcs   { fill: #eef7ea; stroke: #3c7a2e; stroke-width: 1.6; }
+      .new   { fill: #fff4e0; stroke: #b36b00; stroke-width: 1.6; }
+      .t     { fill: #111; }
+      .s     { fill: #555; font-size: 11px; }
+      .h     { fill: #333; font-size: 12px; font-weight: bold; }
+      .ln    { stroke: #333; stroke-width: 1.4; fill: none; marker-end: url(#a); }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="960" height="560" fill="#fafafa"/>
+
+  <!-- AXI domain -->
+  <rect class="dom" x="14" y="14" width="250" height="532" rx="8"/>
+  <text class="h" x="26" y="36">aclk 40 MHz (clk_pl_0)</text>
+  <rect class="blk" x="34" y="56" width="210" height="58" rx="6"/>
+  <text class="t" x="139" y="80" text-anchor="middle">RV32IM SoC (RV32i)</text>
+  <text class="s" x="139" y="98" text-anchor="middle">firmware: config, bursts, snapshot</text>
+  <rect class="blk" x="34" y="140" width="210" height="44" rx="6"/>
+  <text class="t" x="139" y="167" text-anchor="middle">pcs_mmio_bridge (Core 19)</text>
+  <rect class="mac" x="34" y="210" width="210" height="120" rx="6"/>
+  <text class="t" x="139" y="232" text-anchor="middle">mac25g_top register bank</text>
+  <text class="s" x="139" y="252" text-anchor="middle">AXI4-Lite, 0xD000_0000</text>
+  <text class="s" x="139" y="270" text-anchor="middle">CTRL / CMD (HW-ordered)</text>
+  <text class="s" x="139" y="288" text-anchor="middle">STATUS / IRQ (RW1C)</text>
+  <text class="s" x="139" y="306" text-anchor="middle">16 counters (snapshot)</text>
+  <rect class="blk" x="34" y="356" width="210" height="60" rx="6"/>
+  <text class="t" x="139" y="380" text-anchor="middle">DMA + doorbell</text>
+  <text class="s" x="139" y="398" text-anchor="middle">24 result words to DDR+0x40</text>
+  <path class="ln" d="M139,114 L139,140"/>
+  <path class="ln" d="M139,184 L139,210"/>
+  <path class="ln" d="M139,330 L139,356"/>
+
+  <!-- CDC -->
+  <rect class="new" x="280" y="210" width="96" height="120" rx="6"/>
+  <text class="t" x="328" y="236" text-anchor="middle">CDC</text>
+  <text class="s" x="328" y="256" text-anchor="middle">cfg capture</text>
+  <text class="s" x="328" y="272" text-anchor="middle">on CMD</text>
+  <text class="s" x="328" y="292" text-anchor="middle">evsync</text>
+  <text class="s" x="328" y="308" text-anchor="middle">req/ack</text>
+  <path class="ln" d="M244,270 L280,270"/>
+
+  <!-- DP domain -->
+  <rect class="dom" x="392" y="14" width="554" height="532" rx="8"/>
+  <text class="h" x="404" y="36">clk_dp 390.625 MHz (one 66-bit block slot per cycle)</text>
+
+  <!-- TX row -->
+  <rect class="mac" x="410" y="60" width="112" height="78" rx="6"/>
+  <text class="t" x="466" y="86" text-anchor="middle">frame gen</text>
+  <text class="s" x="466" y="104" text-anchor="middle">len sweep, seq,</text>
+  <text class="s" x="466" y="120" text-anchor="middle">xorshift64</text>
+
+  <rect class="mac" x="540" y="60" width="160" height="78" rx="6"/>
+  <text class="t" x="620" y="82" text-anchor="middle">mac25g_tx</text>
+  <text class="s" x="620" y="100" text-anchor="middle">pad · CRC-32 · FCS merge</text>
+  <text class="s" x="620" y="116" text-anchor="middle">encoder S/D/T0..T7/I/E</text>
+  <text class="s" x="620" y="132" text-anchor="middle">advances on ce</text>
+
+  <rect class="blk" x="718" y="60" width="88" height="78" rx="6"/>
+  <text class="t" x="762" y="90" text-anchor="middle">block</text>
+  <text class="t" x="762" y="108" text-anchor="middle">FIFO 8+1</text>
+  <text class="s" x="762" y="126" text-anchor="middle">ce = level&lt;=4</text>
+
+  <rect class="new" x="822" y="60" width="112" height="78" rx="6"/>
+  <text class="t" x="878" y="82" text-anchor="middle">mac25g_pcs_tx</text>
+  <text class="s" x="878" y="100" text-anchor="middle">Core 19 scrambler</text>
+  <text class="s" x="878" y="116" text-anchor="middle">+ gearbox, predictive</text>
+  <text class="s" x="878" y="132" text-anchor="middle">registered ready</text>
+
+  <path class="ln" d="M522,99 L540,99"/>
+  <path class="ln" d="M700,99 L718,99"/>
+  <path class="ln" d="M806,99 L822,99"/>
+
+  <!-- loopback -->
+  <rect class="blk" x="822" y="222" width="112" height="56" rx="6"/>
+  <text class="t" x="878" y="246" text-anchor="middle">parallel</text>
+  <text class="t" x="878" y="264" text-anchor="middle">loopback (reg)</text>
+  <path class="ln" d="M878,138 L878,222"/>
+  <text class="s" x="886" y="186">64-bit words</text>
+
+  <!-- RX row -->
+  <rect class="pcs" x="822" y="362" width="112" height="78" rx="6"/>
+  <text class="t" x="878" y="388" text-anchor="middle">pcs_rx_datapath</text>
+  <text class="s" x="878" y="406" text-anchor="middle">Core 19, unchanged</text>
+  <text class="s" x="878" y="420" text-anchor="middle">de-gearbox +</text>
+  <text class="s" x="878" y="434" text-anchor="middle">descrambler</text>
+  <path class="ln" d="M878,278 L878,362"/>
+
+  <rect class="mac" x="610" y="362" width="194" height="98" rx="6"/>
+  <text class="t" x="707" y="384" text-anchor="middle">mac25g_rx</text>
+  <text class="s" x="707" y="402" text-anchor="middle">decode · framer · CRC residue</text>
+  <text class="s" x="707" y="418" text-anchor="middle">runt / oversize / abort</text>
+  <text class="s" x="707" y="434" text-anchor="middle">MAC filter · FCS strip</text>
+  <text class="s" x="707" y="450" text-anchor="middle">AXIS out, tuser = bad</text>
+  <path class="ln" d="M822,401 L804,401"/>
+
+  <rect class="mac" x="430" y="362" width="160" height="98" rx="6"/>
+  <text class="t" x="510" y="386" text-anchor="middle">frame checker</text>
+  <text class="s" x="510" y="406" text-anchor="middle">byte-exact payload</text>
+  <text class="s" x="510" y="422" text-anchor="middle">length, padding = 0</text>
+  <text class="s" x="510" y="438" text-anchor="middle">sequence continuity</text>
+  <path class="ln" d="M610,411 L590,411"/>
+
+  <rect class="blk" x="430" y="486" width="374" height="44" rx="6"/>
+  <text class="t" x="617" y="513" text-anchor="middle">16 x 32-bit counters  →  snapshot shadow  →  CDC</text>
+  <path class="ln" d="M510,460 L510,486"/>
+  <path class="ln" d="M707,460 L707,486"/>
+
+  <!-- CDC <-> datapath -->
+  <path class="ln" d="M376,236 L466,236 L466,138"/>
+  <text class="s" x="474" y="228">config + commands</text>
+  <path class="ln" d="M430,508 L328,508 L328,330"/>
+  <text class="s" x="336" y="500">snapshot</text>
+
+  <!-- legend -->
+  <rect class="mac" x="600" y="200" width="16" height="12"/>
+  <text class="s" x="622" y="210">new in Core 20</text>
+  <rect class="new" x="600" y="220" width="16" height="12"/>
+  <text class="s" x="622" y="230">new, fixes a Core 19 limitation</text>
+  <rect class="pcs" x="600" y="240" width="16" height="12"/>
+  <text class="s" x="622" y="250">Core 19, reused unchanged</text>
+</svg>
