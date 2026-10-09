@@ -73,7 +73,8 @@ begin
     wait for 200 ns; pg <= '1';
     loop
       wait until rising_edge(aclk);
-      if pllrst = '1' then plllock <= '0';
+      -- como en silicio: sin lock mientras los dos reset maestros esten activos
+      if pllrst = '1' or (txmst = '1' and rxmst = '1') then plllock <= '0';
       elsif plllock = '0' then
         for i in 1 to 30 loop wait until rising_edge(aclk); end loop;
         plllock <= '1';

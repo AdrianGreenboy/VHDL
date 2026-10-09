@@ -7,9 +7,14 @@
 --
 -- Comun:
 --   C_PG     todo en reset; espera gtpowergood
---   C_PLLRST mantiene hsclk0_lcpllreset T_PLLRST
---   C_PLLWT  espera hsclk0_lcplllock (timeout -> C_PG)
+--   C_PLLRST mantiene hsclk0_lcpllreset T_PLLRST y lo suelta
+--   C_PLLWT  (las pistas ya corren) espera hsclk0_lcplllock; timeout -> C_PG
 --   C_RUN    PLL en servicio; si cae el lock o gtpowergood -> C_PG (todo)
+-- IMPORTANTE (Versal, MASTER_RESET_EN): el secuenciador interno del GT solo
+-- arranca el PLL cuando se sueltan ch0_tx/rxmstreset. Esperar el lock con
+-- los reset maestros activos es un abrazo mortal (visto en silicio: PLL sin
+-- lock hasta soltar los resets a mano). Por eso las pistas arrancan en
+-- cuanto se suelta lcpllreset, y el lock se espera en paralelo.
 -- Por pista (TX y RX, solo en C_RUN):
 --   P_RST   mantiene ch0_*mstreset T_RSTP
 --   P_CLK   espera a que el reloj de usuario corra (*_alive, del medidor de
@@ -161,6 +166,9 @@ begin
               ccnt <= ccnt - 1;
             end if;
           when C_PLLWT =>
+            -- las pistas avanzan ya (sus reset maestros arrancan el PLL)
+            tx <= step(tx, tx_alive, td2);
+            rx <= step(rx, rx_alive, rd2);
             if lk2 = '1' then
               cs <= C_RUN;
             elsif ccnt = 0 then

@@ -29,14 +29,15 @@ architecture sim of tb_eth21_gtrst is
 begin
   clk <= not clk after 20 ns when not fin;
 
-  -- modelo del quad
+  -- modelo del quad: como en silicio (Versal, MASTER_RESET_EN), el PLL solo
+  -- engancha si lcpllreset = 0 Y al menos un reset maestro esta suelto
   process
   begin
     loop
-      wait until pll = '0' and pll_kill = '0';
+      wait until pll = '0' and pll_kill = '0' and (txm = '0' or rxm = '0');
       wait for 2 us;
-      if pll = '0' and pll_kill = '0' then lock <= '1'; end if;
-      wait until pll = '1' or pll_kill = '1';
+      if pll = '0' and pll_kill = '0' and (txm = '0' or rxm = '0') then lock <= '1'; end if;
+      wait until pll = '1' or pll_kill = '1' or (txm = '1' and rxm = '1');
       lock <= '0';
     end loop;
   end process;
@@ -102,9 +103,9 @@ begin
         pll_kill <= '1'; wait for 20 us; pll_kill <= '0';
         wait for 5 us;
         expect(n_pll_rise = 1, "sin reinicio del PLL");
-        expect(txr = '0' and rxr = '0', "ready no caen con el PLL");
         wait for 300 us;
         expect(txr = '1' and rxr = '1', "sin recuperacion tras el PLL");
+        expect(n_txr_fall = 1, "tx_ready no cayo una vez con el PLL");
         expect(n_txr_rise = 2 and n_rxr_rise = 2, "subidas de ready");
       when others =>
         wait for 1000 us;

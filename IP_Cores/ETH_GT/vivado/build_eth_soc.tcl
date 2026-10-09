@@ -82,6 +82,8 @@ add_files -norecurse $SRCS
 set_property FILE_TYPE {VHDL 2008} [get_files -filter {FILE_TYPE == VHDL}]
 add_files -norecurse $WRAPV
 add_files -fileset constrs_1 -norecurse $HERE/eth21_gt.xdc
+# los relojes del GT solo existen tras la sintesis: XDC solo en implementacion
+set_property USED_IN_SYNTHESIS false [get_files eth21_gt.xdc]
 update_compile_order -fileset sources_1
 
 # --- 3. BD del Core 20 (CIPS/NoC intactos) con el core en 0xA4000000 ----------
