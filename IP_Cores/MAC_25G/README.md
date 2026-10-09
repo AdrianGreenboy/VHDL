@@ -11,17 +11,17 @@ side block decoding, FCS residue check, runt/oversize/abort detection, MAC
 filtering and FCS stripping — all at one 66-bit block slot per 390.625 MHz
 cycle.
 
-> **Status: simulation-validated, timing closure in progress, silicon
-> pending.** Five verification layers (21 GHDL runs) match the Python oracle
-> bit for bit, including the real compiled firmware running on the real RV32
-> of this repository; 27/27 RTL mutations are detected, and the core went
-> through an independent review whose findings are fixed and covered by
-> tests. The **first implementation did not close at 390.625 MHz (WNS −1.399
-> ns)**; the RTL has been reworked for the paths it reported (see
-> [section 8](#8-resources-and-timing)) and the new implementation is
-> pending. The silicon result is fully
-> predicted in advance: `L5 SILICON PASS` requires the 23 deterministic words
-> listed in [section 7](#7-silicon-bring-up), FNV signature **`0x446C2628`**.
+> **Status: SILICON PASS on the TE0950 at 390.625 MHz.** `mac-selftest`
+> sent 100 000 frames (76 504 177 bytes) through the MAC, the 64B/66B PCS and
+> the fabric loopback: all 23 deterministic words match the prediction
+> (signature **`0x446C2628`**, `FLAGS 0x3F`, `STATUS 0x11D`), the injected
+> FCS error is caught exactly once, and the burst runs at **24.26 Gb/s**
+> L2+FCS. Timing closed after three RTL rounds (WNS +0.019 ns, WHS +0.011
+> ns, all CDC endpoints safe). Five verification layers (21 GHDL runs) match
+> the Python oracle bit for bit, 27/27 RTL mutations are detected, and an
+> independent review's findings are fixed and covered by tests. Not proven
+> here: a real serial link (the loopback is parallel, in fabric) — that is
+> the job of [Core 21](../ETH_GT/).
 
 ![architecture](doc/architecture.svg)
 
@@ -176,7 +176,7 @@ fail.
 | 3 | `tb_mac_datapath` | gen → TX → FIFO → PCS → loopback → PCS → RX → checker: clean burst, 1-bit injection, fine sweep, oversize frames, continuous mode cut by `GEN_STOP` followed by a normal burst; clean and injected bursts again through the Core 19 fabric gearboxes (`GEARBOX=true`); 16 counters vs oracle | `0x62B78AAD`, `0x1E1BA41D`, `0x710C2A4E`, `0x9B22CCD6`, `0x62B78AAD`, `0x62B78AAD`, `0x1E1BA41D` |
 | 4 | `tb_mac_top` | whole core through registers at 40/390.625 MHz, direct AXI4-Lite **and** through `pcs_mmio_bridge`; AXI response-timing monitor; `CMD` with the fast domain held in reset must not hang the bus | `LAYER4_PASS`, `LAYER4MMIO_PASS` |
 | 5 (sim) | `tb_soc_mac` | the compiled firmware on the real RV32 of `IP_Cores/RV32i`; 24 DMA'd words vs oracle | `LAYER5SIM_PASS`, signature `0x6CFBF90C` |
-| 5 (silicon) | `mac-selftest` | TE0950 | **pending** — expected signature `0x446C2628` |
+| 5 (silicon) | `mac-selftest` | TE0950 | **`L5 SILICON PASS`** — signature `0x446C2628`, 100 000 frames, 24.26 Gb/s |
 
 Injection is deterministic by construction: bit 0 of the second data block of
 frame 0 is flipped before the scrambler, so exactly one frame fails the FCS,
@@ -310,7 +310,8 @@ it:
 all constraints met**, 0 critical warnings; CDC report: 228 crossing
 endpoints, all `Safe` (0 unsafe, 0 unknown). The CRC was no longer limiting;
 the 673 paths under 0.3 ns of slack were control and statistics logic. A third
-round targets them (implementation pending):
+round targeted them — **third implementation: WNS +0.019 ns, WHS +0.011 ns**,
+worst remaining paths in the test generator (0.019), RX (0.075) and TX (0.137):
 
 | Path (slack, LUT levels) | Change |
 |--------------------------|--------|
@@ -326,14 +327,8 @@ MAC SoC (TX 1 559, RX 1 586, generator 653, checker 523, PCS 252).
 
 ## 9. Risks and what is not proven yet
 
-- **Timing at 390.625 MHz on the -1LP part** is not closed yet: the first
-  run failed by 1.4 ns (section 8) and the reworked RTL has not been
-  implemented. Remaining suspects if it still fails: the two 64-bit CRC
-  feedback loops (3 LUT levels + routing, no way to pipeline a feedback
-  loop), RX stage R1 (64-bit start-block compare) and R3 (48-bit filter
-  compares), and routing congestion in general. A functional silicon pass at
-  a lower `clk_dp` is a valid intermediate step: the result signature does
-  not depend on the frequency.
+- **Timing margin at 390.625 MHz is thin** (WNS +0.019 ns): any RTL change
+  in the fast domain needs a new timing check.
 - **RX limitations of v1**: control characters inside `/Tn/` and idle blocks
   are not checked, and invalid sync headers (`00`/`11`) are invisible (the
   Core 19 RX maps everything that is not `01` to control). `tkeep = 0` or a

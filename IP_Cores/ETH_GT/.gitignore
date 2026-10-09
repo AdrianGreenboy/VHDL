@@ -1,0 +1,11 @@
+# Vivado / PetaLinux outputs
+vivado/eth_soc_*/
+vivado/*.pdi
+vivado/*.jou
+vivado/*.log
+vivado/.Xil/
+vivado/eth21_bd_wrap.v
+vivado/*_10.txt
+vivado/*_25.txt
+petalinux_*/
+oracle/__pycache__/
