@@ -1,4 +1,4 @@
-# HERCOSSNUX Core 21 — ETH GT (10G / 25G Ethernet over a real GTYP)
+# HERCOSSNUX Core 21 — MAC_10 (10G Ethernet over a real GTYP, 25G-capable)
 
 The [Core 20 MAC](../MAC_25G/) and its 64B/66B PCS, taken off the fabric
 loopback and put on a **real serial transceiver**: lane 0 of the Trenz
@@ -12,14 +12,26 @@ packet.
 | `10` | 10.3125 Gb/s (10GBASE-R) | 156.25 MHz | Mellanox ConnectX-3 Pro (QSFP+, forced to 10G = lane 0) over a QSFP+ DAC |
 | `25` | 25.78125 Gb/s (25GBASE-R) | 390.625 MHz | GTYP near-end PMA loopback (the ConnectX-3 Pro has no 25G mode) |
 
-> **Status: simulation-validated, silicon pending.** Six verification layers
-> (38 GHDL runs, 21/21 RTL mutations detected) are checked against an **independent oracle written from
-> IEEE 802.3 cl.49 and RFC 791/768** — the TX serial stream is decoded by
-> the oracle's own block-lock / descrambler / FCS decoder, and the RX is fed
-> oracle-encoded streams in all four possible GT bit orders, including
-> negative tests. An independent review found two real bugs (length-sweep
-> wrap, reset sequencer coupling RX failures into TX); both are fixed and
-> covered by new tests.
+> **Status: SILICON PASS at 10.3125 Gb/s (GTYP near-end PMA loopback) on the
+> TE0950.** `eth21 selftest` sent 100 000 IPv4/UDP frames (78 550 000 bytes)
+> through the MAC, the 64B/66B PCS and a real GTYP channel (serializer, CDR,
+> 64B66B gearbox): all 18 checked counters match the prediction exactly, the
+> injected FCS error is caught once, 0 bad sync headers, 0 slips, 0 lock
+> losses, **9.71 Gb/s** L2+FCS (≈ 97.5 % of the 10.3125 Gb/s line, the rest is
+> preamble/IPG and 66-bit block alignment). User clocks measured on silicon:
+> TXUSRCLK 156.251 MHz, RXUSRCLK 156.250 MHz. Implementation: WNS +1.903 ns,
+> WHS +0.018 ns, GT placed at `GTYP_QUAD_X0Y1`.
+>
+> **Pending:** the link to the PC (ConnectX-3 Pro over a QSFP+ DAC), which is
+> the only test that fixes the real GT bit order, and the 25G build.
+> Verification: six layers (38 GHDL runs, 21/21 RTL mutations detected)
+> against an **independent oracle written from IEEE 802.3 cl.49 and RFC
+> 791/768**. Bugs found and fixed: two by an independent review (length-sweep
+> wrap, RX failures restarting the TX) and **one by silicon** — the reset
+> sequencer waited for the LCPLL lock while holding the GT master resets, but
+> on Versal the GT's own sequencer only starts the PLL once they are released
+> (deadlock in `PLLWAIT`); now both layer 1D and layer 4 model that behaviour
+> and the old sequencer fails 5 tests.
 
 ---
 
@@ -93,7 +105,7 @@ handshake, clock meter); the regression must fail on every one.
 ## 4. Build
 
 ```bash
-cd ~/vhdl_repo/IP_Cores/ETH_GT
+cd ~/vhdl_repo/IP_Cores/MAC_10
 bash sim/run_layers.sh                     # 38 PASS
 bash vivado/gen_eth_bd_tcl.sh              # BD from Core 20 (CIPS/NoC/DDR untouched)
 vivado -mode batch -source vivado/build_eth_soc.tcl -tclargs 10 bd   # BD + validate only

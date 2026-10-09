@@ -2,7 +2,7 @@
 # HERCOSSNUX Core 21 - ETH GT - construccion completa hasta PDI y XSA.
 # Vivado 2025.2.1, Trenz TE0950 (xcve2302-sfva784-1LP-e-S).
 #
-#   cd IP_Cores/ETH_GT && bash vivado/gen_eth_bd_tcl.sh
+#   cd IP_Cores/MAC_10 && bash vivado/gen_eth_bd_tcl.sh
 #   vivado -mode batch -source vivado/build_eth_soc.tcl -tclargs 10       (10G)
 #   vivado -mode batch -source vivado/build_eth_soc.tcl -tclargs 25       (25G)
 #   vivado -mode batch -source vivado/build_eth_soc.tcl -tclargs 10 bd    (solo BD

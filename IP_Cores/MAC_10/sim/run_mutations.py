@@ -75,15 +75,15 @@ def run(m):
     name, f, a, b = m
     tmp = tempfile.mkdtemp(prefix="eth21mut_")
     try:
-        for d in ("ETH_GT", "MAC_25G", "PCS_25G"):
+        for d in ("MAC_10", "MAC_25G", "PCS_25G"):
             shutil.copytree(os.path.join(IPC, d), os.path.join(tmp, d),
                             ignore=shutil.ignore_patterns("eth_soc_*", "*.pdi", "petalinux*"))
-        p = os.path.join(tmp, "ETH_GT", f)
+        p = os.path.join(tmp, "MAC_10", f)
         src = open(p).read()
         if src.count(a) != 1:
             return name, "MUTACION NO APLICABLE (%d apariciones)" % src.count(a)
         open(p, "w").write(src.replace(a, b))
-        r = subprocess.run(["bash", os.path.join(tmp, "ETH_GT/sim/run_layers.sh"),
+        r = subprocess.run(["bash", os.path.join(tmp, "MAC_10/sim/run_layers.sh"),
                             os.path.join(tmp, "w")], capture_output=True, text=True, timeout=1800)
         fails = [l for l in r.stdout.splitlines() if "FAIL " in l]
         if r.returncode != 0:
