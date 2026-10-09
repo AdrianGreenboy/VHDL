@@ -33,6 +33,8 @@ packet.
 > (deadlock in `PLLWAIT`); now both layer 1D and layer 4 model that behaviour
 > and the old sequencer fails 5 tests.
 
+![architecture](doc/architecture.svg)
+
 ---
 
 ## 1. What it adds to Core 20
@@ -80,7 +82,7 @@ sim/      run_layers.sh (full regression), run_mutations.py
 vivado/   gen_eth_bd_tcl.sh, build_eth_soc.tcl, eth21_gt.xdc
 ps/       eth21.c + eth21.bb (board tool and PetaLinux recipe)
 pc/       setup_pc.sh, eth21_rx.c (PC side)
-doc/      register_map.md
+doc/      architecture.svg, register_map.md
 ```
 
 ## 3. Verification

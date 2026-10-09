@@ -1,0 +1,262 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 740" font-family="Helvetica, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+    <style>
+      .dom   { fill: none; stroke: #888; stroke-dasharray: 6 4; }
+      .blk   { fill: #ffffff; stroke: #333; stroke-width: 1.4; }
+      .mac   { fill: #e8f1fb; stroke: #1f5fa8; stroke-width: 1.6; }
+      .new   { fill: #fff4e0; stroke: #b36b00; stroke-width: 1.6; }
+      .hw    { fill: #ececec; stroke: #555; stroke-width: 1.6; }
+      .t     { fill: #111; }
+      .s     { fill: #555; font-size: 11px; }
+      .h     { fill: #333; font-size: 12px; font-weight: bold; }
+      .ln    { stroke: #333; stroke-width: 1.4; fill: none; marker-end: url(#a); }
+      .bi    { stroke: #333; stroke-width: 1.4; fill: none; marker-end: url(#a); marker-start: url(#a); }
+      .ser   { stroke: #b00020; stroke-width: 2.2; fill: none; marker-end: url(#a); marker-start: url(#a); }
+      .lb    { stroke: #777; stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; marker-end: url(#a); }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1180" height="740" fill="#fafafa"/>
+
+  <!-- ================= AXI domain ================= -->
+  <rect class="dom" x="14" y="14" width="250" height="526" rx="8"/>
+  <text class="h" x="26" y="36">aclk 40 MHz (pl0_ref_clk)</text>
+
+  <rect class="hw" x="34" y="52" width="210" height="72" rx="6"/>
+  <text class="t" x="139" y="74" text-anchor="middle">Versal CIPS · A72 PetaLinux</text>
+  <text class="s" x="139" y="92" text-anchor="middle">eth21 tool (/dev/mem): status,</text>
+  <text class="s" x="139" y="108" text-anchor="middle">selftest, autodetect, send</text>
+  <text class="s" x="139" y="138" text-anchor="middle">M_AXI_FPD → NoC → AXI4-Lite</text>
+  <path class="ln" d="M139,142 L139,160"/>
+
+  <rect class="new" x="34" y="160" width="210" height="150" rx="6"/>
+  <text class="t" x="139" y="182" text-anchor="middle">eth21_top register bank</text>
+  <text class="s" x="139" y="200" text-anchor="middle">AXI4-Lite, 0xA400_0000</text>
+  <text class="s" x="139" y="218" text-anchor="middle">ID 0x47544521 (“GTE!”)</text>
+  <text class="s" x="139" y="236" text-anchor="middle">CTRL / CMD / GT_CTRL / GAP</text>
+  <text class="s" x="139" y="254" text-anchor="middle">MACs · IPs · ports · len sweep</text>
+  <text class="s" x="139" y="272" text-anchor="middle">bit-order flags TX / RX</text>
+  <text class="s" x="139" y="290" text-anchor="middle">23 counters (snapshot)</text>
+
+  <rect class="new" x="34" y="334" width="210" height="78" rx="6"/>
+  <text class="t" x="139" y="356" text-anchor="middle">eth21_clkmeter × 2</text>
+  <text class="s" x="139" y="374" text-anchor="middle">TXUSRCLK / RXUSRCLK</text>
+  <text class="s" x="139" y="390" text-anchor="middle">measured in silicon,</text>
+  <text class="s" x="139" y="404" text-anchor="middle">“alive” for the reset FSM</text>
+
+  <rect class="new" x="34" y="434" width="210" height="88" rx="6"/>
+  <text class="t" x="139" y="456" text-anchor="middle">eth21_gt_rst</text>
+  <text class="s" x="139" y="474" text-anchor="middle">power-good → LCPLL reset</text>
+  <text class="s" x="139" y="490" text-anchor="middle">→ independent TX / RX tracks</text>
+  <text class="s" x="139" y="506" text-anchor="middle">auto or manual (GT_CTRL)</text>
+  <path class="ln" d="M139,412 L139,434"/>
+
+  <!-- ================= CDC ================= -->
+  <rect class="new" x="276" y="150" width="96" height="320" rx="6"/>
+  <text class="t" x="324" y="176" text-anchor="middle">CDC</text>
+  <text class="s" x="324" y="206" text-anchor="middle">cfg capture</text>
+  <text class="s" x="324" y="222" text-anchor="middle">on CMD</text>
+  <text class="s" x="324" y="252" text-anchor="middle">psync /</text>
+  <text class="s" x="324" y="268" text-anchor="middle">evsync</text>
+  <text class="s" x="324" y="298" text-anchor="middle">acks from</text>
+  <text class="s" x="324" y="314" text-anchor="middle">both domains</text>
+  <text class="s" x="324" y="330" text-anchor="middle">or</text>
+  <text class="s" x="324" y="346" text-anchor="middle">CMD_TIMEOUT</text>
+  <text class="s" x="324" y="376" text-anchor="middle">lsync</text>
+  <text class="s" x="324" y="392" text-anchor="middle">lock / link /</text>
+  <text class="s" x="324" y="408" text-anchor="middle">CDR status</text>
+  <path class="bi" d="M244,236 L276,236"/>
+
+  <!-- ================= TX domain ================= -->
+  <rect class="dom" x="388" y="14" width="602" height="232" rx="8"/>
+  <text class="h" x="400" y="36">TXUSRCLK 156.25 MHz (10G) / 390.625 MHz (25G) — one 66-bit block per cycle</text>
+
+  <rect class="new" x="404" y="58" width="122" height="98" rx="6"/>
+  <text class="t" x="465" y="80" text-anchor="middle">eth21_udp_gen</text>
+  <text class="s" x="465" y="98" text-anchor="middle">Eth + IPv4 + UDP</text>
+  <text class="s" x="465" y="114" text-anchor="middle">HW IP checksum</text>
+  <text class="s" x="465" y="130" text-anchor="middle">seq · xorshift64</text>
+  <text class="s" x="465" y="146" text-anchor="middle">len sweep · gap</text>
+
+  <rect class="blk" x="540" y="78" width="64" height="58" rx="6"/>
+  <text class="t" x="572" y="102" text-anchor="middle">AXIS</text>
+  <text class="t" x="572" y="120" text-anchor="middle">slice</text>
+
+  <rect class="mac" x="618" y="58" width="128" height="98" rx="6"/>
+  <text class="t" x="682" y="80" text-anchor="middle">mac25g_tx</text>
+  <text class="s" x="682" y="98" text-anchor="middle">pad · CRC-32 FCS</text>
+  <text class="s" x="682" y="114" text-anchor="middle">cl.49 encoder</text>
+  <text class="s" x="682" y="130" text-anchor="middle">S/D/T/I/E blocks</text>
+  <text class="s" x="682" y="146" text-anchor="middle">ce = '1' (no FIFO)</text>
+
+  <rect class="mac" x="760" y="58" width="112" height="98" rx="6"/>
+  <text class="t" x="816" y="80" text-anchor="middle">pcs66_tx</text>
+  <text class="s" x="816" y="98" text-anchor="middle">Core 19</text>
+  <text class="s" x="816" y="114" text-anchor="middle">scrambler</text>
+  <text class="s" x="816" y="130" text-anchor="middle">x^58 + x^39 + 1</text>
+
+  <rect class="new" x="886" y="58" width="92" height="98" rx="6"/>
+  <text class="t" x="932" y="80" text-anchor="middle">gtmap_tx</text>
+  <text class="s" x="932" y="98" text-anchor="middle">IEEE bit order</text>
+  <text class="s" x="932" y="114" text-anchor="middle">bitrev flag</text>
+  <text class="s" x="932" y="130" text-anchor="middle">hdrswap flag</text>
+  <text class="s" x="932" y="146" text-anchor="middle">+ out reg</text>
+
+  <path class="ln" d="M526,107 L540,107"/>
+  <path class="ln" d="M604,107 L618,107"/>
+  <path class="ln" d="M746,107 L760,107"/>
+  <path class="ln" d="M872,107 L886,107"/>
+
+  <rect class="blk" x="404" y="190" width="574" height="40" rx="6"/>
+  <text class="t" x="691" y="215" text-anchor="middle">4 TX counters (frames, bytes, …)  →  snapshot shadow  →  CDC</text>
+
+  <!-- ================= RX domain ================= -->
+  <rect class="dom" x="388" y="262" width="602" height="278" rx="8"/>
+  <text class="h" x="400" y="284">RXUSRCLK (recovered, same rate as TX) — independent of the TX domain</text>
+
+  <rect class="new" x="886" y="300" width="92" height="98" rx="6"/>
+  <text class="t" x="932" y="322" text-anchor="middle">gtmap_rx</text>
+  <text class="s" x="932" y="340" text-anchor="middle">in reg +</text>
+  <text class="s" x="932" y="356" text-anchor="middle">bitrev /</text>
+  <text class="s" x="932" y="372" text-anchor="middle">hdrswap</text>
+  <text class="s" x="932" y="388" text-anchor="middle">flags</text>
+
+  <rect class="new" x="770" y="300" width="102" height="98" rx="6"/>
+  <text class="t" x="821" y="322" text-anchor="middle">blocklock</text>
+  <text class="s" x="821" y="340" text-anchor="middle">cl.49 fig 49-14</text>
+  <text class="s" x="821" y="356" text-anchor="middle">64 good → lock</text>
+  <text class="s" x="821" y="372" text-anchor="middle">16 bad / 64 → loss</text>
+  <text class="s" x="821" y="388" text-anchor="middle">slip pulses</text>
+
+  <rect class="mac" x="654" y="300" width="102" height="98" rx="6"/>
+  <text class="t" x="705" y="322" text-anchor="middle">pcs66_rx</text>
+  <text class="s" x="705" y="340" text-anchor="middle">descrambler</text>
+  <text class="s" x="705" y="356" text-anchor="middle">(Core 19)</text>
+  <text class="s" x="705" y="372" text-anchor="middle">gated by lock</text>
+
+  <rect class="mac" x="528" y="300" width="112" height="98" rx="6"/>
+  <text class="t" x="584" y="322" text-anchor="middle">mac25g_rx</text>
+  <text class="s" x="584" y="340" text-anchor="middle">decode · framer</text>
+  <text class="s" x="584" y="356" text-anchor="middle">CRC residue</text>
+  <text class="s" x="584" y="372" text-anchor="middle">MAC filter</text>
+  <text class="s" x="584" y="388" text-anchor="middle">FCS strip</text>
+
+  <rect class="new" x="404" y="300" width="110" height="98" rx="6"/>
+  <text class="t" x="459" y="322" text-anchor="middle">eth21_udp_chk</text>
+  <text class="s" x="459" y="340" text-anchor="middle">IP checksum</text>
+  <text class="s" x="459" y="356" text-anchor="middle">id = seq · lengths</text>
+  <text class="s" x="459" y="372" text-anchor="middle">byte-exact</text>
+  <text class="s" x="459" y="388" text-anchor="middle">payload</text>
+
+  <path class="ln" d="M886,349 L872,349"/>
+  <path class="ln" d="M770,349 L756,349"/>
+  <path class="ln" d="M654,349 L640,349"/>
+  <path class="ln" d="M528,349 L514,349"/>
+
+  <rect class="blk" x="404" y="430" width="574" height="56" rx="6"/>
+  <text class="t" x="691" y="452" text-anchor="middle">19 RX counters  →  snapshot shadow  →  CDC</text>
+  <text class="s" x="691" y="472" text-anchor="middle">frames · CRC · checks · lock / slips / bad headers · Idle / LF / RF ordered sets</text>
+  <path class="ln" d="M459,398 L459,430"/>
+  <path class="ln" d="M821,398 L821,430"/>
+
+  <!-- CDC <-> datapaths -->
+  <path class="ln" d="M372,172 L465,172 L465,156"/>
+  <text class="s" x="392" y="187">config + CMD</text>
+  <path class="ln" d="M404,210 L372,210"/>
+  <path class="ln" d="M372,320 L392,320 L392,349 L404,349"/>
+  <path class="ln" d="M404,458 L372,458"/>
+  <text class="s" x="378" y="452">snap</text>
+
+  <!-- ================= GT ================= -->
+  <rect class="hw" x="1006" y="40" width="160" height="482" rx="8"/>
+  <text class="t" x="1086" y="64" text-anchor="middle">gt_quad_base</text>
+  <text class="s" x="1086" y="82" text-anchor="middle">GTYP_QUAD_X0Y1 · CH0</text>
+  <text class="s" x="1086" y="98" text-anchor="middle">(bank 104)</text>
+  <text class="s" x="1086" y="126" text-anchor="middle">64B66B_ASYNC</text>
+  <text class="s" x="1086" y="142" text-anchor="middle">64-bit user width</text>
+  <text class="s" x="1086" y="158" text-anchor="middle">TX gearbox + serializer</text>
+  <text class="s" x="1086" y="196" text-anchor="middle">LCPLL</text>
+  <text class="s" x="1086" y="212" text-anchor="middle">refclk 156.25 MHz</text>
+  <text class="s" x="1086" y="228" text-anchor="middle">10.3125 / 25.78125 Gb/s</text>
+
+  <rect class="blk" x="1012" y="250" width="148" height="52" rx="5"/>
+  <text class="s" x="1086" y="272" text-anchor="middle">near-end PMA</text>
+  <text class="s" x="1086" y="288" text-anchor="middle">loopback (selftest)</text>
+  <path class="lb" d="M1018,166 L1018,250"/>
+  <path class="lb" d="M1018,302 L1018,330"/>
+
+  <text class="s" x="1086" y="350" text-anchor="middle">RX CDR</text>
+  <text class="s" x="1086" y="366" text-anchor="middle">+ gearbox</text>
+  <text class="s" x="1086" y="382" text-anchor="middle">rxgearboxslip</text>
+  <text class="s" x="1086" y="440" text-anchor="middle">bufg_gt × 2</text>
+  <text class="s" x="1086" y="456" text-anchor="middle">→ TX / RX USRCLK</text>
+  <text class="s" x="1086" y="486" text-anchor="middle">apb3clk 100 MHz</text>
+  <text class="s" x="1086" y="502" text-anchor="middle">(clk_wizard)</text>
+
+  <path class="ln" d="M978,107 L1006,107"/>
+  <text class="s" x="980" y="100">66b</text>
+  <path class="ln" d="M1006,349 L978,349"/>
+  <text class="s" x="980" y="342">66b</text>
+  <path class="ln" d="M821,300 L821,292 L1000,292 L1000,382 L1006,382"/>
+  <text class="s" x="884" y="289">rxgearboxslip</text>
+
+  <!-- resets / status -->
+  <path class="bi" d="M139,522 L139,554 L1040,554 L1040,522"/>
+  <text class="s" x="420" y="568">master / PLL / datapath resets  ↔  power-good, PLL lock, resetdone, CDR lock</text>
+
+  <!-- ================= bottom: clocking and link ================= -->
+  <rect class="dom" x="14" y="582" width="520" height="114" rx="8"/>
+  <text class="h" x="26" y="602">Reference clock (board)</text>
+  <rect class="blk" x="30" y="614" width="150" height="66" rx="6"/>
+  <text class="t" x="105" y="636" text-anchor="middle">U6 SiT9365</text>
+  <text class="s" x="105" y="654" text-anchor="middle">156.25 MHz, AC coupled</text>
+  <text class="s" x="105" y="670" text-anchor="middle">pins H7 / H6</text>
+  <rect class="hw" x="204" y="614" width="150" height="66" rx="6"/>
+  <text class="t" x="279" y="636" text-anchor="middle">util_ds_buf</text>
+  <text class="s" x="279" y="654" text-anchor="middle">IBUFDSGTE</text>
+  <text class="s" x="279" y="670" text-anchor="middle">GTYP_REFCLK_X0Y2</text>
+  <path class="ln" d="M180,647 L204,647"/>
+  <path class="ln" d="M354,647 L520,647"/>
+  <text class="s" x="372" y="640">to GT refclk (LCPLL)</text>
+
+  <rect class="dom" x="550" y="582" width="616" height="114" rx="8"/>
+  <text class="h" x="562" y="602">Serial link to the PC</text>
+
+  <rect class="blk" x="566" y="614" width="160" height="66" rx="6"/>
+  <text class="t" x="646" y="636" text-anchor="middle">PC Linux</text>
+  <text class="s" x="646" y="654" text-anchor="middle">plain UDP socket :21009</text>
+  <text class="s" x="646" y="670" text-anchor="middle">eth21_rx (recvmmsg, verify)</text>
+
+  <rect class="blk" x="764" y="614" width="162" height="66" rx="6"/>
+  <text class="t" x="845" y="636" text-anchor="middle">ConnectX-3 Pro</text>
+  <text class="s" x="845" y="654" text-anchor="middle">40G QSFP+, forced to</text>
+  <text class="s" x="845" y="670" text-anchor="middle">10G autoneg off (lane 0)</text>
+
+  <rect class="blk" x="1022" y="614" width="128" height="66" rx="6"/>
+  <text class="t" x="1086" y="636" text-anchor="middle">zQSFP lane 0</text>
+  <text class="s" x="1086" y="654" text-anchor="middle">TX0 E5/E4</text>
+  <text class="s" x="1086" y="670" text-anchor="middle">RX0 F2/F1</text>
+
+  <path class="bi" d="M726,647 L764,647"/>
+  <text class="s" x="733" y="640">PCIe</text>
+  <path class="ser" d="M926,647 L1022,647"/>
+  <text class="s" x="942" y="640">QSFP+ DAC</text>
+  <path class="ser" d="M1120,522 L1120,614"/>
+  <text class="s" x="1114" y="566" text-anchor="end">10GBASE-R</text>
+
+  <!-- legend -->
+  <rect class="new" x="30" y="712" width="16" height="12"/>
+  <text class="s" x="52" y="722">new in Core 21</text>
+  <rect class="mac" x="170" y="712" width="16" height="12"/>
+  <text class="s" x="192" y="722">Core 20 MAC / PCS, reused</text>
+  <rect class="hw" x="370" y="712" width="16" height="12"/>
+  <text class="s" x="392" y="722">AMD hard block / IP</text>
+  <rect class="blk" x="530" y="712" width="16" height="12"/>
+  <text class="s" x="552" y="722">glue / off-chip</text>
+  <path class="lb" d="M660,718 L700,718"/>
+  <text class="s" x="708" y="722">internal loopback path (selftest)</text>
+  <path class="ser" d="M920,718 L960,718"/>
+  <text class="s" x="968" y="722">serial lane</text>
+</svg>
