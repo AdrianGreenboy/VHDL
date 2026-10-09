@@ -1,4 +1,4 @@
-# HERCOSSNUX Core 21 — MAC_10 (10G Ethernet over a real GTYP, 25G-capable)
+# HERCOSSNUX Core 21 — MAC_10G (10G Ethernet over a real GTYP, 25G-capable)
 
 The [Core 20 MAC](../MAC_25G/) and its 64B/66B PCS, taken off the fabric
 loopback and put on a **real serial transceiver**: lane 0 of the Trenz
@@ -105,7 +105,7 @@ handshake, clock meter); the regression must fail on every one.
 ## 4. Build
 
 ```bash
-cd ~/vhdl_repo/IP_Cores/MAC_10
+cd ~/vhdl_repo/IP_Cores/MAC_10G
 bash sim/run_layers.sh                     # 38 PASS
 bash vivado/gen_eth_bd_tcl.sh              # BD from Core 20 (CIPS/NoC/DDR untouched)
 vivado -mode batch -source vivado/build_eth_soc.tcl -tclargs 10 bd   # BD + validate only

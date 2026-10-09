@@ -21,7 +21,7 @@ cycle.
 > the Python oracle bit for bit, 27/27 RTL mutations are detected, and an
 > independent review's findings are fixed and covered by tests. Not proven
 > here: a real serial link (the loopback is parallel, in fabric) — that is
-> the job of [Core 21 — MAC_10](../MAC_10/).
+> the job of [Core 21 — MAC_10G](../MAC_10G/).
 
 ![architecture](doc/architecture.svg)
 
