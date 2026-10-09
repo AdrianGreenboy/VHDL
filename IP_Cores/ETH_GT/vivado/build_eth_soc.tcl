@@ -40,7 +40,7 @@ set NAME eth_soc_$RATE
 set lb ""
 set xmls [glob -nocomplain $::env(XILINX_VIVADO)/data/ip/interfaces/*/gt_channel_debug*_rtl.xml]
 if {[llength $xmls] == 0} {
-  catch {set xmls [split [exec find $::env(XILINX_VIVADO)/data -name "gt_channel_debug*rtl*.xml"] "\n"]}
+  catch {set xmls [split [exec sh -c "find $::env(XILINX_VIVADO)/data -iname '*channel_debug*rtl*.xml' 2>/dev/null; true"] "\n"]}
 }
 foreach x $xmls {
   if {$x eq ""} continue
@@ -49,6 +49,9 @@ foreach x $xmls {
     set lb $n
   }
 }
+# Vivado 2025.2.1 no trae la definicion de gt_channel_debug como XML; el
+# nombre logico se verifico externalizando CH0_DEBUG (probe 6): ch_loopback
+if {$lb eq ""} { set lb ch_loopback }
 set fh [open $CORE/rtl/eth21_bd_wrap.v.tpl r]; set tpl [read $fh]; close $fh
 if {$lb ne ""} {
   puts "== loopback de CH0_DEBUG: nombre logico '$lb'"
@@ -110,7 +113,7 @@ foreach {k v} [list \
   dict set d $k $v
 }
 set_property -dict [list CONFIG.PROT0_NO_OF_LANES 1 CONFIG.PROT0_LR0_SETTINGS $d \
-                         CONFIG.APB3_CLK_FREQUENCY 40] $q
+                         CONFIG.APB3_CLK_FREQUENCY 100] $q
 set dd [get_property CONFIG.PROT0_LR0_SETTINGS $q]
 foreach k {TX_LINE_RATE TX_DATA_ENCODING TX_USER_DATA_WIDTH TXPROGDIV_FREQ_VAL RX_DATA_DECODING RXPROGDIV_FREQ_VAL TX_PLL_TYPE} {
   puts "   gtq $k = [dict get $dd $k]"
@@ -118,7 +121,12 @@ foreach k {TX_LINE_RATE TX_DATA_ENCODING TX_USER_DATA_WIDTH TXPROGDIV_FREQ_VAL R
 connect_bd_net [get_bd_pins refclk_buf/IBUF_OUT] [get_bd_pins gtq/GT_REFCLK0]
 create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gt_rtl:1.0 gt_serial
 connect_bd_intf_net [get_bd_intf_pins gtq/GT_Serial] [get_bd_intf_ports gt_serial]
-connect_bd_net [get_bd_pins versal_cips_0/pl0_ref_clk] [get_bd_pins gtq/apb3clk]
+# apb3clk del gt_quad_base: 100..300 MHz (pl0_ref_clk = 40 MHz no vale)
+create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wizard apb_clk
+set_property -dict [list CONFIG.CLKOUT_USED {true} CONFIG.CLKOUT_REQUESTED_OUT_FREQUENCY {100.000} \
+  CONFIG.USE_LOCKED {false}] [get_bd_cells apb_clk]
+connect_bd_net [get_bd_pins versal_cips_0/pl0_ref_clk] [get_bd_pins apb_clk/clk_in1]
+connect_bd_net [get_bd_pins apb_clk/clk_out1] [get_bd_pins gtq/apb3clk]
 connect_bd_net [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins gtq/apb3presetn]
 
 # 4c. BUFG_GT de TX y RX (CE = 1, CLR = 0, DIV = 0)
