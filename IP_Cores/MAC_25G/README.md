@@ -111,6 +111,9 @@ documents (2) and (3).
    `TXHEADER`/data bit ordering, which must be checked together with the
    payload bit order (scrambler output LSB first) when a GT is connected.
    Core 20 keeps the Core 19 convention so it can reuse its RX.
+   **Settled in [Core 21](../MAC_10G/):** its `eth21_gtmap` converts the
+   Core 19/20 convention to the IEEE order at the GT boundary, and a
+   ConnectX-3 Pro decodes it with zero errors (48.9 M frames at 10G).
 
 ## 4. Architecture
 

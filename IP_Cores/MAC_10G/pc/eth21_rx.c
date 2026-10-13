@@ -6,7 +6,8 @@
  *   payload[0..3] = seq (LE), [4..7] = ~seq, [8..] = xorshift64 sembrado con
  *   seed_of(seq) = 0x9E3779B97F4A7C15 ^ seq  (8 bytes LE por palabra)
  * y cuenta: recibidas, buenas, malas (payload), perdidas (huecos de seq),
- * repetidas/desordenadas. Cada segundo imprime kpps, Gb/s de payload UDP y
+ * repetidas/desordenadas y reinicios (seq vuelve atras > 65536: rafaga nueva
+ * del generador, se re-sincroniza sin contar desordenadas). Cada segundo imprime kpps, Gb/s de payload UDP y
  * Gb/s en el cable (L1: + 42 cabeceras + 4 FCS + 20 preambulo/IPG).
  *
  *   gcc -O2 -o eth21_rx eth21_rx.c
@@ -103,11 +104,11 @@ int main(int argc, char **argv)
     m[i].msg_hdr.msg_iov = &io[i]; m[i].msg_hdr.msg_iovlen = 1;
   }
 
-  uint64_t rx = 0, good = 0, bad = 0, lost = 0, dup = 0, pay = 0, wire = 0;
+  uint64_t rx = 0, good = 0, bad = 0, lost = 0, dup = 0, restarts = 0, pay = 0, wire = 0;
   uint64_t lrx = 0, lpay = 0, lwire = 0;
   int have = 0;
   uint32_t exp = 0;
-  double t0 = now(), tl = t0, tfirst = 0;
+  double t0 = now(), tl = t0, tfirst = 0, tlast = 0;
   while (!stop_flag) {
     int n = recvmmsg(s, m, BATCH, MSG_WAITFORONE, NULL);
     if (n < 0) {
@@ -137,29 +138,31 @@ int main(int argc, char **argv)
       if (!have) { have = 1; exp = seq + 1; continue; }
       if (seq == exp) exp++;
       else if ((int32_t)(seq - exp) > 0) { lost += (uint32_t)(seq - exp); exp = seq + 1; }
+      else if ((int32_t)(seq - exp) < -65536) { restarts++; exp = seq + 1; }  /* rafaga nueva */
       else dup++;
     }
     double t = now();
+    if (n > 0) tlast = t;
     if (t - tl >= 1.0) {
       double dt = t - tl;
-      printf("%8.1f kpps  payload %6.3f Gb/s  cable %6.3f Gb/s | rx=%lu ok=%lu bad=%lu perdidas=%lu desord=%lu\n",
+      printf("%8.1f kpps  payload %6.3f Gb/s  cable %6.3f Gb/s | rx=%lu ok=%lu bad=%lu perdidas=%lu desord=%lu reinicios=%lu\n",
              (rx - lrx) / dt / 1e3, (pay - lpay) * 8 / dt / 1e9, (wire - lwire) * 8 / dt / 1e9,
              (unsigned long)rx, (unsigned long)good, (unsigned long)bad,
-             (unsigned long)lost, (unsigned long)dup);
+             (unsigned long)lost, (unsigned long)dup, (unsigned long)restarts);
       fflush(stdout);
       lrx = rx; lpay = pay; lwire = wire; tl = t;
     }
     if (limit && rx >= limit) break;
     if (secs && t - t0 >= secs) break;
   }
-  double el = rx ? now() - tfirst : 0;
-  printf("\n=== resumen ===\nrecibidas %lu  buenas %lu  malas %lu  perdidas %lu  desordenadas %lu\n",
+  double el = rx ? tlast - tfirst : 0;   /* hasta el ultimo paquete, no hasta Ctrl-C */
+  printf("\n=== resumen ===\nrecibidas %lu  buenas %lu  malas %lu  perdidas %lu  desordenadas %lu  reinicios %lu\n",
          (unsigned long)rx, (unsigned long)good, (unsigned long)bad, (unsigned long)lost,
-         (unsigned long)dup);
+         (unsigned long)dup, (unsigned long)restarts);
   if (el > 0)
     printf("media: %.1f kpps, payload %.3f Gb/s, cable %.3f Gb/s (%.2f s)\n",
            rx / el / 1e3, pay * 8 / el / 1e9, wire * 8 / el / 1e9, el);
-  printf("%s\n", (bad == 0 && lost == 0 && good > 0) ? "PC RX PASS" :
+  printf("%s\n", (bad == 0 && lost == 0 && dup == 0 && good > 0) ? "PC RX PASS" :
                  (good > 0 ? "PC RX con perdidas/errores (ver arriba)" : "PC RX: nada recibido"));
   return 0;
 }

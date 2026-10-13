@@ -12,8 +12,23 @@ packet.
 | `10` | 10.3125 Gb/s (10GBASE-R) | 156.25 MHz | Mellanox ConnectX-3 Pro (QSFP+, forced to 10G = lane 0) over a QSFP+ DAC |
 | `25` | 25.78125 Gb/s (25GBASE-R) | 390.625 MHz | GTYP near-end PMA loopback (the ConnectX-3 Pro has no 25G mode) |
 
-> **Status: SILICON PASS at 10.3125 Gb/s (GTYP near-end PMA loopback) on the
-> TE0950.** `eth21 selftest` sent 100 000 IPv4/UDP frames (78 550 000 bytes)
+> **Status: SILICON PASS at 10.3125 Gb/s to a Linux PC.** The TE0950 GTYP
+> drives a Mellanox ConnectX-3 Pro over a 3 m QSFP+ DAC; a plain UDP socket on
+> the PC receives and checks the hardware-generated frames:
+>
+> | Test | Result |
+> |------|--------|
+> | 1 000 000 frames, every payload byte verified on the PC | 1 000 000 / 1 000 000 good, 0 lost, 0 out of order |
+> | 60 s continuous at line rate (`--cont`) | **48 913 739 sent = 48 913 739 received**, 0 lost, 0 bad, `TX_UNDERRUN 0` |
+> | Rate (1472-byte payload, 1538 bytes on the wire) | **809.6 kpps**, 9.53 Gb/s UDP payload, 9.83 Gb/s L2+FCS, **9.96 Gb/s on the wire (99.6 % of 10 Gb/s)** |
+> | Link quality, board → PC | 0 CRC errors at the NIC over 97.8 M frames (1.2·10¹² bits, BER < 2.5·10⁻¹² at 95 %) |
+> | Link quality, PC → board | 193 M idle blocks from the NIC during a burst: 0 bad sync headers, 0 slips, 0 lock losses |
+>
+> The real GT bit order — the one thing a loopback cannot prove — is the
+> default (`tx_rev = tx_swap = rx_rev = rx_swap = 0`): the IEEE map of
+> `eth21_gtmap` was right first time, and `autodetect` is not needed.
+>
+> **Also: SILICON PASS in GTYP near-end PMA loopback.** `eth21 selftest` sent 100 000 IPv4/UDP frames (78 550 000 bytes)
 > through the MAC, the 64B/66B PCS and a real GTYP channel (serializer, CDR,
 > 64B66B gearbox): all 18 checked counters match the prediction exactly, the
 > injected FCS error is caught once, 0 bad sync headers, 0 slips, 0 lock
@@ -22,9 +37,9 @@ packet.
 > TXUSRCLK 156.251 MHz, RXUSRCLK 156.250 MHz. Implementation: WNS +1.903 ns,
 > WHS +0.018 ns, GT placed at `GTYP_QUAD_X0Y1`.
 >
-> **Pending:** the link to the PC (ConnectX-3 Pro over a QSFP+ DAC), which is
-> the only test that fixes the real GT bit order, and the 25G build.
-> Verification: six layers (38 GHDL runs, 21/21 RTL mutations detected)
+> **Pending:** the 25G build (PMA loopback only: the ConnectX-3 Pro has no
+> 25G mode) and a bitstream with the fixed reset sequencer (the one on the
+> board needs `devmem 0xA4000014 32 0x31`, see section 5). Verification: six layers (38 GHDL runs, 21/21 RTL mutations detected)
 > against an **independent oracle written from IEEE 802.3 cl.49 and RFC
 > 791/768**. Bugs found and fixed: two by an independent review (length-sweep
 > wrap, RX failures restarting the TX) and **one by silicon** — the reset
@@ -131,33 +146,61 @@ Expected `selftest` (deterministic, both rates): `TX_FRAMES 100000`,
 `TX_BYTES 78550000`, `RX_OK 99999`, `RX_BYTES 78549936`, `RX_CRC_ERR 1`,
 `CHK_OK 99999`, `CHK_RXERR 1`, everything else 0 → `SELFTEST PASS`.
 
+With the bitstream built before the reset-sequencer fix, release the GT by
+hand first (the old sequencer waits in `PLLWAIT`), then pulse the RX reset
+once the NIC is up:
+
+```bash
+devmem 0xA4000014 32 0x31              # manual GT control: master resets released
+devmem 0xA4000014 32 0x39; devmem 0xA4000014 32 0x31   # RX datapath reset pulse
+eth21 status                           # block_lock=1 link_up=1 once the NIC transmits
+```
+
 **PC** (ConnectX-3 Pro, QSFP+ DAC to the TE0950 zQSFP):
 
 ```bash
-sudo bash pc/setup_pc.sh <if>          # 10G forced, 192.168.21.1/24, UFW, buffers; prints the NIC MAC
-gcc -O2 -o eth21_rx pc/eth21_rx.c && ./eth21_rx
+sudo bash pc/setup_pc.sh <if>          # 10G forced (10000baseCR, lane 0), 192.168.21.1/24, UFW,
+                                       # buffers, RX IRQs on CPU 2, governor performance; prints the NIC MAC
+gcc -O2 -o eth21_rx pc/eth21_rx.c
+taskset -c 6 ./eth21_rx -p 21009       # add -q to check only the sequence
 ```
+
+`ethtool <if>` shows `Speed: 10000Mb/s`, `Link detected: yes` as soon as the
+GT is out of reset: the NIC block-locks on the FPGA's idles.
 
 **Board → PC:**
 
 ```bash
-eth21 autodetect                       # finds the GT bit order against the NIC
 eth21 send --peer-mac <NIC MAC> --count 1000000
-eth21 send --peer-mac <NIC MAC> --cont --gap 200   # continuous, throttled; 'eth21 stop'
+eth21 send --peer-mac <NIC MAC> --cont           # line rate; 'eth21 stop', then 'eth21 counters'
+eth21 send --peer-mac <NIC MAC> --cont --gap 200 # throttled
+eth21 autodetect                       # only if a link partner needs another bit order
 ```
 
-`eth21_rx` prints kpps, payload and wire Gb/s, and counts good, bad, lost
-and out-of-order packets (`PC RX PASS` at the end when nothing is lost).
+`eth21_rx` prints kpps, payload and wire Gb/s, and counts good, bad, lost,
+out-of-order packets and burst restarts (a new burst restarts the sequence at
+0); `PC RX PASS` at the end when nothing is lost. Compare its `recibidas` with
+`TX_FRAMES` on the board: lost packets at the tail of a burst are invisible to
+the sequence check.
+
+**Where PC-side losses come from** (all seen on this setup, none of them on
+the link):
+
+| Symptom | Counter | Cause | Fix |
+|---------|---------|-------|-----|
+| ~1.5 % lost, `bad = 0` | `netstat -su`: *packet receive errors* | full payload check in one thread, process moved between cores | `taskset`, or `-q` |
+| ~1·10⁻⁵ lost, `bad = 0` | `ethtool -S`: `rx_fifo_errors` | RX IRQ on a shared/sleeping hyper-thread, NIC FIFO overflows | IRQs on their own P-core + governor `performance` (done by `setup_pc.sh`) |
+| frames bad | `ethtool -S`: `rx_crc_errors` | link errors | never seen |
 
 ## 6. Risks and what is not proven yet
 
-* **GT bit order** — the default assumes header bit 0 and data bit 0 first;
-  if the GTYP gearbox sends MSB first, `autodetect` finds it (four
-  combinations, run-time only).
-* **ConnectX-3 Pro at 10G on a QSFP+ DAC** — the NIC is 40GBASE-R4; forcing
-  10G uses lane 0 only. Some firmware only allows 10G with a QSA adapter: in
-  that case use a QSA in the NIC and a QSFP+→4×SFP+ breakout (the QSFP end in
-  the TE0950, lane 0 into the QSA).
+* ~~**GT bit order**~~ — **settled on silicon**: the default (header bit 0
+  and data bit 0 first, all flags 0) is what a ConnectX-3 Pro expects.
+  `autodetect` stays for other link partners.
+* ~~**ConnectX-3 Pro at 10G on a QSFP+ DAC**~~ — **works**: with firmware
+  2.43.7028, `ethtool -s <if> speed 10000 autoneg off` makes the NIC
+  advertise `10000baseCR/Full` on lane 0 of a plain QSFP+ DAC (Mellanox
+  MC2207128-003); no QSA adapter needed.
 * **QSFP management pins** (ModSelL/ResetL/LPMode) are driven by the board's
   Artix; irrelevant for a passive DAC, relevant for optics.
 * **The 25G build is validated only in near-end PMA loopback**: this proves
@@ -168,10 +211,13 @@ and out-of-order packets (`PC RX PASS` at the end when nothing is lost).
 * **Not in v1**: hi-BER monitor, fault response in the TX (we count LF/RF
   but always send idles/data), RS-FEC, auto-negotiation/link training,
   PC → FPGA traffic beyond counting (no ARP/ICMP).
-* The PC receiver verifies every payload byte; at 10G line rate with
-  1472-byte payloads that is ~813 kpps on one core. If the PC drops packets,
-  rerun with `-q` (sequence only) or throttle with `--gap` to separate PC
-  limits from link errors (the FPGA counters show what was sent).
+* **PC → FPGA traffic** is only counted (idles, LF/RF, blocks, sync
+  headers); frames from the PC reach the RX MAC but there is no ARP/ICMP.
+* The PC receiver verifies every payload byte in one thread; at line rate
+  (810 kpps) that is close to the limit of one core. The 60 s line-rate run
+  was done with `-q` (sequence only); the full byte check ran on 1 M frames
+  (0 lost) and on 61 M frames of continuous traffic with 0 bad payloads
+  (before the PC tuning, with PC-side drops).
 
 ## 7. Register map
 
