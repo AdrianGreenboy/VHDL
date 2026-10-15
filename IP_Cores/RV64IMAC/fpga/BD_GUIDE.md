@@ -1,8 +1,18 @@
 # Prototipo RV64IMAC en Versal — guia (Paso 9)
 
-**Estado: NO validado en silicio.** Todo lo de esta carpeta compila y sintetiza en
-GHDL/Yosys, pero no ha pasado por Vivado ni por una placa. Es el punto de partida
-para la Capa 5, no un resultado.
+**Estado: validado en la TE0950 (2026-10-15).** Vivado 2025.2.1, 50 MHz, WNS +2,28 ns.
+`board_smoke` PASS (ciclo a ciclo igual que la simulacion RTL) y OpenSBI 1.6 + Linux 6.6
+hasta `/init` en 1,3 s.
+
+Lecciones del primer paso por Vivado:
+- El proyecto necesita el **board part** (`trenz.biz:te0950_23_1lse:part0:1.2`); sin el,
+  la Block Automation del NoC pone una DDR4 generica sin pines (`Mig 66-441`).
+- Vivado y PetaLinux **fuera de cualquier venv de Python**: lopper (PLM, en
+  `write_device_image`) usa su propio Python y falla con `No module named 'encodings'`.
+  `runme.sh` congela el entorno del primer `launch_runs`; si fallo ahi, generar el PDI con
+  `open_run impl_1; write_device_image` desde una shell limpia.
+- Con la D$ write-back, `tohost` no llega a la DDR: en placa el resultado se ve por la UART
+  (`sw/board_smoke.S`), no leyendo memoria desde el A72.
 
 ## Arquitectura del prototipo
 

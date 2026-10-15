@@ -62,6 +62,7 @@ instruction, result, trap, memory write, interrupt lines). Simulated time is
 | Generic IP | AXI4-Lite 32-bit window (256 MiB) |
 | DMA | non-coherent; managed by software with Zicbom (`dma-noncoherent`) |
 | Synthesis (generic) | CPU without SRAMs: ~76 k cells, ~9 k flops, 0 latches |
+| FPGA (VE2302) | 16.5 k LUT, 8 k FF, 8 BRAM36, 50 MHz with +2.28 ns slack |
 
 ---
 
@@ -263,9 +264,12 @@ returns 0.
 
 - **Done and verified in simulation:** Pasos 0-7 of the spec and the Zicbom
   amendment. OpenSBI + Linux to `/init` on the RTL SoC, in lockstep with the ISS.
-- **Not yet done:** silicon. Nothing here has run on a board or been through
-  an ASIC flow; synthesis has only been checked with GHDL + Yosys (generic
-  cells, no latches, no combinational loops). Timing is unknown.
+- **Running on silicon (TE0950, Versal VE2302, 50 MHz):** Vivado 2025.2.1
+  implementation with CIPS + NoC + LPDDR4 meets timing (WNS +2.28 ns, 16.5 k LUT,
+  8 BRAM36). `board_smoke` passes on the board (M, A, 64 KiB through the D$ to
+  LPDDR4, CLINT) and its loop takes 900 013 cycles, exactly the RTL simulation
+  figure. OpenSBI 1.6 + Linux 6.6 boot to `/init` in 1.3 s, loaded by the A72
+  with `fpga/rv64_load`. Not an ASIC: timing on IHP SG13G2 is still unknown.
 - **No PMP:** OpenSBI is not isolated from S-mode. Acceptable for a prototype,
   not for a secure product. Planned for v2.
 - **No Debug Module:** a fabricated chip could only be debugged through the
