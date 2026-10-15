@@ -30,7 +30,7 @@ RT=$(realpath "$RT")
 [ $r -ne 0 ] && tail -n 6 /tmp/r_build.txt | sed 's/^/   /'
 check $r
 [ $r -eq 0 ] || { echo "   build fallido: no se sigue con simuladores viejos (ver /tmp/r_build.txt)"; exit 1; }
-grep "^GHDL:" /tmp/r_build.txt | sed 's/^/   /' 
+grep "^GHDL:" /tmp/r_build.txt | sed 's/^/   /'
 
 ALL=$(ls $T/rv64* | grep -v '\.s$')
 P=$(echo "$ALL" | grep -Ev "$WAIVE")                 # entornos p y v
