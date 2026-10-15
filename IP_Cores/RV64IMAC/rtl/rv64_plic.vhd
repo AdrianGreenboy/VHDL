@@ -41,20 +41,48 @@ begin
   off <= unsigned(addr(25 downto 2)) & "00";
   w32 <= wdata(63 downto 32) when addr(2) = '1' else wdata(31 downto 0);
 
-  -- arbitraje: mayor prioridad, empate al menor id, y por encima del umbral
-  process (all)
-    variable b  : natural range 0 to 31;
-    variable bp : unsigned(2 downto 0);
+  -- arbitraje: mayor prioridad, empate al menor id, y por encima del umbral.
+  -- Torneo en arbol (5 niveles) y resultado registrado: un ciclo de latencia, que el
+  -- puente absorbe (cada acceso al PLIC dura varios ciclos). Antes era una cadena de
+  -- 31 comparadores en el mismo ciclo que meip -> CSR -> pipeline (ruta critica en FPGA).
+  process (clk)
+    type cand_t is array (0 to 31) of unsigned(7 downto 0);   -- prio(3) & id(5)
+    variable c : cand_t;
+    variable n : natural;
   begin
-    for c in 0 to 1 loop
-      b := 0; bp := (others => '0');
-      for i in 1 to 31 loop
-        if pending(i) = '1' and enable(c)(i) = '1' and prio(i) > bp then
-          b := i; bp := prio(i);
-        end if;
-      end loop;
-      if bp > thresh(c) then best(c) <= b; else best(c) <= 0; end if;
-    end loop;
+    if rising_edge(clk) then
+      if rst = '1' then
+        best <= (others => 0);
+      else
+        for ctx in 0 to 1 loop
+          c(0) := (others => '0');
+          for i in 1 to 31 loop
+            if pending(i) = '1' and enable(ctx)(i) = '1' then
+              c(i) := prio(i) & to_unsigned(i, 5);
+            else
+              c(i) := (others => '0');
+            end if;
+          end loop;
+          n := 32;
+          while n > 1 loop
+            for k in 0 to n / 2 - 1 loop
+              -- gana la prioridad mayor; en empate la de la izquierda (id menor)
+              if c(2 * k + 1)(7 downto 5) > c(2 * k)(7 downto 5) then
+                c(k) := c(2 * k + 1);
+              else
+                c(k) := c(2 * k);
+              end if;
+            end loop;
+            n := n / 2;
+          end loop;
+          if c(0)(7 downto 5) > thresh(ctx) then
+            best(ctx) <= to_integer(c(0)(4 downto 0));
+          else
+            best(ctx) <= 0;
+          end if;
+        end loop;
+      end if;
+    end if;
   end process;
   meip <= '1' when best(0) /= 0 else '0';
   seip <= '1' when best(1) /= 0 else '0';
@@ -71,9 +99,11 @@ begin
     elsif off = x"002000" then v := enable(0) & '0';
     elsif off = x"002080" then v := enable(1) & '0';
     elsif off = x"200000" then v(2 downto 0) := std_logic_vector(thresh(0));
-    elsif off = x"200004" then v := std_logic_vector(to_unsigned(best(0), 32));
+    elsif off = x"200004" then
+      if best(0) /= 0 and pending(best(0)) = '1' then v := std_logic_vector(to_unsigned(best(0), 32)); end if;
     elsif off = x"201000" then v(2 downto 0) := std_logic_vector(thresh(1));
-    elsif off = x"201004" then v := std_logic_vector(to_unsigned(best(1), 32));
+    elsif off = x"201004" then
+      if best(1) /= 0 and pending(best(1)) = '1' then v := std_logic_vector(to_unsigned(best(1), 32)); end if;
     end if;
     if addr(2) = '1' then rdata <= v & x"00000000"; else rdata <= x"00000000" & v; end if;
     err <= '1' when req = '1' and size /= "10" else '0';
@@ -107,9 +137,9 @@ begin
             end if;
           else
             -- claim: lectura con efecto (el bridge garantiza una sola lectura)
-            if off = x"200004" and best(0) /= 0 then
+            if off = x"200004" and best(0) /= 0 and pending(best(0)) = '1' then
               pending(best(0)) <= '0'; active(best(0)) <= '1';
-            elsif off = x"201004" and best(1) /= 0 then
+            elsif off = x"201004" and best(1) /= 0 and pending(best(1)) = '1' then
               pending(best(1)) <= '0'; active(best(1)) <= '1';
             end if;
           end if;

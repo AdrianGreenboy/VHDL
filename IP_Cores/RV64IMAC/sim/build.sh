@@ -29,6 +29,7 @@ if [ -d "$IPC/USART" ]; then
     $IPC/USART/usart_dma.vhd $IPC/USART/usart_axi_top.vhd ../tb/tb_soc.vhd
   TBS="$TBS tb_soc"
 else
-  echo "aviso: sin IP_Cores en $IPC; tb_soc no se compila" >&2
+  rm -f tb_soc                       # nunca dejar un tb_soc de un RTL anterior
+  echo "aviso: sin IP_Cores en $IPC; tb_soc no se compila (IP_CORES=<ruta>)" >&2
 fi
 for t in $TBS; do $G -e --std=08 $t; done

@@ -27,3 +27,7 @@ sw/bootrom/*.elf
 sw/bootrom/*.dtb
 sw/coremark/*.elf
 __pycache__/
+fpga/ooc/*.rpt
+fpga/ooc/*.log
+fpga/ooc/*.jou
+.Xil/

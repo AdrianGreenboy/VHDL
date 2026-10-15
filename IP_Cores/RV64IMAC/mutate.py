@@ -104,11 +104,11 @@ MUTS += [
    """  mtip <= '1' when mtime >= mtimecmp else '0';""",
    """  mtip <= '1' when mtime > mtimecmp else '0';""", [SOCT], SOC + ['--time-div', '100']),
   ('PLIC: claim de ctx1 devuelve el de ctx0', 'rv64_plic.vhd',
-   """    elsif off = x"201004" then v := std_logic_vector(to_unsigned(best(1), 32));""",
-   """    elsif off = x"201004" then v := std_logic_vector(to_unsigned(best(0), 32));""", [SOCP], SOC),
+   """      if best(1) /= 0 and pending(best(1)) = '1' then v := std_logic_vector(to_unsigned(best(1), 32)); end if;""",
+   """      if best(0) /= 0 and pending(best(0)) = '1' then v := std_logic_vector(to_unsigned(best(0), 32)); end if;""", [SOCP], SOC),
   ('PLIC: umbral con >= en vez de >', 'rv64_plic.vhd',
-   """      if bp > thresh(c) then best(c) <= b; else best(c) <= 0; end if;""",
-   """      if bp >= thresh(c) and bp /= 0 then best(c) <= b; else best(c) <= 0; end if;""", [SOCP], SOC),
+   """          if c(0)(7 downto 5) > thresh(ctx) then""",
+   """          if c(0)(7 downto 5) >= thresh(ctx) then""", [SOCP], SOC),
 ]
 
 
