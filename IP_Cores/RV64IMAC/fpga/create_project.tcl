@@ -11,15 +11,27 @@
 set board [lindex $argv 0]
 if {$board eq ""} { set board te0950 }
 switch -- $board {
-  te0950 { set part xcve2302-sfva784-1LP-e-S }
-  vck190 { set part xcvc1902-vsva2197-2MP-e-S }
+  te0950 { set part xcve2302-sfva784-1LP-e-S; set bpat *te0950* }
+  vck190 { set part xcvc1902-vsva2197-2MP-e-S; set bpat *vck190* }
   default { error "placa desconocida: $board (te0950 | vck190)" }
+}
+# board part: sin el, la Block Automation del NoC pone una DDR4 generica sin pines
+# (error Mig 66-441 en opt_design). Se puede forzar con BOARD_PART=<nombre>.
+if {[info exists ::env(BOARD_PART)]} {
+  set bp $::env(BOARD_PART)
+} else {
+  set bp [lindex [lsort -decreasing [get_board_parts -quiet $bpat]] 0]
+}
+if {$bp eq ""} {
+  error "no hay board files para $board (get_board_parts $bpat vacio): instala los de Trenz/AMD o exporta BOARD_PART"
 }
 set here [file normalize [file dirname [info script]]]
 set root [file normalize $here/..]
 set proj rv64_proto_$board
 
 create_project $proj $here/$proj -part $part -force
+set_property board_part $bp [current_project]
+puts "board part: $bp"
 set_property target_language VHDL [current_project]
 
 # --- RTL del SoC (VHDL-2008). La boot ROM es la de la placa (fpga/gen), no la de simulacion.

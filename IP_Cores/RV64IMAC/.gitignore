@@ -31,3 +31,5 @@ fpga/ooc/*.rpt
 fpga/ooc/*.log
 fpga/ooc/*.jou
 .Xil/
+fpga/rv64_proto_*/
+fpga/bd_insert.log
