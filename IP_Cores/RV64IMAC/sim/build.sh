@@ -3,8 +3,18 @@
 #   IP_CORES: arbol IP_Cores del repo VHDL (para el USART real del tb_soc)
 set -e
 cd $(dirname $0)
-G="${GHDL:-ghdl-llvm}"
-command -v $G > /dev/null || { echo "falta $G (sudo apt install ghdl-llvm)" >&2; exit 1; }
+# backend: $GHDL si funciona; si no, ghdl-llvm o ghdl-gcc (mcode no genera ejecutables)
+pick() {
+  for g in ${GHDL:-} ghdl-llvm ghdl-gcc; do
+    command -v $g > /dev/null || continue
+    d=$(mktemp -d); echo "entity t is end;" > $d/t.vhd
+    if (cd $d && $g -a --std=08 t.vhd) > /dev/null 2>&1; then rm -rf $d; echo $g; return; fi
+    rm -rf $d; echo "aviso: $g no funciona, pruebo el siguiente" >&2
+  done
+}
+G=$(pick)
+[ -n "$G" ] || { echo "no hay GHDL con backend llvm o gcc (sudo apt install ghdl-gcc)" >&2; exit 1; }
+echo "GHDL: $G" >&2
 IPC=${IP_CORES:-$(cd ../.. && pwd)}          # por defecto: el IP_Cores que contiene RV64IMAC
 R=../rtl
 $G -a --std=08 $R/rv64_pkg.vhd $R/rv64_mmu_pkg.vhd $R/rv64_tlb.vhd $R/rv64_ptw.vhd \

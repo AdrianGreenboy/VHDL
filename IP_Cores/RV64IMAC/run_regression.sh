@@ -27,9 +27,10 @@ fi
 RT=$(realpath "$RT")
 { sw/build_tests.sh "$RT" $T && sw/build_directed.sh "$RT" && python3 sw/bootrom/build_bootrom.py \
   && sim/build.sh; } > /tmp/r_build.txt 2>&1; r=$?
-[ $r -ne 0 ] && grep -iE "error|not found|no such" /tmp/r_build.txt | head -10 | sed 's/^/   /'
+[ $r -ne 0 ] && tail -n 6 /tmp/r_build.txt | sed 's/^/   /'
 check $r
-[ -x sim/tb_core ] || { echo "   sin simuladores (sim/tb_*): ver /tmp/r_build.txt"; exit 1; }
+[ $r -eq 0 ] || { echo "   build fallido: no se sigue con simuladores viejos (ver /tmp/r_build.txt)"; exit 1; }
+grep "^GHDL:" /tmp/r_build.txt | sed 's/^/   /' 
 
 ALL=$(ls $T/rv64* | grep -v '\.s$')
 P=$(echo "$ALL" | grep -Ev "$WAIVE")                 # entornos p y v

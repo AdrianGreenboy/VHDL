@@ -130,6 +130,7 @@ def main():
         env.setdefault('IP_CORES', os.path.dirname(HERE))      # el IP_Cores que contiene RV64IMAC
         b = subprocess.run([os.path.join(sim, 'build.sh')], cwd=sim, capture_output=True, env=env)
         if b.returncode != 0 or not os.path.exists(os.path.join(sim, 'tb_soc')):
+            print((b.stdout + b.stderr).decode(errors='replace')[-1500:])
             sys.exit(f'build del mutante fallo ({name}): no se puede juzgar la mutacion')
         killed, first = False, []
         for u in [t for t in tests if t.startswith('unit:')]:
