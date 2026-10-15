@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" width="760" height="560" font-family="DejaVu Sans, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2e7d4f"/>
+    </marker>
+    <style>
+      .blk { fill: #ffffff; stroke: #2e7d4f; stroke-width: 1.4; }
+      .grp { fill: #eaf5ec; stroke: #2e7d4f; stroke-width: 1.6; }
+      .ext { fill: #ffffff; stroke: #2e7d4f; stroke-width: 1.4; stroke-dasharray: 5 3; }
+      .t   { font-size: 12px; fill: #1b4d31; text-anchor: middle; }
+      .ts  { font-size: 10px; fill: #2e7d4f; text-anchor: middle; }
+      .h   { font-size: 13px; fill: #1b4d31; font-weight: bold; }
+      .ln  { stroke: #2e7d4f; stroke-width: 1.4; fill: none; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="760" height="560" fill="#ffffff"/>
+
+  <!-- ===================== rv64_soc ===================== -->
+  <rect class="grp" x="14" y="14" width="732" height="532" rx="10"/>
+  <text class="h" x="28" y="36">rv64_soc</text>
+
+  <!-- rv64_cpu -->
+  <rect class="blk" x="30" y="48" width="440" height="288" rx="8" fill="#f6fbf7"/>
+  <text class="h" x="44" y="68">rv64_cpu</text>
+
+  <!-- pipeline -->
+  <text class="ts" x="250" y="88">rv64_core: pipeline en orden de 5 etapas</text>
+  <g>
+    <rect class="blk" x="46"  y="96" width="70" height="44" rx="5"/><text class="t" x="81"  y="115">F</text><text class="ts" x="81"  y="130">buffer RVC</text>
+    <rect class="blk" x="128" y="96" width="70" height="44" rx="5"/><text class="t" x="163" y="115">D</text><text class="ts" x="163" y="130">decod / irq</text>
+    <rect class="blk" x="210" y="96" width="70" height="44" rx="5"/><text class="t" x="245" y="115">X</text><text class="ts" x="245" y="130">ALU / D-TLB</text>
+    <rect class="blk" x="292" y="96" width="70" height="44" rx="5"/><text class="t" x="327" y="115">M</text><text class="ts" x="327" y="130">respuesta</text>
+    <rect class="blk" x="374" y="96" width="80" height="44" rx="5"/><text class="t" x="414" y="115">W</text><text class="ts" x="414" y="130">commit / traps</text>
+    <path class="ln" d="M116,118 H128" marker-end="url(#a)"/>
+    <path class="ln" d="M198,118 H210" marker-end="url(#a)"/>
+    <path class="ln" d="M280,118 H292" marker-end="url(#a)"/>
+    <path class="ln" d="M362,118 H374" marker-end="url(#a)"/>
+  </g>
+
+  <!-- core helpers -->
+  <rect class="blk" x="46"  y="152" width="96" height="38" rx="5"/><text class="t" x="94"  y="168">I-TLB 8</text><text class="ts" x="94" y="182">Sv39, ASID 16</text>
+  <rect class="blk" x="154" y="152" width="96" height="38" rx="5"/><text class="t" x="202" y="168">D-TLB 8</text><text class="ts" x="202" y="182">Svade</text>
+  <rect class="blk" x="262" y="152" width="86" height="38" rx="5"/><text class="t" x="305" y="168">PTW</text><text class="ts" x="305" y="182">via D$</text>
+  <rect class="blk" x="360" y="152" width="94" height="38" rx="5"/><text class="t" x="407" y="168">CSR M/S/U</text><text class="ts" x="407" y="182">Zicntr, Zicbom</text>
+  <rect class="blk" x="360" y="198" width="94" height="30" rx="5"/><text class="t" x="407" y="218">mul/div</text>
+
+  <!-- caches -->
+  <rect class="blk" x="46"  y="244" width="150" height="44" rx="5"/><text class="t" x="121" y="263">I$ 16 KiB 2 vias</text><text class="ts" x="121" y="278">PIPT, linea 64 B</text>
+  <rect class="blk" x="214" y="244" width="240" height="44" rx="5"/><text class="t" x="334" y="263">D$ 16 KiB 2 vias, write-back</text><text class="ts" x="334" y="278">AMO, LR/SC, fence.i, cbo.*</text>
+  <path class="ln" d="M81,140 V152"/>
+  <path class="ln" d="M94,190 V244" marker-end="url(#a)"/>
+  <path class="ln" d="M327,140 V152"/>
+  <path class="ln" d="M330,190 V244" marker-end="url(#a)"/>
+
+  <rect class="blk" x="46" y="298" width="408" height="28" rx="5"/><text class="t" x="250" y="317">maestro AXI4 64 bit (rafagas INCR8), D$ con prioridad</text>
+  <path class="ln" d="M121,288 V298"/>
+  <path class="ln" d="M334,288 V298"/>
+
+  <!-- crossbar -->
+  <rect class="blk" x="130" y="352" width="240" height="30" rx="5"/><text class="t" x="250" y="372">crossbar 1 a 2 (por direccion)</text>
+  <path class="ln" d="M250,326 V352" marker-end="url(#a)"/>
+
+  <!-- DRAM -->
+  <rect class="ext" x="30" y="420" width="190" height="56" rx="6"/>
+  <text class="t" x="125" y="442">DRAM 0x8000_0000</text>
+  <text class="ts" x="125" y="458">AXI4 64 bit: DDR / NoC (FPGA),</text>
+  <text class="ts" x="125" y="470">controlador (ASIC)</text>
+  <path class="ln" d="M180,382 V420" marker-end="url(#a)"/>
+
+  <!-- periph bridge -->
+  <rect class="blk" x="250" y="408" width="210" height="44" rx="5"/>
+  <text class="t" x="355" y="427">puente de perifericos</text>
+  <text class="ts" x="355" y="442">beats unicos, 64 bit -> 2 x 32 bit</text>
+  <path class="ln" d="M320,382 V408" marker-end="url(#a)"/>
+
+  <!-- local peripherals -->
+  <rect class="blk" x="494" y="60"  width="236" height="34" rx="5"/><text class="t" x="612" y="81">boot ROM 0x1000 (codigo + DTB)</text>
+  <rect class="blk" x="494" y="104" width="236" height="34" rx="5"/><text class="t" x="612" y="125">CLINT: mtime, mtimecmp, msip</text>
+  <rect class="blk" x="494" y="148" width="236" height="34" rx="5"/><text class="t" x="612" y="169">PLIC: 31 fuentes, contextos M y S</text>
+  <rect class="blk" x="494" y="192" width="236" height="34" rx="5"/><text class="t" x="612" y="213">UART 16550 (fuente 1)</text>
+
+  <!-- IP_Cores -->
+  <rect class="ext" x="494" y="268" width="236" height="96" rx="6"/>
+  <text class="t" x="612" y="290">IP_Cores: 16 ranuras MMIO nativas</text>
+  <text class="ts" x="612" y="306">sel/req/addr/wdata/wstrb/rdata, 1 ciclo</text>
+  <text class="ts" x="612" y="320">USART, SPI, CAN, SpW, 1553, PTP ...</text>
+  <text class="ts" x="612" y="334">irq n -> PLIC n+2</text>
+  <text class="ts" x="612" y="352">sus DMA -> DRAM (no coherente: Zicbom)</text>
+
+  <rect class="ext" x="494" y="392" width="236" height="44" rx="6"/>
+  <text class="t" x="612" y="411">ventana AXI4-Lite 32 bit</text>
+  <text class="ts" x="612" y="426">0x2000_0000, IPs genericas</text>
+
+  <!-- bridge fan-out -->
+  <path class="ln" d="M460,420 H478 V77 H494" marker-end="url(#a)"/>
+  <path class="ln" d="M478,121 H494" marker-end="url(#a)"/>
+  <path class="ln" d="M478,165 H494" marker-end="url(#a)"/>
+  <path class="ln" d="M478,209 H494" marker-end="url(#a)"/>
+  <path class="ln" d="M478,316 H494" marker-end="url(#a)"/>
+  <path class="ln" d="M478,414 H494" marker-end="url(#a)"/>
+
+  <!-- interrupts back to core -->
+  <text class="ts" x="612" y="246">meip/seip (PLIC) y mtip/msip (CLINT) al core</text>
+
+  <!-- footer -->
+  <text class="ts" x="380" y="506">RV64IMAC + Zicsr, Zifencei, Zicntr, Zicbom  -  M/S/U  -  Sv39  -  VHDL-2008 portable (IHP SG13G2 / Versal)</text>
+  <text class="ts" x="380" y="524">lockstep instruccion a instruccion contra el ISS; ISS contrastado con Spike</text>
+</svg>

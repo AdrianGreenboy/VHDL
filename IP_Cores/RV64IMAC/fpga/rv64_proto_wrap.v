@@ -1,0 +1,110 @@
+// rv64_proto_wrap.v - envoltorio Verilog del prototipo para el Block Design de Vivado
+// (el BD no admite un top VHDL-2008 como module reference). Los nombres
+// m_axi_dram_* y s_axi_ctrl_* hacen que Vivado infiera las interfaces AXI.
+// NO VALIDADO EN SILICIO TODAVIA (Paso 9).
+`timescale 1ns / 1ps
+module rv64_proto_wrap #(
+  parameter integer TICK_DIV  = 50,                    // f_clk / 1 MHz
+  parameter [63:0]  DRAM_PHYS = 64'h0000_0000_7000_0000,
+  parameter [63:0]  DRAM_MASK = 64'h0000_0000_07FF_FFFF
+) (
+  (* X_INTERFACE_PARAMETER = "ASSOCIATED_BUSIF m_axi_dram:s_axi_ctrl, ASSOCIATED_RESET aresetn" *)
+  input  wire         clk,
+  input  wire         aresetn,
+  // DRAM -> NoC
+  output wire [3:0]   m_axi_dram_awid,
+  output wire [63:0]  m_axi_dram_awaddr,
+  output wire [7:0]   m_axi_dram_awlen,
+  output wire [2:0]   m_axi_dram_awsize,
+  output wire [1:0]   m_axi_dram_awburst,
+  output wire [3:0]   m_axi_dram_awcache,
+  output wire [2:0]   m_axi_dram_awprot,
+  output wire         m_axi_dram_awvalid,
+  input  wire         m_axi_dram_awready,
+  output wire [63:0]  m_axi_dram_wdata,
+  output wire [7:0]   m_axi_dram_wstrb,
+  output wire         m_axi_dram_wlast,
+  output wire         m_axi_dram_wvalid,
+  input  wire         m_axi_dram_wready,
+  input  wire [3:0]   m_axi_dram_bid,
+  input  wire [1:0]   m_axi_dram_bresp,
+  input  wire         m_axi_dram_bvalid,
+  output wire         m_axi_dram_bready,
+  output wire [3:0]   m_axi_dram_arid,
+  output wire [63:0]  m_axi_dram_araddr,
+  output wire [7:0]   m_axi_dram_arlen,
+  output wire [2:0]   m_axi_dram_arsize,
+  output wire [1:0]   m_axi_dram_arburst,
+  output wire [3:0]   m_axi_dram_arcache,
+  output wire [2:0]   m_axi_dram_arprot,
+  output wire         m_axi_dram_arvalid,
+  input  wire         m_axi_dram_arready,
+  input  wire [3:0]   m_axi_dram_rid,
+  input  wire [63:0]  m_axi_dram_rdata,
+  input  wire [1:0]   m_axi_dram_rresp,
+  input  wire         m_axi_dram_rlast,
+  input  wire         m_axi_dram_rvalid,
+  output wire         m_axi_dram_rready,
+  // banco de control desde M_AXI_FPD
+  input  wire [15:0]  s_axi_ctrl_awaddr,
+  input  wire         s_axi_ctrl_awvalid,
+  output wire         s_axi_ctrl_awready,
+  input  wire [31:0]  s_axi_ctrl_wdata,
+  input  wire [3:0]   s_axi_ctrl_wstrb,
+  input  wire         s_axi_ctrl_wvalid,
+  output wire         s_axi_ctrl_wready,
+  output wire [1:0]   s_axi_ctrl_bresp,
+  output wire         s_axi_ctrl_bvalid,
+  input  wire         s_axi_ctrl_bready,
+  input  wire [15:0]  s_axi_ctrl_araddr,
+  input  wire         s_axi_ctrl_arvalid,
+  output wire         s_axi_ctrl_arready,
+  output wire [31:0]  s_axi_ctrl_rdata,
+  output wire [1:0]   s_axi_ctrl_rresp,
+  output wire         s_axi_ctrl_rvalid,
+  input  wire         s_axi_ctrl_rready,
+  // IP_Cores (bus MMIO nativo, 16 ranuras) e irq
+  output wire [15:0]  mm_sel,
+  output wire         mm_req,
+  output wire [15:0]  mm_addr,
+  output wire [31:0]  mm_wdata,
+  output wire [3:0]   mm_wstrb,
+  input  wire [511:0] mm_rdata,
+  input  wire [15:0]  irq_ip,
+  output wire         soc_rst
+);
+  rv64_proto_top #(
+    .TICK_DIV(TICK_DIV), .DRAM_PHYS(DRAM_PHYS), .DRAM_MASK(DRAM_MASK)
+  ) u (
+    .clk(clk), .aresetn(aresetn),
+    .m_axi_dram_awid(m_axi_dram_awid), .m_axi_dram_awaddr(m_axi_dram_awaddr),
+    .m_axi_dram_awlen(m_axi_dram_awlen), .m_axi_dram_awsize(m_axi_dram_awsize),
+    .m_axi_dram_awburst(m_axi_dram_awburst), .m_axi_dram_awcache(m_axi_dram_awcache),
+    .m_axi_dram_awprot(m_axi_dram_awprot), .m_axi_dram_awvalid(m_axi_dram_awvalid),
+    .m_axi_dram_awready(m_axi_dram_awready),
+    .m_axi_dram_wdata(m_axi_dram_wdata), .m_axi_dram_wstrb(m_axi_dram_wstrb),
+    .m_axi_dram_wlast(m_axi_dram_wlast), .m_axi_dram_wvalid(m_axi_dram_wvalid),
+    .m_axi_dram_wready(m_axi_dram_wready),
+    .m_axi_dram_bid(m_axi_dram_bid), .m_axi_dram_bresp(m_axi_dram_bresp),
+    .m_axi_dram_bvalid(m_axi_dram_bvalid), .m_axi_dram_bready(m_axi_dram_bready),
+    .m_axi_dram_arid(m_axi_dram_arid), .m_axi_dram_araddr(m_axi_dram_araddr),
+    .m_axi_dram_arlen(m_axi_dram_arlen), .m_axi_dram_arsize(m_axi_dram_arsize),
+    .m_axi_dram_arburst(m_axi_dram_arburst), .m_axi_dram_arcache(m_axi_dram_arcache),
+    .m_axi_dram_arprot(m_axi_dram_arprot), .m_axi_dram_arvalid(m_axi_dram_arvalid),
+    .m_axi_dram_arready(m_axi_dram_arready),
+    .m_axi_dram_rid(m_axi_dram_rid), .m_axi_dram_rdata(m_axi_dram_rdata),
+    .m_axi_dram_rresp(m_axi_dram_rresp), .m_axi_dram_rlast(m_axi_dram_rlast),
+    .m_axi_dram_rvalid(m_axi_dram_rvalid), .m_axi_dram_rready(m_axi_dram_rready),
+    .s_axi_ctrl_awaddr(s_axi_ctrl_awaddr), .s_axi_ctrl_awvalid(s_axi_ctrl_awvalid),
+    .s_axi_ctrl_awready(s_axi_ctrl_awready), .s_axi_ctrl_wdata(s_axi_ctrl_wdata),
+    .s_axi_ctrl_wstrb(s_axi_ctrl_wstrb), .s_axi_ctrl_wvalid(s_axi_ctrl_wvalid),
+    .s_axi_ctrl_wready(s_axi_ctrl_wready), .s_axi_ctrl_bresp(s_axi_ctrl_bresp),
+    .s_axi_ctrl_bvalid(s_axi_ctrl_bvalid), .s_axi_ctrl_bready(s_axi_ctrl_bready),
+    .s_axi_ctrl_araddr(s_axi_ctrl_araddr), .s_axi_ctrl_arvalid(s_axi_ctrl_arvalid),
+    .s_axi_ctrl_arready(s_axi_ctrl_arready), .s_axi_ctrl_rdata(s_axi_ctrl_rdata),
+    .s_axi_ctrl_rresp(s_axi_ctrl_rresp), .s_axi_ctrl_rvalid(s_axi_ctrl_rvalid),
+    .s_axi_ctrl_rready(s_axi_ctrl_rready),
+    .mm_sel(mm_sel), .mm_req(mm_req), .mm_addr(mm_addr), .mm_wdata(mm_wdata),
+    .mm_wstrb(mm_wstrb), .mm_rdata(mm_rdata), .irq_ip(irq_ip), .soc_rst_o(soc_rst)
+  );
+endmodule

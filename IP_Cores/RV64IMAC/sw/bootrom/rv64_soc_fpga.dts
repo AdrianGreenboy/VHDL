@@ -1,0 +1,77 @@
+/dts-v1/;
+/* RV64IMAC SoC - prototipo Versal (TE0950 / VCK190): PL a 50 MHz, TICK_DIV 50 -> 1 MHz.
+   DRAM: 128 MiB (el core ve 0x8000_0000; el top del prototipo la remapea a la reserva
+   no-map del PS en 0x7000_0000). Consola: UART 16550 a 115200 cruzada con la UART del
+   lado host, que el cargador del PS drena por el banco de control. */
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	compatible = "adriangreenboy,rv64imac-soc";
+	model = "RV64IMAC SoC";
+
+	chosen {
+		bootargs = "earlycon=sbi console=ttyS0,115200";
+		stdout-path = "serial0";
+	};
+	aliases { serial0 = &uart0; };
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <1000000>;
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			compatible = "riscv";
+			riscv,isa = "rv64imac_zicsr_zifencei_zicntr_zicbom";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "c", "zicsr", "zifencei", "zicntr", "zicbom";
+			riscv,cbom-block-size = <64>;
+			mmu-type = "riscv,sv39";
+			status = "okay";
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x08000000>;          /* 128 MiB */
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+		dma-noncoherent;              /* DMA de las IP_Cores: coherencia por Zicbom */
+
+		clint@2000000 {
+			compatible = "riscv,clint0";
+			reg = <0x0 0x2000000 0x0 0x10000>;
+			interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
+		};
+		plic: interrupt-controller@c000000 {
+			compatible = "riscv,plic0";
+			#interrupt-cells = <1>;
+			#address-cells = <0>;
+			interrupt-controller;
+			reg = <0x0 0xc000000 0x0 0x4000000>;
+			interrupts-extended = <&cpu0_intc 11 &cpu0_intc 9>;
+			riscv,ndev = <31>;
+		};
+		uart0: serial@10000000 {
+			compatible = "ns16550a";
+			reg = <0x0 0x10000000 0x0 0x1000>;
+			clock-frequency = <50000000>;
+			current-speed = <115200>;
+			reg-shift = <0>;
+			reg-io-width = <1>;
+			interrupt-parent = <&plic>;
+			interrupts = <1>;
+		};
+	};
+};
