@@ -1,0 +1,75 @@
+/dts-v1/;
+/* RV64IMAC SoC - mapa de SPEC_FREEZE_V1.md. timebase = f_clk / TICK_DIV (100 MHz / 100).
+   Variante de SIMULACION: 128 MiB y UART a 6.25 Mbaud. La placa usa su propio DTS. */
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	compatible = "adriangreenboy,rv64imac-soc";
+	model = "RV64IMAC SoC";
+
+	chosen {
+		bootargs = "earlycon=sbi console=hvc0";
+		stdout-path = "serial0";
+	};
+	aliases { serial0 = &uart0; };
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <1000000>;
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			compatible = "riscv";
+			riscv,isa = "rv64imac_zicsr_zifencei_zicntr_zicbom";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "c", "zicsr", "zifencei", "zicntr", "zicbom";
+			riscv,cbom-block-size = <64>;
+			mmu-type = "riscv,sv39";
+			status = "okay";
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x08000000>;          /* 128 MiB (simulacion) */
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+		dma-noncoherent;              /* DMA de las IP_Cores: coherencia por Zicbom */
+
+		clint@2000000 {
+			compatible = "riscv,clint0";
+			reg = <0x0 0x2000000 0x0 0x10000>;
+			interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
+		};
+		plic: interrupt-controller@c000000 {
+			compatible = "riscv,plic0";
+			#interrupt-cells = <1>;
+			#address-cells = <0>;
+			interrupt-controller;
+			reg = <0x0 0xc000000 0x0 0x4000000>;
+			interrupts-extended = <&cpu0_intc 11 &cpu0_intc 9>;
+			riscv,ndev = <31>;
+		};
+		uart0: serial@10000000 {
+			compatible = "ns16550a";
+			reg = <0x0 0x10000000 0x0 0x1000>;
+			clock-frequency = <100000000>;
+			current-speed = <6250000>;                    /* divisor 1: UART rapida en simulacion */
+			reg-shift = <0>;
+			reg-io-width = <1>;
+			interrupt-parent = <&plic>;
+			interrupts = <1>;
+		};
+	};
+};
