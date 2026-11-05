@@ -13,6 +13,11 @@
 --
 -- Nibble bajo primero (orden MII). FCS transmitido byte bajo primero,
 -- nibble bajo primero, SIN pasar por el propio CRC.
+--
+-- mii_ce may come from the internal /4 divider (LOOP_INT) or from
+-- eth_mii_cdc (external PHY: one ce per free slot of the TX_CLK async FIFO,
+-- possibly on consecutive core cycles). The engine is agnostic: one nibble
+-- per ce. This file is shared by ETH, PTP (byte-identical copy) and TSN.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -32,7 +37,20 @@ entity eth_tx_mii is
     underrun : out std_logic;                     -- pulso: valid cayo en mitad de trama
     -- MII TX
     txd      : out std_logic_vector(3 downto 0);
-    tx_en    : out std_logic
+    tx_en    : out std_logic;
+    -- pulso de 1 ciclo de core-clock en el instante del SFD (para PTP TS).
+    -- Se afirma en el mii_ce que emite el nibble 0xD del SFD. Convenio de
+    -- captura identico al de eth_rx_mii (nibble 0xD).
+    tx_sfd_pulse : out std_logic;
+    -- override 1-step: cuando ovr_en='1' y byte_cnt cae en [ovr_off, ovr_off+
+    -- ovr_len), el byte emitido (y alimentado al CRC) se toma de ovr_data en
+    -- vez de la FIFO. Permite parchear originTimestamp/correctionField in-fly
+    -- con el timestamp del SFD de ESTA trama, manteniendo el FCS correcto.
+    -- ovr_data se indexa por (byte_cnt - ovr_off). Ancho maximo 10 bytes.
+    ovr_en   : in  std_logic := '0';
+    ovr_off  : in  std_logic_vector(10 downto 0) := (others => '0');
+    ovr_len  : in  std_logic_vector(3 downto 0)  := (others => '0');
+    ovr_data : in  std_logic_vector(79 downto 0) := (others => '0')  -- 10 bytes, byte0 en [7:0]
   );
 end entity eth_tx_mii;
 
@@ -52,11 +70,13 @@ architecture rtl of eth_tx_mii is
   signal last_l   : std_logic := '0';
   signal txd_r    : std_logic_vector(3 downto 0) := (others => '0');
   signal txen_r   : std_logic := '0';
+  signal sfd_p    : std_logic := '0';   -- pulso SFD (1 ciclo de core-clock)
 
 begin
 
   txd      <= txd_r;
   tx_en    <= txen_r;
+  tx_sfd_pulse <= sfd_p;
   tx_busy  <= '0' when st = ST_IDLE else '1';
   -- Consumo combinacional en el mismo ce del nibble bajo (contrato FIFO FWFT).
   tx_ready <= '1' when (st = ST_DAT_LO and mii_ce = '1' and rst = '0') else '0';
@@ -64,9 +84,12 @@ begin
   process(clk)
     variable v_crc : std_logic_vector(31 downto 0);
     variable v_cnt : unsigned(10 downto 0);
+    variable v_byte : std_logic_vector(7 downto 0);
+    variable v_idx  : integer range 0 to 9;
   begin
     if rising_edge(clk) then
       underrun <= '0';
+      sfd_p    <= '0';
       if rst = '1' then
         st     <= ST_IDLE;
         txen_r <= '0';
@@ -93,16 +116,28 @@ begin
 
           when ST_SFD =>
             txd_r    <= x"D";                     -- SFD 0xD5: 0x5 ya emitido, ahora 0xD
+            sfd_p    <= '1';                       -- pulso SFD: instante de TS TX
             crc      <= CRC32_INIT;
             byte_cnt <= (others => '0');
             st       <= ST_DAT_LO;
 
           when ST_DAT_LO =>
             if tx_valid = '1' then
-              txd_r  <= tx_data(3 downto 0);
-              cur_hi <= tx_data(7 downto 4);
+              -- seleccion del byte efectivo: override 1-step si byte_cnt cae en
+              -- la ventana [ovr_off, ovr_off+ovr_len). El byte parcheado va
+              -- TANTO a la salida MII como al CRC (asi el FCS queda correcto).
+              if ovr_en = '1'
+                 and byte_cnt >= unsigned(ovr_off)
+                 and byte_cnt < (unsigned(ovr_off) + unsigned(ovr_len)) then
+                v_idx  := to_integer(byte_cnt - unsigned(ovr_off));
+                v_byte := ovr_data(v_idx*8+7 downto v_idx*8);
+              else
+                v_byte := tx_data;
+              end if;
+              txd_r  <= v_byte(3 downto 0);
+              cur_hi <= v_byte(7 downto 4);
               last_l <= tx_last;
-              crc    <= crc32_nibble(crc, tx_data(3 downto 0));
+              crc    <= crc32_nibble(crc, v_byte(3 downto 0));
               st     <= ST_DAT_HI;
             else
               txen_r   <= '0';                    -- underrun: abortar trama
