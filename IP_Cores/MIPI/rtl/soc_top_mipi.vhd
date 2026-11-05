@@ -92,7 +92,16 @@ entity soc_top_mipi is
     mipi_bvalid  : in  std_logic;
     mipi_bready  : out std_logic;
 
-    irq_out : out std_logic
+    irq_out : out std_logic;
+
+    -- AUDIT 2026-11: D-PHY RX PPI (tie off / leave open without a PHY) and
+    -- the MIPI error/status interrupt (csi2_mmio STATUS & IRQ_EN) to the PS
+    ppi_clk    : in  std_logic := '0';
+    ppi_byte   : in  std_logic_vector(31 downto 0) := (others => '0');
+    ppi_valid  : in  std_logic_vector(3 downto 0) := (others => '0');
+    ppi_active : in  std_logic_vector(3 downto 0) := (others => '0');
+    ppi_sync   : in  std_logic_vector(3 downto 0) := (others => '0');
+    mipi_irq   : out std_logic
   );
 end entity soc_top_mipi;
 
@@ -125,11 +134,24 @@ architecture rtl of soc_top_mipi is
   signal done_pulse : std_logic;
   signal ddr_base   : std_logic_vector(AXI_AW-1 downto 0);
 
-  signal sync_rst : std_logic;   -- active-high reset for MIPI (from aresetn)
+  signal sync_rst : std_logic := '1';   -- active-high reset for MIPI (from aresetn)
+  signal rst_m    : std_logic := '1';
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of rst_m, sync_rst : signal is "TRUE";
 begin
 
   cpu_rst  <= '1' when (aresetn = '0' or cpu_hold_reset = '1') else '0';
-  sync_rst <= '1' when aresetn = '0' else '0';
+  -- AUDIT 2026-11: 2-flop reset synchronizer for the MIPI domain (aresetn may
+  -- come from an asynchronous source on the ASIC). Assertion and release are
+  -- both synchronous to aclk (2 cycles), consistent with the synchronous
+  -- active-high reset style of every MIPI block.
+  process(aclk)
+  begin
+    if rising_edge(aclk) then
+      rst_m    <= not aresetn;
+      sync_rst <= rst_m;
+    end if;
+  end process;
 
   -- MIPI region decode: addr[31:28] = "1101" -> 0xD000_0000
   is_mipi  <= '1' when dmem_addr(31 downto 28) = "1101" else '0';
@@ -193,7 +215,9 @@ begin
       m_awburst => mipi_awburst, m_awvalid => mipi_awvalid, m_awready => mipi_awready,
       m_wdata => mipi_wdata, m_wstrb => mipi_wstrb, m_wlast => mipi_wlast,
       m_wvalid => mipi_wvalid, m_wready => mipi_wready,
-      m_bresp => mipi_bresp, m_bvalid => mipi_bvalid, m_bready => mipi_bready
+      m_bresp => mipi_bresp, m_bvalid => mipi_bvalid, m_bready => mipi_bready,
+      ppi_clk => ppi_clk, ppi_byte => ppi_byte, ppi_valid => ppi_valid,
+      ppi_active => ppi_active, ppi_sync => ppi_sync, irq => mipi_irq
     );
 
   -- dmem read/ready mux: MIPI region vs memory subsystem

@@ -11,6 +11,18 @@
 -- Versal NoC lesson: an AXI burst must NOT cross a 4 KB address boundary
 -- (PMC EAM ERR / NoC rejection). The engine splits transfers at 4 KB pages.
 -- Data path is 32-bit (4 bytes/beat); AWSIZE=2, INCR bursts.
+--
+-- AUDIT 2026-11 (AXI protocol): AWVALID / WVALID / BREADY are now driven
+-- combinationally FROM THE STATE (S_ADDR / S_PUSH / S_RESP), not from a
+-- register re-armed every cycle. A valid therefore drops in the very cycle
+-- after its handshake (no duplicate AW or W beat), READY is only sampled
+-- while the matching VALID is asserted, and AWADDR/AWLEN/WDATA/WSTRB/WLAST are
+-- stable for as long as VALID is high (they only depend on registers that do
+-- not change in that state). Same pattern as ADCS/soc/axi4_master.vhd.
+-- AUDIT 2026-11 (length): length = 0 completes without any bus traffic. A
+-- length that is not a multiple of 4 gets a partial WSTRB on its last beat,
+-- so no byte past 'length' is written in DDR.
+-- Requirement: dst_addr must be 4-byte aligned (low 2 bits are ignored).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -60,76 +72,86 @@ architecture rtl of mipi_dma_burst is
   signal cur_dst   : unsigned(31 downto 0) := (others=>'0');
   signal rem_bytes : unsigned(31 downto 0) := (others=>'0');
   signal fb_ptr    : unsigned(FB_AWID-1 downto 0) := (others=>'0');
-  signal beats     : unsigned(7 downto 0) := (others=>'0');
-  signal beat_cnt  : unsigned(7 downto 0) := (others=>'0');
+  signal beats     : unsigned(8 downto 0) := (others=>'0');   -- 1..256
+  signal beat_cnt  : unsigned(8 downto 0) := (others=>'0');
+  signal nb_c      : unsigned(8 downto 0);                    -- beats of next burst
 
   signal word_buf  : std_logic_vector(31 downto 0) := (others=>'0');
 
   signal done_i  : std_logic := '0';
   signal fb_re_i : std_logic := '0';
+  signal last_c  : std_logic;
 
+  -- beats of the next burst: bounded by the 4 KB page, the remaining bytes
+  -- (rounded up to whole words) and the AXI4 INCR limit of 256.
   function beats_to_boundary(addr : unsigned(31 downto 0); rem_b : unsigned(31 downto 0))
     return unsigned is
-    variable page_off  : unsigned(11 downto 0);
-    variable to_bound  : integer;
-    variable rem_beats : integer;
-    variable n         : integer;
+    variable to_bound  : unsigned(10 downto 0);   -- 1..1024 words to the page end
+    variable rem_beats : unsigned(30 downto 0);
+    variable n         : unsigned(10 downto 0);
   begin
-    page_off := addr(11 downto 0);
-    to_bound := (4096 - to_integer(page_off)) / 4;
-    rem_beats := (to_integer(rem_b) + 3) / 4;
+    to_bound  := to_unsigned(1024, 11) - resize(addr(11 downto 2), 11);
+    rem_beats := resize(shift_right(rem_b + 3, 2), 31);
     n := to_bound;
-    if rem_beats < n then n := rem_beats; end if;
-    if n > 256 then n := 256; end if;
-    if n < 1 then n := 1; end if;
-    return to_unsigned(n, 8);
+    if rem_beats < resize(n, 31) then n := resize(rem_beats, 11); end if;
+    if n > 256 then n := to_unsigned(256, 11); end if;
+    if n < 1 then n := to_unsigned(1, 11); end if;
+    return resize(n, 9);
   end function;
 begin
 
   m_awsize  <= "010";
   m_awburst <= "01";
-  m_wstrb   <= "1111";
   fb_sel    <= src_sel;
   fb_re     <= fb_re_i;
   fb_addr   <= std_logic_vector(fb_ptr);
   done      <= done_i;
   m_wdata   <= word_buf;
 
+  -- AXI handshake signals are a pure function of the state (+ stable regs).
+  nb_c      <= beats_to_boundary(cur_dst, rem_bytes);
+  m_awvalid <= '1' when st = S_ADDR else '0';
+  m_awaddr  <= std_logic_vector(cur_dst(31 downto 2)) & "00";
+  m_awlen   <= std_logic_vector(resize(nb_c - 1, 8));
+  last_c    <= '1' when beat_cnt = beats - 1 else '0';
+  m_wvalid  <= '1' when st = S_PUSH else '0';
+  m_wlast   <= last_c when st = S_PUSH else '0';
+  m_wstrb   <= "0001" when rem_bytes = 1 else
+               "0011" when rem_bytes = 2 else
+               "0111" when rem_bytes = 3 else
+               "1111";
+  m_bready  <= '1' when st = S_RESP else '0';
+
   process(clk)
-    variable nb : unsigned(7 downto 0);
   begin
     if rising_edge(clk) then
       done_i    <= '0';
-      m_awvalid <= '0';
-      m_wvalid  <= '0';
-      m_wlast   <= '0';
-      m_bready  <= '0';
       fb_re_i   <= '0';
 
       if rst='1' then
         st <= S_IDLE;
         fb_ptr <= (others=>'0');
+        beats <= to_unsigned(1, 9); beat_cnt <= (others=>'0');
       else
         case st is
           when S_IDLE =>
             if start='1' then
-              cur_dst   <= unsigned(dst_addr);
+              cur_dst   <= unsigned(dst_addr(31 downto 2)) & "00";
               rem_bytes <= unsigned(length);
               fb_ptr    <= (others=>'0');
-              st <= S_ADDR;
+              if unsigned(length) = 0 then
+                st <= S_DONE;              -- nothing to move
+              else
+                st <= S_ADDR;
+              end if;
             end if;
 
-          -- issue write address for this burst (bounded by 4 KB page)
+          -- AWVALID is high in this state; leave only on the handshake.
           when S_ADDR =>
-            nb := beats_to_boundary(cur_dst, rem_bytes);
-            beats    <= nb;
-            beat_cnt <= (others=>'0');
-            m_awaddr  <= std_logic_vector(cur_dst);
-            m_awlen   <= std_logic_vector(nb - 1);
-            m_awvalid <= '1';
             if m_awready='1' then
-              -- prime FB read for first byte of first word
-              fb_re_i <= '1';
+              beats    <= nb_c;
+              beat_cnt <= (others=>'0');
+              fb_re_i  <= '1';             -- prime FB read for byte 0 of word 0
               st <= S_FILL0;
             end if;
 
@@ -158,16 +180,16 @@ begin
             word_buf(31 downto 24) <= fb_data; -- byte3
             st <= S_PUSH;
 
-          -- push the assembled word on the AXI W channel
+          -- WVALID is high in this state; WDATA/WSTRB/WLAST are stable here.
           when S_PUSH =>
-            m_wvalid <= '1';
-            if beat_cnt = beats - 1 then
-              m_wlast <= '1';
-            end if;
             if m_wready='1' then
-              cur_dst   <= cur_dst + 4;
-              rem_bytes <= rem_bytes - 4;
-              if beat_cnt = beats - 1 then
+              cur_dst <= cur_dst + 4;
+              if rem_bytes > 4 then
+                rem_bytes <= rem_bytes - 4;
+              else
+                rem_bytes <= (others=>'0');
+              end if;
+              if last_c = '1' then
                 st <= S_RESP;
               else
                 beat_cnt <= beat_cnt + 1;
@@ -176,10 +198,10 @@ begin
               end if;
             end if;
 
+          -- BREADY is high in this state.
           when S_RESP =>
-            m_bready <= '1';
             if m_bvalid='1' then
-              if rem_bytes = 0 or rem_bytes(31)='1' then
+              if rem_bytes = 0 then
                 st <= S_DONE;
               else
                 st <= S_ADDR;

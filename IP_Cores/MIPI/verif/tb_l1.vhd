@@ -12,6 +12,9 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 entity tb_l1 is
+  -- AUDIT 2026-11: BUBBLE idle cycles between bytes (1 = legacy pacing,
+  -- 0 = back-to-back bytes: exercises a byte arriving in the P1 cycle)
+  generic (BUBBLE : integer := 1);
 end entity;
 
 architecture sim of tb_l1 is
@@ -98,7 +101,7 @@ begin
       -- bubble: deassert so a pending P1 (from a b2 byte) can drain without
       -- colliding with a new incoming byte
       byte_valid <= '0';
-      wait until rising_edge(clk);
+      for b in 1 to BUBBLE loop wait until rising_edge(clk); end loop;
     end loop;
     file_close(fh);
 

@@ -53,7 +53,8 @@ set mipi_files [list \
   $RTL/framebuffer.vhd \
   $RTL/csi2_dual_rx.vhd \
   $RTL/frame_gen.vhd \
-  $RTL/dphy_model.vhd \
+  $RTL/csi2_lane_rx.vhd \
+  $RTL/mipi_async_fifo.vhd \
   $RTL/byte_fifo.vhd \
   $RTL/csi2_selftest.vhd \
   $RTL/csi2_mmio.vhd \

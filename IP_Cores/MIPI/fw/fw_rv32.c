@@ -15,8 +15,8 @@
  *   0x10 DMA_SRC  W  bit0 selects FB
  *   0x14 DMA_DST  W  DDR destination (low 32 bits of the DDR aperture)
  *   0x18 DMA_LEN  W  bytes
- *   0x1C FBSEL    W  bit0 selects FB, resets stream pointer
- *   0x20 FBDATA   R  current stream byte, auto-increments
+ *   0x1C FBSEL    W  bit0 selects FB, resets stream pointer, prefetches byte 0
+ *   0x20 FBDATA   R  byte at the stream pointer, auto-increments
  *
  * Doorbell: after computing the FNV signature the core writes it (and a status
  * word) into local RAM, then writes DONE_WORD. The soc_top_mipi decodes that
@@ -80,8 +80,9 @@
 
 static uint32_t fold_fb(uint32_t h, int sel, int nbytes)
 {
-    MREG(M_FBSEL) = (uint32_t)(sel & 1);   /* select FB, reset stream pointer */
-    (void)MREG(M_FBDATA);                  /* priming read (BRAM pipeline) */
+    MREG(M_FBSEL) = (uint32_t)(sel & 1);   /* select FB, reset pointer, prefetch byte 0 */
+    /* AUDIT 2026-11: no priming read -- FBSEL prefetches, FBDATA returns the
+     * byte at the pointer (the old RTL returned the previous byte). */
     for (int i = 0; i < nbytes; i++) {
         uint8_t b = (uint8_t)(MREG(M_FBDATA) & 0xFF);
         h ^= b;

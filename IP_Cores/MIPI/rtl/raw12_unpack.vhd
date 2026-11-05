@@ -10,6 +10,11 @@
 --
 -- Interface: byte-in handshake (byte_valid), pixel-out handshake (pix_valid).
 -- Every 3 input bytes produce 2 output pixels (P0 first, then P1).
+-- AUDIT 2026-11: a byte arriving in the cycle the staged P1 is emitted was
+-- silently dropped (the byte input was in the 'elsif' of the P1 emission).
+-- Byte capture is now independent of P1 emission. A conflict is impossible by
+-- construction: after b2 the next two bytes are b0/b1, which produce no pixel,
+-- so the output stays one pixel per cycle with no skid buffer and no ready.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -63,7 +68,8 @@ begin
           pix_out_i   <= p1_r;
           pix_valid_i <= '1';
           p1_pending  <= '0';
-        elsif byte_valid = '1' then
+        end if;
+        if byte_valid = '1' then
           case to_integer(phase) is
             when 0 =>
               b0_r  <= byte_in;
