@@ -7,8 +7,9 @@
 --
 -- Mapa (aprobado en scope freeze):
 --   0x000 CONTROL  : b0 enable (rw), b1 cnt_clear (W1, autolimpia, lee 0)
---   0x004 STATUS   : status_in (RO) [3:0] fifo no-vacia [7:4] salida ocupada
---                    [11:8] entrada drenandose
+--   0x004 STATUS   : status_in (RO) [3:0] descriptor pendiente (nivel)
+--                    [7:4] salida ocupada (nivel, IPG incluido)
+--                    [11:8] byte de entrada leido este ciclo (pulso)
 --   0x008 TBL_MAC_LO (rw, holding)   MAC destino [31:0]
 --   0x00C TBL_MAC_HI (rw, holding)   [15:0] MAC[47:32] [17:16] puerto [31] valid
 --   0x010 TBL_IDX  : escritura dispara tbl_wr con idx=wdata[3:0]; lee ultimo idx
@@ -18,6 +19,11 @@
 --   0x070-0x07C DROP_FCS p0-p3
 --   0x080-0x08C TAGGED p0-p3
 --   0x0C0 DBG_STATE : dbg_in (RO)
+--   0x0C4 ERR_STICKY: (R, W1C per bit, a same-cycle set wins) audit 2026-11
+--                    [3:0] RX oversize (> 1522 B) per port
+--                    [7:4] external-PHY CDC FIFO overflow/underflow per port
+--                    [8]   injector request refused (len 0 / > buffer, go
+--                          with one already pending, push while busy)
 --   0x100-0x1FC Qbv GCL reservado fase 2 (lee 0, escritura ignorada)
 --   resto: lee 0, escritura ignorada
 
@@ -60,7 +66,8 @@ entity tsn_regs is
     p_tag     : in  std_logic_vector(3 downto 0);
     -- estado y debug
     status_in : in  std_logic_vector(11 downto 0);
-    dbg_in    : in  std_logic_vector(31 downto 0)
+    dbg_in    : in  std_logic_vector(31 downto 0);
+    err_set   : in  std_logic_vector(8 downto 0) := (others => '0')
   );
 end entity;
 
@@ -83,6 +90,7 @@ architecture rtl of tsn_regs is
   signal cnt : cnt_t := (others => (others => '0'));
 
   signal pulses : std_logic_vector(19 downto 0);
+  signal err_r  : std_logic_vector(8 downto 0) := (others => '0');
 begin
   irq      <= '0';
   enable   <= enable_r;
@@ -142,6 +150,22 @@ begin
     end if;
   end process;
 
+  -- ERR_STICKY: W1C per bit, set wins over a same-cycle clear
+  p_err : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        err_r <= (others => '0');
+      else
+        if sel = '1' and we = '1' and addr = 9x"0C4" then
+          err_r <= (err_r and not wdata(8 downto 0)) or err_set;
+        else
+          err_r <= err_r or err_set;
+        end if;
+      end if;
+    end if;
+  end process;
+
   p_cnt : process(clk)
   begin
     if rising_edge(clk) then
@@ -173,6 +197,7 @@ begin
         when 9x"024" => rdata(11 downto 0) <= std_logic_vector(inj_len_r);
         when 9x"02C" => rdata(0) <= inj_busy;   -- INJ_STATUS: b0 ocupado
         when 9x"0C0" => rdata <= dbg_in;
+        when 9x"0C4" => rdata(8 downto 0) <= err_r;
         when others =>
           if unsigned(addr) >= 16#040# and unsigned(addr) <= 16#08C#
              and addr(1 downto 0) = "00" then

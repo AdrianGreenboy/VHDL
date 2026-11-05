@@ -87,20 +87,21 @@ Byte offsets from `0x6000_0000`. `W1` = write-1 action bit.
 | Offset | Name | Access | Fields |
 |--------|------|--------|--------|
 | 0x000 | CONTROL | RW | b0 enable, b1 cnt_clear (W1) |
-| 0x004 | STATUS | RO | status flags |
+| 0x004 | STATUS | RO | b3:0 descriptor pending, b7:4 egress busy (level), b11:8 ingress byte read (pulse) |
 | 0x008 | TBL_MAC_LO | RW | MAC[31:0] |
 | 0x00C | TBL_MAC_HI | RW | b31 valid, b17:16 port, b15:0 MAC[47:32] |
 | 0x010 | TBL_IDX | RW | table index (write triggers entry commit) |
 | 0x020 | INJ_CTRL | RW | b1:0 port, b2 go |
 | 0x024 | INJ_LEN | RW | injected frame length (bytes) |
 | 0x028 | INJ_WDATA | WO | push one 32-bit word to injector buffer |
-| 0x02C | INJ_STATUS | RW | b0 busy, b1 clr (W1) |
+| 0x02C | INJ_STATUS | RW | b0 busy (incl. a queued go), b1 clr (W1) |
 | 0x040..0x04C | RX0..RX3 | RO | per-port received count |
 | 0x050..0x05C | TX0..TX3 | RO | per-port transmitted count |
 | 0x060..0x06C | OVF0..OVF3 | RO | per-port overflow-drop count |
 | 0x070..0x07C | FCS0..FCS3 | RO | per-port FCS-drop count |
 | 0x080..0x08C | TAG0..TAG3 | RO | per-port 802.1Q-tagged count |
 | 0x0C0 | DBG_STATE | RO | debug state |
+| 0x0C4 | ERR_STICKY | R/W1C | b3:0 RX oversize, b7:4 PHY CDC error, b8 injector request refused (audit 2026-11) |
 | 0x100..0x1FC | (reserved) | — | 802.1Qbv GCL, phase 2 |
 
 ## 5. How to use it — software
@@ -189,6 +190,8 @@ ghdl -e --std=08 <tb> ; ghdl -r --std=08 <tb> --stop-time=1ms
 ```
 
 Mutation regression: `run_mut_*.sh` (each must fail, i.e. no PASS string).
+Full regression (audit 2026-11, incl. real-MII `tb_tsn_ext`): `./run_regression.sh`.
+The real-MII CDC files (`eth_cdc_sync`, `eth_async_fifo`, `eth_mii_cdc`) also come from `../ETH/rtl/`.
 
 ## 9. Build & run — Vivado
 

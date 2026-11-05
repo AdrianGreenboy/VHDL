@@ -15,6 +15,15 @@
 --
 -- Salida: inj_rxd/inj_rx_dv (4 bits) + inj_port; el top los enruta al RX del
 -- puerto seleccionado. Los avances de nibble ocurren en mii_ce (tasa MII).
+--
+-- Audit 2026-11:
+--   * len = 0 or len > buffer (2**LOG2_DEPTH) is refused (err pulse); v1
+--     computed len-1 = 4095 for len = 0 and emitted 4096 bytes of garbage.
+--   * 'go' while busy is QUEUED (one pending request, its len/port latched
+--     at request time) instead of being silently lost; a second request
+--     while one is pending is refused (err). busy covers the pending one.
+--   * a push while busy is still ignored (the single frame buffer is being
+--     read) but now reported (err).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -36,6 +45,7 @@ entity tsn_inject is
     go        : in  std_logic;                       -- dispara (1 pulso)
     port_sel  : in  std_logic_vector(1 downto 0);
     busy      : out std_logic;
+    err       : out std_logic;                       -- pulse: request refused
     -- salida MII hacia el RX del puerto seleccionado
     inj_port  : out std_logic_vector(1 downto 0);
     inj_rxd   : out std_logic_vector(3 downto 0);
@@ -70,6 +80,17 @@ architecture rtl of tsn_inject is
   signal fcs_nib : unsigned(2 downto 0) := (others => '0');
   signal rxd_r   : std_logic_vector(3 downto 0) := (others => '0');
   signal dv_r    : std_logic := '0';
+  -- one pending request + error reporting
+  signal pend      : std_logic := '0';
+  signal pend_len  : unsigned(11 downto 0) := (others => '0');
+  signal pend_port : std_logic_vector(1 downto 0) := (others => '0');
+  signal err_ser, err_ld : std_logic := '0';
+  constant MAXLEN  : natural := 2**LOG2_DEPTH;
+
+  function len_ok(l : unsigned(11 downto 0)) return boolean is
+  begin
+    return l /= 0 and to_integer(l) <= MAXLEN;
+  end function;
 
   -- byte seleccionado de rd_word segun los 2 bits bajos del indice
   function sel_byte(w : std_logic_vector(31 downto 0); sel : unsigned(1 downto 0))
@@ -94,7 +115,8 @@ architecture rtl of tsn_inject is
     return v;
   end function;
 begin
-  busy      <= '0' when st = S_IDLE else '1';
+  busy      <= '0' when st = S_IDLE and pend = '0' else '1';
+  err       <= err_ser or err_ld;
   inj_port  <= port_r;
   inj_rxd   <= rxd_r;
   inj_rx_dv <= dv_r;
@@ -103,11 +125,14 @@ begin
   p_load : process(clk)
   begin
     if rising_edge(clk) then
+      err_ld <= '0';
       if rst = '1' or clr_buf = '1' then
         wr_ptr <= (others => '0');
-      elsif wr_push = '1' and st = S_IDLE then
+      elsif wr_push = '1' and st = S_IDLE and pend = '0' then
         buf(to_integer(wr_ptr(LOG2_WDEPTH-1 downto 0))) <= wr_word;
         wr_ptr <= wr_ptr + 1;
+      elsif wr_push = '1' then
+        err_ld <= '1';                            -- buffer in use: word dropped
       end if;
     end if;
   end process;
@@ -127,24 +152,48 @@ begin
     variable byte_now : std_logic_vector(7 downto 0);
   begin
     if rising_edge(clk) then
+      err_ser <= '0';
       if rst = '1' then
         st    <= S_IDLE;
         dv_r  <= '0';
         rxd_r <= (others => '0');
         rd_waddr <= (others => '0');
+        pend  <= '0';
       else
+        -- request bookkeeping: queue a go that arrives while busy
+        if go = '1' and (st /= S_IDLE or pend = '1') then
+          if pend = '0' and len_ok(len_bytes) then
+            pend      <= '1';
+            pend_len  <= len_bytes;
+            pend_port <= port_sel;
+          else
+            err_ser <= '1';                       -- second pending / bad len
+          end if;
+        end if;
         case st is
           when S_IDLE =>
             dv_r  <= '0';
             rxd_r <= (others => '0');
             rd_waddr <= (others => '0');   -- apunta a palabra 0 (bytes 0..3)
-            if go = '1' then
-              len_r   <= len_bytes;
-              port_r  <= port_sel;
+            if pend = '1' then
+              len_r   <= pend_len;
+              port_r  <= pend_port;
+              pend    <= '0';
               byte_i  <= (others => '0');
               pre_cnt <= (others => '0');
               crc     <= (others => '1');
               st      <= S_PRE;
+            elsif go = '1' then
+              if len_ok(len_bytes) then
+                len_r   <= len_bytes;
+                port_r  <= port_sel;
+                byte_i  <= (others => '0');
+                pre_cnt <= (others => '0');
+                crc     <= (others => '1');
+                st      <= S_PRE;
+              else
+                err_ser <= '1';                   -- len 0 or > buffer: refused
+              end if;
             end if;
 
           when S_PRE =>
