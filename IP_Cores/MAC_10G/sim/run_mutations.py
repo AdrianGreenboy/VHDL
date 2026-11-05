@@ -45,9 +45,11 @@ M = [
      "elsif sh_cnt = 63 then\n            lock_r <= '1';", "elsif sh_cnt = 62 then\n            lock_r <= '1';"),
     ("M12 bl: pierde lock con 15", "rtl/eth21_blocklock.vhd",
      "if not shv and inv_cnt = 15 then", "if not shv and inv_cnt = 14 then"),
-    ("M13 gtmap: cabecera TX sin cruzar", "rtl/eth21_gtmap.vhd",
-     "txheader(0) <= blk(0) when hdr_swap = '1' else blk(1);",
-     "txheader(0) <= blk(1) when hdr_swap = '1' else blk(0);"),
+    # audit 2026-11: the PCS66 block is now in IEEE order, the map is the
+    # identity by default; the mutation swaps the TX header bits
+    ("M13 gtmap: cabecera TX cruzada", "rtl/eth21_gtmap.vhd",
+     "txheader(0) <= blk(1) when hdr_swap = '1' else blk(0);",
+     "txheader(0) <= blk(0) when hdr_swap = '1' else blk(1);"),
     ("M14 gtmap: bit_rev RX ignorado", "rtl/eth21_gtmap.vhd",
      "blk(2 + i) <= rxdata(63 - i) when bit_rev = '1' else rxdata(i);",
      "blk(2 + i) <= rxdata(i);"),

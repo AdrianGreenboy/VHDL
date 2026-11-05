@@ -74,7 +74,7 @@ set ETH $CORE/rtl
 set SRCS [list \
   $PCS/pcs_scrambler.vhd \
   $MAC/mac25g_crc_pkg.vhd $MAC/mac25g_pkg.vhd $MAC/mac25g_sync.vhd \
-  $MAC/mac25g_tx.vhd $MAC/mac25g_rx.vhd $MAC/mac25g_pcs66.vhd \
+  $MAC/mac25g_tx.vhd $MAC/mac25g_rx.vhd $MAC/mac25g_pcs66.vhd $MAC/mac25g_flow.vhd \
   $ETH/eth21_pkg.vhd $ETH/eth21_udp_gen.vhd $ETH/eth21_udp_chk.vhd $ETH/eth21_blocklock.vhd \
   $ETH/eth21_gtmap.vhd $ETH/eth21_txpath.vhd $ETH/eth21_rxpath.vhd $ETH/eth21_gt_rst.vhd \
   $ETH/eth21_clkmeter.vhd $ETH/eth21_top.vhd]
