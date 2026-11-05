@@ -9,7 +9,7 @@ PASS_LINE="PQC L1 NTT PASS"
 run_mut () {
   name="$1"; file="$2"; from="$3"; to="$4"
   d=$(mktemp -d)
-  cp "$SRC_T" "$SRC_U" "$SRC_TB" ntt_k_vectors.txt ntt_d_vectors.txt "$d"/
+  cp "$SRC_T" "$SRC_U" "$SRC_TB" ntt_k_vectors.txt ntt_d_l1_vectors.txt "$d"/
   python3 - "$d/$file" "$from" "$to" << 'PYEOF'
 import sys
 p,a,b=sys.argv[1],sys.argv[2],sys.argv[3]

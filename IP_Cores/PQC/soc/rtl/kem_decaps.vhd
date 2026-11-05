@@ -60,14 +60,21 @@ entity kem_decaps is
     --   2 after v is decompressed
     --   3 after w = v - INTT(s o u)
     --   4 after m2 is written
-    G_STOP_AT  : integer := 0);
+    G_STOP_AT  : integer := 0;
+    -- Verification only. The implicit-rejection outcome (c /= c') must never
+    -- leave the core in production: exported, it is a plaintext-checking /
+    -- decryption-failure oracle (audit 2026-11). With the default false the
+    -- 'rejected' output is the constant '0' and no logic is generated for
+    -- it; production wrappers leave it open. Rejection is verified through
+    -- the KAT value of the output key (Kbar versus K').
+    G_DEBUG_REJ : boolean := false);
   port (
     clk        : in  std_logic;
     rst_n      : in  std_logic;
     start      : in  std_logic;
     done       : out std_logic;
     busy       : out std_logic;
-    rejected   : out std_logic;   -- observability only, not a control path
+    rejected   : out std_logic;   -- G_DEBUG_REJ only, constant '0' otherwise
 
     grant      : out integer range 0 to 4;
     slot_rd    : out integer range 0 to C_SLOTS - 1;
@@ -1313,10 +1320,15 @@ begin
           when S_SEL_RD =>
             if diff_acc = 0 then
               keep_msk <= (others => '1');
-              rejected <= '0';
             else
               keep_msk <= (others => '0');
-              rejected <= '1';
+            end if;
+            if G_DEBUG_REJ then
+              if diff_acc = 0 then
+                rejected <= '0';
+              else
+                rejected <= '1';
+              end if;
             end if;
             by_addr <= std_logic_vector(to_unsigned(G_ADDR_K2 + cnt, 13));
             fsm     <= S_SEL_RDW;

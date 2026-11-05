@@ -118,11 +118,20 @@ Versal PS (A72) ──M_AXI_FPD──► SmartConnect ──► axil_soc ──�
 | Offset | Name   | Access | Fields |
 |-------:|--------|--------|--------|
 | `0x00` | CTRL   | RW  | b0 `ALG` (0 = KEM, 1 = DSA) |
-| `0x04` | CMD    | W1P | b1:0 `OP` (00 KeyGen / 01 Encaps·Sign / 10 Decaps·Verify), b2 `START` |
-| `0x08` | STATUS | R   | b0 `BUSY`, b1 `DONE`, b2 `KEM_REJ`, b3 `DSA_RESULT`, b6:4 `REASON`, b7 `DONE_STICKY` |
+| `0x04` | CMD    | W1P | b1:0 `OP` (00 KeyGen / 01 Encaps·Sign / 10 Decaps·Verify), b2 `START`, b3 `ZEROIZE`, b4 `ERR_CLR` |
+| `0x08` | STATUS | R   | b0 `BUSY`, b1 `DONE`, b2 reserved (0), b3 `DSA_RESULT`, b6:4 `REASON`, b7 `DONE_STICKY`, b8 `ZBUSY`, b9 `ZDONE_STICKY`, b13:10 `ERR` (b10 sponge protocol, b11 command rejected, b12 Sign iteration bound) |
 | `0x0C` | ADDR   | RW  | b13:0 byte-window address into the core (auto-increments on DATA access) |
 | `0x10` | DATA   | RW  | b7:0 byte to/from the core's byte memory at `ADDR` |
 | `0x14` | SIGLEN | RW  | b15:0 signature length for DSA Verify |
+
+**Audit 2026-11 changes** (details in [AUDIT_FIXES.md](AUDIT_FIXES.md)):
+STATUS b2 used to be `KEM_REJ`, the Decaps implicit-rejection outcome; it was a
+plaintext-checking oracle and is no longer exported. The host window has no
+effect while the core is busy, and host reads outside the staging/output
+windows of the last operation return `0x00`. `ZEROIZE` wipes every memory and
+the sponge state (aborting a running operation); in addition every operation
+wipes its secret intermediates before `DONE`. Host scratch ("park") areas are
+KEM `5760..8191` and DSA `11520..16383`.
 
 **Host-port semantics**: the core's byte memory is shared between the algorithm
 datapath and the host window. Writing `ADDR` puts the peripheral into *host
@@ -176,8 +185,8 @@ wait:
 | ML-DSA | `sig` | 8192 | 3309 |
 
 The self-test firmware chains all six operations, moving intermediates inside
-the core (park/restore of `dk`, relocation of `sk`/`pk`/`sig`) exactly as the
-standalone core testbenches did.
+the core (park/restore of `dk` at 5760, relocation of `sk`/`sig`, park of
+`pk` at 11520) exactly as the standalone core testbenches did.
 
 ## 6. The shared Keccak sponge
 
@@ -412,9 +421,10 @@ IP_Cores/PQC/
 │   ├── sampler_*.vhd / codec_*.vhd            CBD/uniform samplers, byte codecs
 │   ├── kem_keygen/encaps/decaps.vhd           ML-KEM operations
 │   ├── dsa_keygen/sign/verify.vhd             ML-DSA operations
-│   ├── kem_core_sx.vhd / dsa_core_sx.vhd      per-algorithm cores
+│   ├── kem_core_sx.vhd / dsa_core_sx.vhd      per-algorithm cores (+ zeroizer)
 │   ├── pqc_core.vhd                           fused core (shared sponge)
 │   └── byte_mem.vhd / poly_mem.vhd            byte + polynomial memories
+├── legacy/                                    L1 ML-DSA sampler prototypes (tb only)
 ├── soc/
 │   ├── rtl/
 │   │   ├── pqc_mmio.vhd                        peripheral wrapper (0xD0000000)
@@ -424,7 +434,7 @@ IP_Cores/PQC/
 │   ├── fw/                                     self-test firmware + gen + ref model
 │   ├── vivado/                                 pqc_soc project (BD by Tcl)
 │   └── validate_selftest.sh / run_soc_validation.sh
-├── verif/                                      KAT vectors (kem/dsa_st_vectors.txt)
+├── verif/                                      KAT vectors, testbenches, run_regress.sh
 ├── doc/  pqc_soc_arch.svg
 └── README.md
 ```

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# --- audit 2026-11 guard -------------------------------------------------
+# This installer embeds PRE-AUDIT copies of the sources and would overwrite
+# the audited tree (see AUDIT_FIXES.md). It is kept for history only.
+if [ "${PQC_ALLOW_LEGACY_INSTALL:-0}" != "1" ]; then
+  echo "refusing to run: embeds pre-audit sources (set PQC_ALLOW_LEGACY_INSTALL=1)"
+  exit 1
+fi
+# -------------------------------------------------------------------------
 # =============================================================================
 # HERCOSSNUX PQC IP Core - Layer 3B step 7: ML-DSA-65 KeyGen
 #

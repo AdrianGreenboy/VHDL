@@ -103,6 +103,30 @@ begin
 
   eff_prow <= h_prow when h_sel = '1' else p_row;
 
+  -- Audit 2026-11: the hint decoder clears all six rows before it sets any
+  -- position. The k-th clear write must land in row k/256 at index k mod
+  -- 256. Before p_row was registered with the write strobe, the last clear
+  -- write of each row landed in the NEXT row (and row 5's in row 0), which
+  -- the per-position checks below could not see because every slot still
+  -- ended up cleared.
+  prow_mon : process (clk)
+    variable k : integer := 1536;
+  begin
+    if rising_edge(clk) then
+      if start = '1' and mode = "0111" then
+        k := 0;
+      elsif h_sel = '0' and p_we = '1' and k < 1536 then
+        assert p_row = k / 256 and
+               to_integer(unsigned(p_waddr)) = k mod 256
+          report "TB FAIL hint decode clear write " & integer'image(k) &
+                 " went to row " & integer'image(p_row) & " index " &
+                 integer'image(to_integer(unsigned(p_waddr)))
+          severity failure;
+        k := k + 1;
+      end if;
+    end if;
+  end process;
+
   process (clk)
     variable pa : integer;
   begin

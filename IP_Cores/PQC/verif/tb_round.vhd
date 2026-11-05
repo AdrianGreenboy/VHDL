@@ -18,6 +18,7 @@ use std.textio.all;
 
 library work;
 use work.pqc_round_pkg.all;
+use work.pqc_round_ref_pkg.all;
 
 entity tb_round is
   generic (

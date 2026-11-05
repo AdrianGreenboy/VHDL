@@ -26,6 +26,24 @@
 -- from "the loop happened to produce the right bytes". It is a deterministic
 -- function of the inputs, not a timing measurement.
 --
+-- ITERATION BOUND (audit 2026-11). The loop is bounded by G_MAX_ITER
+-- iterations (default 814). For ML-DSA-65 the expected number of iterations
+-- is about 5.1 (acceptance probability p ~ 0.196 per iteration), so the
+-- probability of needing more than N iterations is (1 - p)^N; N = 814 makes
+-- it smaller than 2^-256 (814 * log2(1/0.804) ~ 256.4), i.e. the bound never
+-- triggers for a well-formed key, and kappa stays below 814 * 5 = 4070,
+-- inside the 16-bit nonce space of ExpandMask. Reaching the bound means a
+-- malformed key or a fault: the sequencer aborts, raises err with done, and
+-- the core wipes the partial signature.
+--
+-- CONSTANT-TIME NORM CHECKS (audit 2026-11). The ||z||, ||r0|| and ||ct0||
+-- tests scan every coefficient and OR a reject flag; the decision is taken
+-- only after the full vector (z: after all L polynomials, r0: after all K,
+-- ct0 and the hint count: at S_HW_CHK). The run time therefore no longer
+-- reveals the index of the first out-of-bound coefficient. Which of the
+-- conditions caused a rejection remains observable, as in the reference
+-- design rationale (rejected candidates are discarded).
+--
 -- Byte map (14-bit space):
 --   sk       @    0  4032 bytes, caller supplied
 --   mu       @ 4096  64 bytes, caller supplied
@@ -53,6 +71,8 @@ entity dsa_sign is
     G_ADDR_CT : integer := 4224;
     G_ADDR_W1 : integer := 4352;
     G_ADDR_SG : integer := 8192;
+    -- rejection-loop bound, see the header
+    G_MAX_ITER : integer := 814;
     -- Halt after a named checkpoint, for inspection:
     --   0 run to completion
     --   1 after y[0] of the FIRST iteration
@@ -68,6 +88,9 @@ entity dsa_sign is
     busy       : out std_logic;
     -- final kappa, part of the end-of-run signature
     kappa_out  : out std_logic_vector(15 downto 0);
+    -- '1' together with done when the iteration bound aborted the run
+    -- (no valid signature was produced); cleared by the next start
+    err        : out std_logic;
 
     -- polynomial memory, two read ports and one write port
     slot_a     : out integer range 0 to C_SLOTS_D - 1;
@@ -155,7 +178,7 @@ architecture rtl of dsa_sign is
     S_VC_RD, S_VC_RDW, S_VC_TEST, S_VC_NEXT, S_VC_RNEXT,
     -- ct0, rejection 3, hints, rejection 4
     S_T_MUL, S_T_MULW, S_T_INTT, S_T_INTTW,
-    S_TC_RD, S_TC_RDW, S_TC_TEST, S_TC_NEXT, S_TC_RNEXT,
+    S_TC_RD, S_TC_RDW, S_TC_TEST, S_TC_NEXT,
     S_HH_RD, S_HH_RDW, S_HH_WR, S_HH_NEXT, S_HH_RNEXT,
     S_HW_CHK,
     -- signature assembly
@@ -173,8 +196,11 @@ architecture rtl of dsa_sign is
   signal ii    : integer range 0 to 31 := 0;   -- row index r, setup index
   signal jj    : integer range 0 to 15 := 0;   -- column index s
   signal cnt   : integer range 0 to 8191 := 0;
-  signal kappa : integer range 0 to 4095 := 0;
-  signal iter  : integer range 0 to 255 := 0;
+  signal kappa : integer range 0 to 65535 := 0;
+  signal iter  : integer range 0 to 65535 := 0;
+  -- OR of every failed norm test in the current iteration
+  signal rej_f : std_logic := '0';
+  signal err_r : std_logic := '0';
 
   signal acc_val : signed(C_CW - 1 downto 0) := (others => '0');
   -- Where S_CP_NEXT returns to. The c_hat copy is shared by the three
@@ -223,8 +249,12 @@ architecture rtl of dsa_sign is
 
 begin
 
+  assert G_MAX_ITER >= 1 and G_MAX_ITER * G_L <= 65535 - G_L
+    report "dsa_sign: G_MAX_ITER out of range" severity failure;
+
   busy      <= busy_r;
   done      <= done_r;
+  err       <= err_r;
   kappa_out <= std_logic_vector(to_unsigned(kappa, 16));
 
   process (clk)
@@ -266,6 +296,8 @@ begin
         iter      <= 0;
         hw_cnt    <= 0;
         cp_ret    <= 0;
+        rej_f     <= '0';
+        err_r     <= '0';
       else
         done_r    <= '0';
         p_we      <= '0';
@@ -286,6 +318,8 @@ begin
               busy_r <= '1';
               kappa  <= 0;
               iter   <= 0;
+              rej_f  <= '0';
+              err_r  <= '0';
               cnt    <= 0;
               ii     <= 0;
               jj     <= 0;
@@ -1164,10 +1198,9 @@ begin
           when S_ZC_TEST =>
             cv := signed(p_rdata);
             if absv(cv) >= to_signed(C_GAMMA1_DD - 196, C_CW) then
-              fsm <= S_REJECT;
-            else
-              fsm <= S_ZC_NEXT;
+              rej_f <= '1';
             end if;
+            fsm <= S_ZC_NEXT;
 
           when S_ZC_NEXT =>
             if cnt = 255 then
@@ -1183,7 +1216,11 @@ begin
               ii     <= 0;
               cnt    <= 0;
               cp_ret <= 1;
-              fsm    <= S_CP_RD;
+              if rej_f = '1' then
+                fsm <= S_REJECT;
+              else
+                fsm <= S_CP_RD;
+              end if;
             else
               jj  <= jj + 1;
               fsm <= S_ZC_RD;
@@ -1272,10 +1309,9 @@ begin
           when S_VC_TEST =>
             cv := resize(dec_lo(canon_d(signed(p_rdata))), C_CW);
             if absv(cv) >= to_signed(C_GAMMA2_DD - 196, C_CW) then
-              fsm <= S_REJECT;
-            else
-              fsm <= S_VC_NEXT;
+              rej_f <= '1';
             end if;
+            fsm <= S_VC_NEXT;
 
           when S_VC_NEXT =>
             if cnt = 255 then
@@ -1291,7 +1327,11 @@ begin
               ii     <= 0;
               cnt    <= 0;
               cp_ret <= 2;
-              fsm    <= S_CP_RD;
+              if rej_f = '1' then
+                fsm <= S_REJECT;
+              else
+                fsm <= S_CP_RD;
+              end if;
             else
               ii  <= ii + 1;
               fsm <= S_VC_RD;
@@ -1346,10 +1386,9 @@ begin
           when S_TC_TEST =>
             cv := signed(p_rdata);
             if absv(cv) >= to_signed(C_GAMMA2_DD, C_CW) then
-              fsm <= S_REJECT;
-            else
-              fsm <= S_TC_NEXT;
+              rej_f <= '1';
             end if;
+            fsm <= S_TC_NEXT;
 
           when S_TC_NEXT =>
             if cnt = 255 then
@@ -1359,9 +1398,6 @@ begin
               cnt <= cnt + 1;
               fsm <= S_TC_RD;
             end if;
-
-          when S_TC_RNEXT =>
-            fsm <= S_HH_RD;
 
           ----------------------------------------------------------------
           -- hints and rejection 4
@@ -1410,7 +1446,8 @@ begin
             end if;
 
           when S_HW_CHK =>
-            if hw_cnt > C_OMEGA_D then
+            -- the ct0 flag of every row is folded in here, after all rows
+            if hw_cnt > C_OMEGA_D or rej_f = '1' then
               fsm <= S_REJECT;
             else
               -- kappa advances on EVERY iteration, including the accepting
@@ -1484,16 +1521,23 @@ begin
 
           ----------------------------------------------------------------
           -- rejection: advance kappa and start over. The iteration count is
-          -- data-dependent by design, so there is no bound to enforce here.
+          -- data-dependent by design; G_MAX_ITER bounds it (see header).
           ----------------------------------------------------------------
           when S_REJECT =>
-            kappa  <= kappa + G_L;
-            iter   <= iter + 1;
+            rej_f  <= '0';
             hw_cnt <= 0;
             jj     <= 0;
             ii     <= 0;
             cnt    <= 0;
-            fsm    <= S_Y_MODE;
+            if iter >= G_MAX_ITER - 1 then
+              -- bound reached: abort without a signature
+              err_r <= '1';
+              fsm   <= S_DONE;
+            else
+              kappa <= kappa + G_L;
+              iter  <= iter + 1;
+              fsm   <= S_Y_MODE;
+            end if;
 
           when S_DONE =>
             busy_r <= '0';

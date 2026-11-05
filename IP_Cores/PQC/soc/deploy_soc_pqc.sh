@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# --- audit 2026-11 guard -------------------------------------------------
+# This installer embeds PRE-AUDIT copies of the sources and would overwrite
+# the audited tree (see AUDIT_FIXES.md). It is kept for history only.
+if [ "${PQC_ALLOW_LEGACY_INSTALL:-0}" != "1" ]; then
+  echo "refusing to run: embeds pre-audit sources (set PQC_ALLOW_LEGACY_INSTALL=1)"
+  exit 1
+fi
+# -------------------------------------------------------------------------
 # Despliega los archivos RTL NUEVOS del SoC PQC (Core 17 patron RISC-V).
 # Los cuatro archivos que envuelven el pqc_core (ya existente) como periferico
 # del RV32, siguiendo el molde de los 16 cores anteriores (soc_top_eth).

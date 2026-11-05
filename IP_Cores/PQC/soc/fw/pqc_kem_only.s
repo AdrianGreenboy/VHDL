@@ -146,7 +146,7 @@
     li   x15, 2400
     jal  x28, fold_region
     li   x14, 2048
-    li   x22, 5000
+    li   x22, 5760
     li   x15, 2400
     jal  x28, move_region
     li   x5, 0
@@ -227,7 +227,7 @@
     li   x22, 0
     li   x15, 1088
     jal  x28, move_region
-    li   x14, 5000
+    li   x14, 5760
     li   x22, 2048
     li   x15, 2400
     jal  x28, move_region
