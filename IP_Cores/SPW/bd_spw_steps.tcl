@@ -68,6 +68,8 @@ add_files -norecurse [list \
   $env(HOME)/spw_ip/spw_fifo.vhd \
   $env(HOME)/spw_ip/spw_tx.vhd \
   $env(HOME)/spw_ip/spw_rx.vhd \
+  $env(HOME)/spw_ip/spw_rx_dsr.vhd \
+  $env(HOME)/spw_ip/spw_tx_cdc.vhd \
   $env(HOME)/spw_ip/spw_link.vhd \
   $env(HOME)/spw_ip/spw_codec.vhd \
   $env(HOME)/spw_ip/spw_mmio.vhd \

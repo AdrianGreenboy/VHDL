@@ -2,7 +2,7 @@
 set -u
 (
   cd "$(dirname "$0")" || exit 1
-  RV=/home/adrian/vhdl_repo/IP_Cores/RV32i
+  RV=${RV:-/home/adrian/vhdl_repo/IP_Cores/RV32i}   # override: RV=/path ./run_soc.sh
 
   # ensamblar el programa (asm.py del core RV32i)
   python3 "$RV/asm.py" spw_test.s spw_test.mem || exit 1
@@ -20,7 +20,7 @@ set -u
 
   # IP SpaceWire + subsistema + TB
   ghdl -a --std=08 \
-    spw_fifo.vhd spw_tx.vhd spw_rx.vhd spw_link.vhd spw_codec.vhd spw_mmio.vhd \
+    spw_fifo.vhd spw_tx.vhd spw_tx_cdc.vhd spw_rx.vhd spw_rx_dsr.vhd spw_link.vhd spw_codec.vhd spw_mmio.vhd \
     mem_subsys_spw.vhd tb_spw_soc.vhd || exit 1
 
   ghdl -e --std=08 tb_spw_soc || exit 1

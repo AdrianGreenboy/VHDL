@@ -13,13 +13,18 @@
 --   0x08 CMD   W1P b0 TX_FLUSH  b1 RX_FLUSH (escritura pulsa la accion)
 --   0x0C TIME  W   b7:0 valor -> latch + tick_in (emite Time-Code en Run)
 --              R   b7:0 ultimo time_out recibido, b15:8 contador de ticks
+--                  ECSS-E-ST-50-12C 8.12 (audit 2026-11): a received time-code
+--                  is a TICK (sticky b20, tick counter) only when its 6-bit
+--                  time value = previous value + 1 (mod 64); otherwise the
+--                  time value is updated (b7:0) without a tick.
 --   0x10 STAT  R   vivos:    b2:0 estado del enlace, b3 RUN, b4 TX_SPACE,
 --                            b5 RX_AVAIL, b6 TX_EMPTY, b7 RX_FULL,
 --                            b14:8 rx_level
 --                  stickies: b16 PAR, b17 ESC, b18 DISC, b19 CRED, b20 TICK,
 --                            b21 LINKDOWN (salida de Run), b22 RUNOK (llegada
 --                            a Run), b23 TXOVF, b24 RXOVF
---              W   limpia stickies; los sets del mismo ciclo GANAN
+--              W   write-1-to-clear per sticky bit (audit 2026-11); los sets
+--                  del mismo ciclo GANAN
 --   0x14 TXD   W   b8:0 N-Char al FIFO TX (b8='1': b0='0' EOP, '1' EEP)
 --              R   b6:0 tx_level, b8 tx_full
 --   0x18 RXD   R   pop-on-read: b8:0 N-Char, b31 VALID
@@ -32,6 +37,8 @@ use ieee.numeric_std.all;
 
 entity spw_mmio is
   generic (
+    G_RX_MODE   : integer := 1;   -- 1 recovered-clock RX (default), 0 oversampling
+    G_TX_CLK    : integer := 0;   -- 0 TX on clk, 1 TX on tx_clk
     DISC_CYCLES : integer := 85;
     T64_CYCLES  : integer := 640;
     T128_CYCLES : integer := 1280
@@ -39,6 +46,7 @@ entity spw_mmio is
   port (
     clk   : in  std_logic;
     rst   : in  std_logic;                        -- sincrono, activo alto
+    tx_clk : in std_logic := '0';                 -- TX bit clock (G_TX_CLK = 1)
     -- bus dmem
     sel   : in  std_logic;                        -- req de 1 ciclo
     we    : in  std_logic;
@@ -56,7 +64,6 @@ end entity spw_mmio;
 
 architecture rtl of spw_mmio is
 
-  signal arstn : std_logic;
 
   -- registros
   signal ctrl_r  : std_logic_vector(4 downto 0)  := (others => '0');
@@ -105,7 +112,6 @@ architecture rtl of spw_mmio is
 
 begin
 
-  arstn <= not rst;
 
   -- ------------------------------------------------------------------ decode
   sel_ctrl  <= '1' when addr(7 downto 2) = "000000" else '0';
@@ -138,7 +144,7 @@ begin
   u_txf : entity work.spw_fifo
     generic map (LOG2_DEPTH => 6, WIDTH => 9)
     port map (
-      clk => clk, aresetn => arstn, clr => txf_clr,
+      clk => clk, rst => rst, clr => txf_clr,
       wr_en => txf_wr, wdata => wdata(8 downto 0),
       rd_en => tx_ack_i, rdata => tx_head,
       empty => txf_empty, full => txf_full, level => txf_level
@@ -147,7 +153,7 @@ begin
   u_rxf : entity work.spw_fifo
     generic map (LOG2_DEPTH => 6, WIDTH => 9)
     port map (
-      clk => clk, aresetn => arstn, clr => rxf_clr,
+      clk => clk, rst => rst, clr => rxf_clr,
       wr_en => rx_we_i, wdata => rx_data_i,
       rd_en => rxf_rd, rdata => rxf_head,
       empty => rxf_empty, full => rxf_full, level => rxf_level
@@ -156,12 +162,14 @@ begin
   -- ------------------------------------------------------------------ codec
   u_codec : entity work.spw_codec
     generic map (
+      G_RX_MODE   => G_RX_MODE,
+      G_TX_CLK    => G_TX_CLK,
       DISC_CYCLES => DISC_CYCLES,
       T64_CYCLES  => T64_CYCLES,
       T128_CYCLES => T128_CYCLES
     )
     port map (
-      clk => clk, arstn => arstn, en => en_i, div => div_r,
+      clk => clk, tx_clk => tx_clk, rst => rst, en => en_i, div => div_r,
       link_start => ctrl_r(1), link_autostart => ctrl_r(2),
       link_disable => ctrl_r(3),
       tick_in => tick_in_p, time_in => time_in_r,
@@ -198,20 +206,23 @@ begin
            (others => '0');
 
   -- ----------------------------------------------------------- IRQ por nivel
-  irq_p : process (clk, arstn)
+  irq_p : process (clk)
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       irq <= '0';
-    elsif rising_edge(clk) then
+    else  -- (synchronous reset, audit 2026-11)
       irq <= or (stat_v and irqen_r);
+    end if;
     end if;
   end process irq_p;
 
   -- ------------------------------------------------------ registros y stickies
-  regs : process (clk, arstn)
+  regs : process (clk)
     variable wr : boolean;
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       ctrl_r    <= (others => '0');
       div_r     <= x"0A";
       irqen_r   <= (others => '0');
@@ -223,7 +234,7 @@ begin
       txf_clr   <= '0';
       rxf_clr   <= '0';
       run_d     <= '0';
-    elsif rising_edge(clk) then
+    else  -- (synchronous reset, audit 2026-11)
       wr := (sel = '1') and (we = '1');
 
       -- pulsos por defecto
@@ -247,7 +258,7 @@ begin
         elsif sel_irqen = '1' then
           irqen_r <= wdata;
         elsif sel_stat = '1' then
-          stk <= (others => '0');         -- limpiar stickies...
+          stk <= stk and not wdata(24 downto 16);  -- W1C per bit...
         end if;
       end if;
 
@@ -257,14 +268,18 @@ begin
       if e_disc = '1' then stk(2) <= '1'; end if;
       if e_cred = '1' then stk(3) <= '1'; end if;
       if tick_out_i = '1' then
-        stk(4)    <= '1';
+        -- ECSS 8.12: always update the time value, tick only on +1 mod 64
         time_last <= time_out_i;
-        tick_cnt  <= tick_cnt + 1;
+        if unsigned(time_out_i(5 downto 0)) = unsigned(time_last(5 downto 0)) + 1 then
+          stk(4)   <= '1';
+          tick_cnt <= tick_cnt + 1;
+        end if;
       end if;
       if run_d = '1' and run_now = '0' then stk(5) <= '1'; end if;  -- LINKDOWN
       if run_d = '0' and run_now = '1' then stk(6) <= '1'; end if;  -- RUNOK
       if txf_wr = '1' and txf_full = '1' then stk(7) <= '1'; end if;
       if rx_we_i = '1' and rxf_full = '1' then stk(8) <= '1'; end if;
+    end if;
     end if;
   end process regs;
 

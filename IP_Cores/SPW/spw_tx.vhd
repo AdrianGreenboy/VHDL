@@ -28,9 +28,15 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity spw_tx is
+  generic (
+    -- minimum bits period in clk cycles. 2 when clocked by the system clock
+    -- (pre-audit behaviour); 1 when clocked by a dedicated tx_clk at the
+    -- bit rate (spw_tx_cdc, e.g. 400 MHz for 400 Mbit/s)
+    MIN_DIV : integer := 2
+  );
   port (
     clk         : in  std_logic;
-    arstn       : in  std_logic;
+    rst       : in  std_logic;  -- synchronous, active high
     en          : in  std_logic;
     div         : in  std_logic_vector(7 downto 0);
     txen        : in  std_logic;
@@ -73,7 +79,7 @@ begin
   dout <= dreg;
   sout <= sreg;
 
-  main : process (clk, arstn)
+  main : process (clk)
     variable v_f    : std_logic;
     variable v_pay  : std_logic_vector(7 downto 0);
     variable v_plen : integer range 2 to 8;
@@ -151,7 +157,8 @@ begin
     end procedure;
 
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       cnt      <= (others => '0');
       bits     <= (others => '0');
       blen     <= (others => '0');
@@ -165,14 +172,14 @@ begin
       fct_ack  <= '0';
       time_ack <= '0';
       d_ack    <= '0';
-    elsif rising_edge(clk) then
+    else  -- (synchronous reset, audit 2026-11)
       fct_ack  <= '0';
       time_ack <= '0';
       d_ack    <= '0';
 
       divv := unsigned(div);
-      if divv < 2 then
-        divv := to_unsigned(2, 8);
+      if divv < MIN_DIV then
+        divv := to_unsigned(MIN_DIV, 8);
       end if;
 
       if en = '0' or txen = '0' then
@@ -189,7 +196,7 @@ begin
           running <= '1';
           cnt     <= (others => '0');
         else
-          if cnt = divv - 1 then
+          if cnt >= divv - 1 then          -- '>=': div may shrink while running
             cnt <= (others => '0');
             -- emitir bits(bidx) con codificacion DS
             v_b := bits(to_integer(bidx));
@@ -208,6 +215,7 @@ begin
           end if;
         end if;
       end if;
+    end if;
     end if;
   end process main;
 

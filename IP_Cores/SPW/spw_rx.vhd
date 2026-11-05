@@ -16,6 +16,13 @@
 -- transicion en DISC_CYCLES ciclos (850 ns a 100 MHz) -> err_disc.
 -- Inactiva antes del primer NULL y en HALT (ECSS 8.5.3.7.2).
 --
+-- Simultaneous D and S transitions (both change between two samples; a DS
+-- line has exactly one transition per bit) are an encoding error: after the
+-- first NULL they raise err_par and HALT (audit 2026-11; reliable while a
+-- bit lasts >= 2 samples, i.e. <= 50 Mbit/s at 100 MHz). A simultaneous
+-- drop to D = S = 0 is a transmitter reset and is left to the disconnect
+-- detection (so a genuine simultaneous transition into 00 is not flagged).
+--
 -- Tras cualquier error el receptor queda en HALT hasta que rxen baje
 -- (la FSM del enlace pasa por ErrorReset y lo rearma).
 --
@@ -32,7 +39,7 @@ entity spw_rx is
   );
   port (
     clk        : in  std_logic;
-    arstn      : in  std_logic;
+    rst      : in  std_logic;  -- synchronous, active high
     en         : in  std_logic;
     rxen       : in  std_logic;
     din        : in  std_logic;
@@ -58,6 +65,7 @@ architecture rtl of spw_rx is
 
   signal d1, d2, s1, s2 : std_logic := '0';
   signal xprev          : std_logic := '0';
+  signal dp, sp         : std_logic := '0';
   signal st             : st_t      := HUNT;
   signal sh             : std_logic_vector(7 downto 0) := (others => '0');
   signal acc            : std_logic := '0';
@@ -73,13 +81,14 @@ begin
 
   first_null <= fnull;
 
-  main : process (clk, arstn)
+  main : process (clk)
     variable v_new  : boolean;
     variable v_b    : std_logic;
     variable v_sh   : std_logic_vector(7 downto 0);
     variable v_byte : std_logic_vector(7 downto 0);
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       d1 <= '0'; d2 <= '0'; s1 <= '0'; s2 <= '0';
       xprev  <= '0';
       st     <= HUNT;
@@ -96,11 +105,12 @@ begin
       rx_we    <= '0'; err_par <= '0'; err_esc <= '0'; err_disc <= '0';
       time_out <= (others => '0');
       rx_data  <= (others => '0');
-    elsif rising_edge(clk) then
+    else  -- (synchronous reset, audit 2026-11)
       -- sincronizador 2FF siempre en marcha (leccion: eventos llegan 2-3 clk tarde)
       d1 <= din; d2 <= d1;
       s1 <= sin; s2 <= s1;
       xprev <= d2 xor s2;
+      dp <= d2; sp <= s2;
 
       -- pulsos por defecto a cero
       got_null <= '0'; got_fct <= '0'; got_time <= '0';
@@ -133,7 +143,13 @@ begin
           dcnt <= 0;
         end if;
 
-        if v_new then
+        -- (a drop of both lines to 00 is the remote transmitter being reset,
+        --  ECSS 8.4.2: left to the disconnect detection, not an encoding error)
+        if fnull = '1' and st /= HALT and d2 /= dp and s2 /= sp
+           and not (d2 = '0' and s2 = '0') then
+          err_par <= '1';               -- simultaneous D/S transition
+          st      <= HALT;
+        elsif v_new then
           case st is
 
             when HUNT =>
@@ -230,6 +246,7 @@ begin
           end case;
         end if;
       end if;
+    end if;
     end if;
   end process main;
 
