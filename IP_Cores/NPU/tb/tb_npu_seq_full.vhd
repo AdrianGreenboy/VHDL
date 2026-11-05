@@ -246,6 +246,8 @@ begin
               read(ln, s2, ok);
               expv := signed(hex2slv(s2));
               p2_addr <= to_unsigned(ch*16 + y*4 + x, 8);
+              -- audit 2026-11: lectura sincrona (dato al ciclo siguiente)
+              wait until rising_edge(clk);
               wait for CP/4;
               if p2_data /= expv then
                 e_p2 := e_p2 + 1;

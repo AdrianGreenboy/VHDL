@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 python3 gen_l3_conv1.py oracle/oracle_npu.py model/npu_weights.hex model/npu_golden.txt vec 8
 rm -rf build_seq && mkdir -p build_seq
 ghdl -a --std=08 --workdir=build_seq \
-  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_seq_conv1.vhd tb/tb_npu_seq_conv1.vhd 2>&1 | grep -v "warning" || true
+  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_sram.vhd rtl/npu_seq_conv1.vhd tb/tb_npu_seq_conv1.vhd 2>&1 | grep -v "warning" || true
 
 fail=0
 out=$(ghdl -r --std=08 --workdir=build_seq tb_npu_seq_conv1 2>&1)

@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 python3 gen_l3_full.py oracle/oracle_npu.py model/npu_weights.hex model/npu_golden.txt vec 8
 rm -rf build_full && mkdir -p build_full
 ghdl -a --std=08 --workdir=build_full \
-  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_seq_full.vhd \
+  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_sram.vhd rtl/npu_seq_full.vhd \
   tb/tb_npu_seq_full.vhd 2>&1 | grep -v "warning" || true
 
 fail=0

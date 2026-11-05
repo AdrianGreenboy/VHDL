@@ -173,6 +173,8 @@ begin
               read(ln, s2, ok);
               expv := signed(hex2slv(s2));
               out_addr <= to_unsigned(ch*64 + y*8 + x, 9);
+              -- audit 2026-11: lectura sincrona (dato al ciclo siguiente)
+              wait until rising_edge(clk);
               wait for CP/4;
               if out_data /= expv then
                 nerr := nerr + 1;

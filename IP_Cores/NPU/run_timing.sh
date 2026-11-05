@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 echo "[1/3] analizando con cache limpia..."
 rm -rf build_tim && mkdir -p build_tim
 ghdl -a --std=08 --workdir=build_tim \
-  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_seq_conv1.vhd \
+  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_sram.vhd rtl/npu_seq_conv1.vhd \
   rtl/npu_seq_full.vhd rtl/npu_top.vhd \
   tb/tb_npu_seq_full.vhd tb/tb_npu_top.vhd 2>&1 | grep -v "warning" || true
 

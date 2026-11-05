@@ -13,7 +13,7 @@ python3 gen_l3_full.py  oracle/oracle_npu.py model/npu_weights.hex model/npu_gol
 rm -rf build_bram && mkdir -p build_bram
 echo "[2/5] analizando..."
 ghdl -a --std=08 --workdir=build_bram \
-  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_seq_conv1.vhd \
+  rtl/npu_pkg.vhd rtl/npu_array.vhd rtl/npu_sram.vhd rtl/npu_seq_conv1.vhd \
   rtl/npu_seq_full.vhd rtl/npu_top.vhd \
   tb/tb_npu_seq_conv1.vhd tb/tb_npu_seq_full.vhd tb/tb_npu_top.vhd 2>&1 | grep -v "warning" || true
 

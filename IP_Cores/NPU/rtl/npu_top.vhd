@@ -94,7 +94,7 @@ architecture rtl of npu_top is
   -- FSM del puente
   type t_state is (T_IDLE, T_C1, T_WAIT1, T_COPY, T_S2, T_WAIT2, T_DONE);
   signal state : t_state := T_IDLE;
-  signal cp_i  : natural range 0 to 512 := 0;
+  signal cp_i  : natural range 0 to 513 := 0;
 
   signal busy_r : std_logic := '0';
   signal done_r : std_logic := '0';
@@ -169,19 +169,22 @@ begin
 
           when T_COPY =>
             -- Copia de los 512 bytes de pool1 a la entrada de la etapa 2.
-            -- s1_oaddr ya apunta a cp_i (asignacion concurrente), por lo que
-            -- s1_odata es valido en este ciclo.
-            if cp_i < 512 then
-              s2_in_we   <= '1';
+            -- Audit 2026-11: la memoria de pool1 tiene lectura SINCRONA:
+            -- s1_oaddr apunta a cp_i y el dato llega el ciclo siguiente, asi
+            -- que en el ciclo cp_i se escribe el byte cp_i-1.
+            if cp_i <= 512 then
+              if cp_i >= 1 then
+                s2_in_we <= '1';
+              end if;
               if G_MUT = 2 then
                 -- MUT 2: la copia omite el ultimo canal de pool1
-                if cp_i < 448 then
-                  s2_in_addr <= to_unsigned(cp_i, 9);
+                if cp_i - 1 < 448 then
+                  s2_in_addr <= to_unsigned((cp_i - 1) mod 512, 9);
                 else
                   s2_in_addr <= to_unsigned(0, 9);
                 end if;
               else
-                s2_in_addr <= to_unsigned(cp_i, 9);
+                s2_in_addr <= to_unsigned((cp_i - 1) mod 512, 9);
               end if;
               if G_MUT = 1 then
                 -- MUT 1: la copia se desplaza un byte

@@ -12,6 +12,12 @@
 -- El demultiplexor traduce el flujo plano de bytes del DMA a los puertos
 -- we/addr/data del nucleo. Los bias son int32: se acumulan 4 bytes en little
 -- endian y se escriben cuando llega el ultimo.
+--
+-- Audit 2026-11: STATUS.error solo recoge el error de las peticiones DMA de
+-- la operacion en curso (se muestrea dma_err al terminar cada peticion; el
+-- DMA lo limpia al arrancar cada una). Antes se hacia OR con dma_err en
+-- cada ciclo y un error antiguo reaparecia tras el clear de T_IDLE.
+-- Todos los registros del demux y de la FSM tienen reset.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -239,7 +245,16 @@ begin
       img_we <= '0'; w1_we <= '0'; b1_we <= '0';
       w2_we  <= '0'; b2_we <= '0'; w3_we <= '0'; b3_we <= '0';
 
-      if dma_out_we = '1' then
+      if rst_n = '0' then
+        bacc <= (others => '0');
+        img_addr <= (others => '0'); img_data <= (others => '0');
+        w1_addr <= (others => '0'); w1_data <= (others => '0');
+        b1_addr <= (others => '0'); b1_data <= (others => '0');
+        w2_addr <= (others => '0'); w2_data <= (others => '0');
+        b2_addr <= (others => '0'); b2_data <= (others => '0');
+        w3_addr <= (others => '0'); w3_data <= (others => '0');
+        b3_addr <= (others => '0'); b3_data <= (others => '0');
+      elsif dma_out_we = '1' then
         idx  := dma_out_idx;
         bsel := idx mod 4;
 
@@ -308,12 +323,16 @@ begin
         state <= T_IDLE; busy_r <= '0'; done_r <= '0'; error_r <= '0';
         dma_rd_start <= '0'; dma_wr_start <= '0'; core_start <= '0';
         dest <= D_NONE;
+        dma_rd_addr <= (others => '0'); dma_rd_bytes <= 0;
+        dma_wr_addr <= (others => '0'); dma_wr_bytes <= 0;
+        res_clase <= (others => '0');
       else
         dma_rd_start <= '0';
         dma_wr_start <= '0';
         core_start   <= '0';
 
-        if dma_err = '1' then
+        -- error de la peticion que acaba de terminar (no un error viejo)
+        if (dma_rd_done = '1' or dma_wr_done = '1') and dma_err = '1' then
           error_r <= '1';
         end if;
 
