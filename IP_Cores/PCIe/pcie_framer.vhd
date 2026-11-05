@@ -17,6 +17,13 @@
 -- Flags de salida (hacia scrambler): is_k, is_com, is_skp, bypass.
 -- 'bypass' se usara en pasos posteriores para TS1/TS2; aqui siempre '0' salvo
 -- que el pilotante lo pida por tx_bypass.
+--
+-- Audit 2026-11: STORE-AND-FORWARD. The payload is first written into an
+-- internal packet buffer (pay_ready='1' combinationally while filling; a byte
+-- transfers on a clock edge with pay_valid='1' and pay_ready='1'). STP/SDP is
+-- emitted only when the whole packet is buffered, so a payload underrun can no
+-- longer insert logical-idle symbols inside an open TLP. A SKP OS that falls
+-- due during a packet is held pending and inserted right after it.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -26,7 +33,8 @@ use work.pcie_8b10b_pkg.all;
 
 entity pcie_framer is
   generic (
-    SKP_INTERVAL : integer := 1180   -- simbolos entre SKP OS (spec: <=1538)
+    SKP_INTERVAL : integer := 1180;  -- simbolos entre SKP OS (spec: <=1538)
+    MAX_PKT      : integer := 256    -- packet buffer (bytes)
   );
   port (
     clk        : in  std_logic;
@@ -56,49 +64,53 @@ entity pcie_framer is
 end entity;
 
 architecture rtl of pcie_framer is
-  type st_t is (S_IDLE, S_STP, S_PAY, S_END, S_SKP0, S_SKP1, S_SKP2, S_SKP3);
+  type st_t is (S_IDLE, S_PAY, S_END, S_SKP1, S_SKP2, S_SKP3);
   signal state   : st_t := S_IDLE;
   signal skp_cnt : integer range 0 to 65535 := 0;
-  signal end_edb : std_logic := '0';
-  signal pend    : std_logic := '0';   -- paquete pendiente latcheado
-  signal pend_dllp : std_logic := '0';
+  signal skp_pend: std_logic := '0';
+
+  type buf_t is array (0 to MAX_PKT-1) of work.pcie_phy_pkg.byte_t;
+  signal pbuf    : buf_t := (others => (others => '0'));
+  signal filling : std_logic := '0';   -- a packet is being written
+  signal ready_p : std_logic := '0';   -- a complete packet is buffered
+  signal wcnt    : integer range 0 to MAX_PKT := 0;
+  signal plen    : integer range 0 to MAX_PKT := 0;
+  signal rptr    : integer range 0 to MAX_PKT := 0;
+  signal p_dllp  : std_logic := '0';
+  signal p_abort : std_logic := '0';
+  signal prdy    : std_logic;
 begin
+  prdy      <= '1' when filling = '1' and wcnt < MAX_PKT else '0';
+  pay_ready <= prdy;
 
   process(clk)
   begin
     if rising_edge(clk) then
       if rst = '1' then
-        state     <= S_IDLE;
-        skp_cnt   <= 0;
-        end_edb   <= '0';
-        pend      <= '0';
-        pend_dllp <= '0';
-        sym       <= (others => '0');
-        sym_k     <= '0';
-        sym_com   <= '0';
-        sym_skp   <= '0';
-        sym_bypass<= '0';
-        pay_ready <= '0';
-        busy      <= '0';
+        state <= S_IDLE; skp_cnt <= 0; skp_pend <= '0';
+        filling <= '0'; ready_p <= '0'; wcnt <= 0; plen <= 0; rptr <= 0;
+        p_dllp <= '0'; p_abort <= '0';
+        sym <= (others => '0'); sym_k <= '0'; sym_com <= '0'; sym_skp <= '0';
+        sym_bypass <= '0'; busy <= '0';
       else
-        -- latch de peticion aun estando ocupado (se sirve al terminar)
-        if pkt_start = '1' then
-          pend      <= '1';
-          pend_dllp <= pkt_is_dllp;
+        -- ---------------- store ----------------
+        if pkt_start = '1' and filling = '0' and ready_p = '0' and state /= S_PAY
+           and state /= S_END then
+          filling <= '1'; wcnt <= 0; p_dllp <= pkt_is_dllp;
+        end if;
+        if pay_valid = '1' and prdy = '1' then
+          pbuf(wcnt) <= pay_data; wcnt <= wcnt + 1;
+          if pay_last = '1' then
+            filling <= '0'; ready_p <= '1'; plen <= wcnt + 1; p_abort <= pay_abort;
+          end if;
         end if;
 
+        -- ---------------- forward ----------------
         if en = '1' then
-          -- defaults por ciclo
-          sym       <= x"00";
-          sym_k     <= '0';
-          sym_com   <= '0';
-          sym_skp   <= '0';
-          sym_bypass<= tx_bypass;
-          pay_ready <= '0';
-
-          -- contador de SKP (avanza siempre que se emite un simbolo)
+          sym <= x"00"; sym_k <= '0'; sym_com <= '0'; sym_skp <= '0';
+          sym_bypass <= tx_bypass;
           if skp_cnt = SKP_INTERVAL - 1 then
-            skp_cnt <= 0;
+            skp_cnt <= 0; skp_pend <= '1';
           else
             skp_cnt <= skp_cnt + 1;
           end if;
@@ -106,62 +118,38 @@ begin
           case state is
             when S_IDLE =>
               busy <= '0';
-              if skp_cnt = SKP_INTERVAL - 1 then
-                -- prioriza SKP OS en la frontera
+              if skp_pend = '1' or skp_cnt = SKP_INTERVAL - 1 then
+                skp_pend <= '0';
                 sym <= K_COM; sym_k <= '1'; sym_com <= '1';
-                state <= S_SKP1;
-                busy  <= '1';
-              elsif pend = '1' then
-                pend <= '0';
-                busy <= '1';
-                if pend_dllp = '1' then
-                  sym <= K_SDP;
-                else
-                  sym <= K_STP;
-                end if;
+                state <= S_SKP1; busy <= '1';
+              elsif ready_p = '1' then
+                busy <= '1'; rptr <= 0;
+                if p_dllp = '1' then sym <= K_SDP; else sym <= K_STP; end if;
                 sym_k <= '1';
                 state <= S_PAY;
               else
-                -- logical idle: D00.0 (se scramblea a algo no nulo)
-                sym <= x"00"; sym_k <= '0';
+                sym <= x"00"; sym_k <= '0';     -- logical idle (between packets only)
               end if;
 
             when S_PAY =>
               busy <= '1';
-              if pay_valid = '1' then
-                sym       <= pay_data;
-                sym_k     <= '0';
-                pay_ready <= '1';
-                if pay_last = '1' then
-                  end_edb <= pay_abort;
-                  state   <= S_END;
-                end if;
-              else
-                -- underrun: mantener idle-data sin cerrar (store&forward evita
-                -- esto en el uso normal; se deja robusto)
-                sym <= x"00"; sym_k <= '0';
-              end if;
+              sym <= pbuf(rptr); sym_k <= '0';
+              if rptr = plen - 1 then state <= S_END; else rptr <= rptr + 1; end if;
 
             when S_END =>
               busy <= '1';
-              if end_edb = '1' then
-                sym <= K_EDB;
-              else
-                sym <= K_END;
-              end if;
+              if p_abort = '1' then sym <= K_EDB; else sym <= K_END; end if;
               sym_k <= '1';
+              ready_p <= '0';
               state <= S_IDLE;
 
-            -- SKP OS: COM ya emitido en la transicion; faltan 3 SKP
+            -- SKP OS: COM already emitted; 3 SKP follow
             when S_SKP1 =>
               sym <= K_SKP; sym_k <= '1'; sym_skp <= '1'; state <= S_SKP2;
             when S_SKP2 =>
               sym <= K_SKP; sym_k <= '1'; sym_skp <= '1'; state <= S_SKP3;
             when S_SKP3 =>
               sym <= K_SKP; sym_k <= '1'; sym_skp <= '1'; state <= S_IDLE;
-
-            when others =>
-              state <= S_IDLE;
           end case;
         end if;
       end if;
