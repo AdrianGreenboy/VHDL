@@ -75,7 +75,6 @@ IP_Cores/<CORE>/
 | Core | What it is | Status |
 |---|---|---|
 | **[RV32i](IP_Cores/RV32i/)** | A complete **RV32IM SoC**: 5-stage pipelined RISC-V CPU (hardware multiply/divide, CSRs, CLINT), local RAM, burst **DMA engine** with AXI4 master to DDR, MMIO bus for peripherals, plus its own Python assembler (`asm.py`) and ISS used as the golden oracle by every other core. This is the heart that drives all the bring-ups. | **SILICON PASS** — GEMV from LPDDR4 up to 64×64, 100 MHz, WNS +3.2 ns |
-| **[RV32IMA](IP_Cores/RV32IMA/)** | A **Linux-capable RV32IMA** soft core: the RV32i heart extended with the **atomic (A) extension** (`rv32_amo_unit` LR/SC/AMO sequencer), machine **and** user privilege levels, and the traps, CSRs and timer plumbing a kernel needs. It **boots mainline Linux 6.1.14 (nommu)** to an interactive shell on the Versal: the PS writes the kernel image into a reserved DDR region, releases the core, and the core runs free through its own NoC port, mounts a root filesystem and reaches `Run /init as init process`. The whole chain — RTL, synthesis, silicon — is closed with bit-identical signatures, including a full **46 M-instruction boot** in lockstep with the Python ISS. The step from bare-metal to a real operating system. | **SILICON PASS** — boots Linux 6.1.14 to a shell, ~5.2 M instr/s, WNS +1.67 ns / WHS +0.040 ns |
 | **[SPW](IP_Cores/SPW/)** | **SpaceWire** link controller (ECSS-E-ST-50-12C): Data-Strobe codec, full ECSS link FSM, credit-based flow control, Time-Codes, 9-bit N-Char FIFOs, internal loopback self-test. The spacecraft onboard network, memory-mapped for an RV32. | **SILICON PASS** — 10/20/25/50 Mbit/s, WNS +2.740 ns |
 | **[PTP](IP_Cores/PTP/)** | **PTP / IEEE 802.1AS** (gPTP) time-sync endpoint: 80-bit PTP clock with PI servo, hardware SFD timestamping, peer-delay measurement in hardware, master/slave Sync loop, and its **own MII Ethernet MAC** with 1-step timestamp override. The time plane of TSN. | **SILICON PASS** — mpd 40 ns, offset 0, WNS +1.171 ns |
 | **[ADCS](IP_Cores/ADCS/)** | **ADCS MPC accelerator**: a projected-gradient QP solver for spacecraft attitude control — dense `70×70` float32 GEMV + gradient + clamp, iterated in hardware, on an **8-lane fused multiply-add datapath** bit-exact to the AMD FPO. Two AXI masters to DDR, an on-chip sequencer (`LOAD_H → solve → STORE_U`), governed by the RV32. The compute plane of an ADCS. | **SILICON PASS** — signature `0x0C4CCCD2` bit-identical sim↔silicon, WNS +2.844 ns |
@@ -195,6 +194,6 @@ reflects the v1.1 re-validation pass.
 | ETH   | +3.133   | Boot OK        | Boot-level; own bring-up pending |
 | DSP   | +0.867   | Boot OK        | Boot-level (no bring-up recipe yet) |
 
-Long-cycle cores (ADC, RV32IMA, PTP, TSN, MIPI, PCS, PQC, ECC): v1.1
+Long-cycle cores (ADC, PTP, TSN, MIPI, PCS, PQC, ECC): v1.1
 re-validation deferred to the next campaign. See `rv32i/README.md` for the
 bug description, the fix and the family-wide lessons learned.
