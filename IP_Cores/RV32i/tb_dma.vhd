@@ -14,6 +14,10 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_dma is
+  generic (
+    SYNC    : boolean := false;   -- local RAM with 1-cycle synchronous read
+    W_STALL : boolean := false    -- DDR model throttles WREADY
+  );
 end entity tb_dma;
 
 architecture sim of tb_dma is
@@ -27,6 +31,7 @@ architecture sim of tb_dma is
   signal src, dst : std_logic_vector(31 downto 0) := (others => '0');
   signal len      : std_logic_vector(8 downto 0) := (others => '0');
   signal dir, start, busy : std_logic := '0';
+  signal dma_err : std_logic;
 
   -- DMA <-> RAM local
   signal loc_addr  : std_logic_vector(31 downto 0);
@@ -69,7 +74,7 @@ begin
 
   -- RAM local: puerto axi = DMA (escritura), puerto cpu = testbench (lectura)
   u_local : entity work.dp_ram
-    generic map (DEPTH => 256, INIT_FILE => "")
+    generic map (DEPTH => 256, INIT_FILE => "", SYNC_READ => SYNC)
     port map (
       clk => clk,
       cpu_addr => tb_addr, cpu_wdata => ZERO_WORD, cpu_wstrb => "0000",
@@ -79,10 +84,11 @@ begin
     );
 
   u_dma : entity work.dma_burst
-    generic map (ADDR_W => AXI_AW)
+    generic map (ADDR_W => AXI_AW, SYNC_LOC => SYNC)
     port map (
       clk => clk, aresetn => aresetn, ddr_base => (others => '0'),
       src => src, dst => dst, len => len, dir => dir, start => start, busy => busy,
+      err => dma_err,
       loc_addr => loc_addr, loc_wdata => loc_wdata, loc_we => loc_we, loc_rdata => loc_rdata,
       m_axi_awaddr => aw_addr, m_axi_awlen => aw_len, m_axi_awsize => aw_size,
       m_axi_awburst => aw_burst, m_axi_awvalid => aw_valid, m_axi_awready => aw_ready,
@@ -96,7 +102,8 @@ begin
     );
 
   u_ddr : entity work.axi_ddr_sim
-    generic map (ADDR_W => AXI_AW, DEPTH => 1024, RD_LAT => 3, INIT_FILE => "ddr_init.mem")
+    generic map (ADDR_W => AXI_AW, DEPTH => 1024, RD_LAT => 3, INIT_FILE => "ddr_init.mem",
+                 ERR_WORD => 100, W_STALL => W_STALL)
     port map (
       clk => clk, aresetn => aresetn,
       s_axi_awaddr => aw_addr, s_axi_awlen => aw_len, s_axi_awvalid => aw_valid, s_axi_awready => aw_ready,
@@ -127,6 +134,7 @@ begin
     procedure check_loc (constant w : integer; constant exp : integer) is
     begin
       tb_addr <= std_logic_vector(to_unsigned(w*4, 32));
+      if SYNC then wait until rising_edge(clk); end if;   -- registered read port
       wait for 1 ns;
       if to_integer(unsigned(tb_rdata)) = exp then
         report "PASS local[" & integer'image(w) & "] = " & integer'image(exp) severity note;
@@ -167,6 +175,23 @@ begin
     dma_go(0, 16*4, 8, '1');   -- src=local word 0, dst=DDR byte 64 (word 16)
     check_ddr(16, 10); check_ddr(17, 20); check_ddr(18, 30); check_ddr(19, 40);
     check_ddr(20, 50); check_ddr(21, 60); check_ddr(22, 70); check_ddr(23, 80);
+    if dma_err = '0' then report "PASS no DMA error on clean transfers" severity note;
+    else report "FAIL DMA error flag set on clean transfers" severity error; errors := errors + 1; end if;
+
+    -- (3) audit-2026-11: odd-length local->DDR (exercises the look-ahead at
+    -- the burst end) local[1..5] -> DDR[40..44]
+    report "--- DMA escritura local->DDR (5 words, unaligned start) ---";
+    dma_go(4, 40*4, 5, '1');
+    check_ddr(40, 20); check_ddr(41, 30); check_ddr(42, 40); check_ddr(43, 50); check_ddr(44, 60);
+
+    -- (4) audit-2026-11: SLVERR on a beat (DDR word 100) -> sticky err
+    report "--- DMA con SLVERR (DDR word 100) ---";
+    dma_go(96*4, 32*4, 8, '0');
+    if dma_err = '1' then report "PASS DMA err set by SLVERR" severity note;
+    else report "FAIL DMA err not set by SLVERR" severity error; errors := errors + 1; end if;
+    dma_go(0, 48*4, 2, '0');          -- clean transfer: err cleared on start
+    if dma_err = '0' then report "PASS DMA err cleared by next start" severity note;
+    else report "FAIL DMA err not cleared" severity error; errors := errors + 1; end if;
 
     report "-----------------------------------------";
     if errors = 0 then

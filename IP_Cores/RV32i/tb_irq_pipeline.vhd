@@ -11,6 +11,9 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_irq_pipeline is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_irq_pipeline;
 
 architecture sim of tb_irq_pipeline is
@@ -32,6 +35,7 @@ begin
   clk <= not clk after TCK/2;
 
   u_cpu : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
       dmem_addr => dmem_addr, dmem_wdata => dmem_wdata,
@@ -40,8 +44,8 @@ begin
       dbg_reg_addr => dbg_addr, dbg_reg_data => dbg_data, dbg_pc => dbg_pc);
 
   u_imem : entity work.imem
-    generic map (DEPTH => 256, INIT_FILE => "program_irq.mem")
-    port map (addr => imem_addr, instr => imem_instr);
+    generic map (DEPTH => 256, INIT_FILE => "program_irq.mem", SYNC_READ => SYNC_MEM)
+    port map (clk => clk, addr => imem_addr, instr => imem_instr);
 
   sel_clint  <= '1' when dmem_addr(31 downto 16) = x"0200" else '0';
   clint_we   <= '1' when (sel_clint = '1' and dmem_wstrb /= "0000") else '0';
@@ -49,7 +53,7 @@ begin
   dmem_rdata <= clint_rdata when sel_clint = '1' else ram_rdata;
 
   u_dmem : entity work.dmem
-    generic map (DEPTH => 256)
+    generic map (DEPTH => 256, SYNC_READ => SYNC_MEM)
     port map (clk => clk, addr => dmem_addr, wdata => dmem_wdata,
               wstrb => ram_wstrb, rdata => ram_rdata);
 

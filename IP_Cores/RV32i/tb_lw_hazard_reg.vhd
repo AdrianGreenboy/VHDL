@@ -22,6 +22,12 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_lw_hazard_reg is
+  generic (
+    -- audit-2026-11: also run with 1-cycle synchronous IMEM/DMEM. The DMEM
+    -- model below stays combinational (MMIO-like, address held by the core);
+    -- with DMEM_SYNC the core adds its address cycle in front of it.
+    SYNC_MEM : boolean := false
+  );
 end entity tb_lw_hazard_reg;
 
 architecture sim of tb_lw_hazard_reg is
@@ -29,6 +35,9 @@ architecture sim of tb_lw_hazard_reg is
   signal rst        : std_logic := '1';
   signal imem_addr  : word_t;
   signal imem_instr : word_t;
+  signal imem_comb  : word_t;
+  signal dbg_addr   : reg_addr_t := (others => '0');
+  signal dbg_data   : word_t;
   signal dmem_addr  : word_t;
   signal dmem_wdata : word_t;
   signal dmem_wstrb : std_logic_vector(3 downto 0);
@@ -49,24 +58,34 @@ begin
   clk <= not clk after PERIOD/2 when not sim_done else '0';
 
   dut : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (
       clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
       dmem_addr => dmem_addr, dmem_wdata => dmem_wdata,
       dmem_wstrb => dmem_wstrb, dmem_rdata => dmem_rdata,
-      dmem_req => dmem_req, dmem_ready => dmem_ready
+      dmem_req => dmem_req, dmem_ready => dmem_ready,
+      dbg_reg_addr => dbg_addr, dbg_reg_data => dbg_data
     );
+
+  -- IMEM: combinational ROM, or registered (synchronous SRAM model)
+  g_ia : if not SYNC_MEM generate
+    imem_instr <= imem_comb;
+  end generate;
+  g_is : if SYNC_MEM generate
+    imem_instr <= imem_comb when rising_edge(clk);
+  end generate;
 
   process(imem_addr)
     variable idx : natural;
   begin
     idx := to_integer(unsigned(imem_addr(7 downto 2)));
     case idx is
-      when 0      => imem_instr <= x"D0000537";
-      when 1      => imem_instr <= x"00052583";
-      when 2      => imem_instr <= x"00452603";
-      when 3      => imem_instr <= x"00852683";
-      when others => imem_instr <= x"00000013";
+      when 0      => imem_comb <= x"D0000537";
+      when 1      => imem_comb <= x"00052583";
+      when 2      => imem_comb <= x"00452603";
+      when 3      => imem_comb <= x"00852683";
+      when others => imem_comb <= x"00000013";
     end case;
   end process;
 
@@ -127,6 +146,13 @@ begin
       report "REG_HAZARD: lw#2 (0xD0000004) NO aparecio con base intacta (regresion del hazard lw-lw)" severity failure;
     assert seen_d8
       report "REG_FALLO: lw#3 (0xD0000008) ausente en el bus" severity failure;
+    -- audit-2026-11: the loaded VALUES must also be right (x11/x12/x13)
+    dbg_addr <= "01011"; wait for 1 ns;
+    assert dbg_data = x"AAAA0000" report "REG_FALLO: a1 /= AAAA0000" severity failure;
+    dbg_addr <= "01100"; wait for 1 ns;
+    assert dbg_data = x"BBBB0004" report "REG_FALLO: a2 /= BBBB0004" severity failure;
+    dbg_addr <= "01101"; wait for 1 ns;
+    assert dbg_data = x"CCCC0008" report "REG_FALLO: a3 /= CCCC0008" severity failure;
 
     report "TB_LW_HAZARD_REG_PASS: las tres lecturas con base intacta; hazard ausente" severity note;
     sim_done <= true;

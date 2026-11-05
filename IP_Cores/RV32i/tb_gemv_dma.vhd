@@ -9,6 +9,9 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_gemv_dma is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_gemv_dma;
 
 architecture sim of tb_gemv_dma is
@@ -51,7 +54,7 @@ begin
   aresetn <= not rst;
 
   u_imem : entity work.dp_ram
-    generic map (DEPTH => 256, INIT_FILE => "gemv_dma_hw.mem")
+    generic map (DEPTH => 256, INIT_FILE => "gemv_dma_hw.mem", SYNC_READ => SYNC_MEM)
     port map (
       clk => clk,
       cpu_addr => imem_addr, cpu_wdata => ZERO_WORD, cpu_wstrb => "0000",
@@ -61,6 +64,7 @@ begin
     );
 
   u_cpu : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (
       clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
@@ -72,7 +76,7 @@ begin
     );
 
   u_mem : entity work.mem_subsys_dma
-    generic map (DEPTH => 256, INIT_FILE => "", ADDR_W => AXI_AW)
+    generic map (DEPTH => 256, INIT_FILE => "", ADDR_W => AXI_AW, SYNC_READ => SYNC_MEM)
     port map (
       clk => clk, aresetn => aresetn, ddr_base => (others => '0'),
       dmem_addr => dmem_addr, dmem_wdata => dmem_wdata, dmem_wstrb => dmem_wstrb,

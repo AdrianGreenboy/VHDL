@@ -10,6 +10,13 @@
 --
 --  Memorias externas al core (imem/dmem) se instancian en el nivel superior de
 --  simulacion o de sintesis. Puerto de depuracion para inspeccionar registros.
+--
+--  audit-2026-11: synchronous exceptions (illegal instruction incl. unknown
+--  CSRs, load/store address misaligned, misaligned jump target) trap through
+--  the existing path with mcause/mtval; the faulting instruction writes
+--  nothing. This single-cycle core needs ASYNCHRONOUS memories by
+--  construction (FPGA/LUTRAM only); the ASIC-capable core is cpu_pipeline
+--  with IMEM_SYNC/DMEM_SYNC.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -84,6 +91,13 @@ architecture rtl of cpu is
   signal irq_cause                 : word_t;
   signal commit                    : std_logic;
   signal sync_trap                 : std_logic;
+  signal csr_illegal, csr_rs1z     : std_logic;
+  signal exc                       : std_logic;   -- synchronous exception
+  signal exc_cause, exc_tval       : word_t;
+  signal trap_tval                 : word_t;
+  signal cf_tgt                    : word_t;
+  signal cf_taken                  : std_logic;
+  signal do_commit                 : std_logic;   -- commit without exception
 
   -- FSM de stall para mul/div
   type state_t is (RUN, MDWAIT);
@@ -153,14 +167,40 @@ begin
   -- commit: la instruccion escribe su estado (se suprime si hay interrupcion)
   commit <= '1' when (retire = '1' and irq_take = '0') else '0';
 
-  csr_access <= '1' when (ctrl.is_csr = '1' and commit = '1') else '0';
-  sync_trap  <= '1' when ((ctrl.is_ecall = '1' or ctrl.is_ebreak = '1') and commit = '1') else '0';
-  mret_fire  <= '1' when (ctrl.is_mret = '1' and commit = '1') else '0';
+  -- jump / branch target and synchronous exception detection
+  cf_tgt   <= std_logic_vector(unsigned(rs1) + unsigned(imm)) and x"FFFFFFFE"
+                when ctrl.is_jalr = '1' else
+              std_logic_vector(unsigned(pc) + unsigned(imm));
+  cf_taken <= '1' when (ctrl.is_jal = '1' or ctrl.is_jalr = '1' or
+                        (ctrl.is_branch = '1' and branch_taken = '1')) else '0';
+
+  process(ctrl, csr_illegal, instr, alu_y, cf_taken, cf_tgt)
+  begin
+    exc <= '0'; exc_cause <= CAUSE_ILLEGAL_INSTR; exc_tval <= (others => '0');
+    if ctrl.is_illegal = '1' or (ctrl.is_csr = '1' and csr_illegal = '1') then
+      exc <= '1'; exc_cause <= CAUSE_ILLEGAL_INSTR; exc_tval <= instr;
+    elsif ctrl.mem_re = '1' and is_misaligned(instr(14 downto 12), alu_y(1 downto 0)) then
+      exc <= '1'; exc_cause <= CAUSE_LOAD_MISALIGNED; exc_tval <= alu_y;
+    elsif ctrl.mem_we = '1' and is_misaligned(instr(14 downto 12), alu_y(1 downto 0)) then
+      exc <= '1'; exc_cause <= CAUSE_STORE_MISALIGNED; exc_tval <= alu_y;
+    elsif cf_taken = '1' and cf_tgt(1) = '1' then
+      exc <= '1'; exc_cause <= CAUSE_INSTR_MISALIGNED; exc_tval <= cf_tgt;
+    end if;
+  end process;
+
+  do_commit  <= '1' when (commit = '1' and exc = '0') else '0';
+  csr_rs1z   <= '1' when instr(19 downto 15) = "00000" else '0';
+
+  csr_access <= '1' when (ctrl.is_csr = '1' and do_commit = '1') else '0';
+  sync_trap  <= '1' when ((ctrl.is_ecall = '1' or ctrl.is_ebreak = '1' or exc = '1') and commit = '1') else '0';
+  mret_fire  <= '1' when (ctrl.is_mret = '1' and do_commit = '1') else '0';
 
   trap_fire  <= irq_take or sync_trap;
   trap_cause <= irq_cause    when irq_take = '1'       else
+                exc_cause    when exc = '1'            else
                 CAUSE_EBREAK when ctrl.is_ebreak = '1' else
                 CAUSE_ECALL_M;
+  trap_tval  <= exc_tval when (irq_take = '0' and exc = '1') else (others => '0');
 
   u_csr : entity work.csr
     port map (
@@ -169,10 +209,13 @@ begin
       csr_wdata   => csr_src,
       csr_cmd     => ctrl.csr_cmd,
       csr_access  => csr_access,
+      csr_rs1z    => csr_rs1z,
       csr_rdata   => csr_rdata,
+      csr_illegal => csr_illegal,
       trap        => trap_fire,
       trap_cause  => trap_cause,
       trap_pc     => pc,
+      trap_tval   => trap_tval,
       mret        => mret_fire,
       irq_timer   => irq_timer,
       irq_soft    => irq_soft,
@@ -207,18 +250,14 @@ begin
   ---------------------------------------------------------------------------
   pc4 <= std_logic_vector(unsigned(pc) + 4);
 
-  process(pc, pc4, imm, rs1, ctrl, branch_taken, trap_fire, mret_fire, csr_mtvec, csr_mepc)
+  process(pc4, trap_fire, mret_fire, csr_mtvec, csr_mepc, cf_taken, cf_tgt)
   begin
     if trap_fire = '1' then
       next_pc <= csr_mtvec;                          -- entra al manejador
     elsif mret_fire = '1' then
       next_pc <= csr_mepc;                           -- retorna del manejador
-    elsif ctrl.is_jal = '1' then
-      next_pc <= std_logic_vector(unsigned(pc) + unsigned(imm));
-    elsif ctrl.is_jalr = '1' then
-      next_pc <= std_logic_vector(unsigned(rs1) + unsigned(imm)) and x"FFFFFFFE";
-    elsif ctrl.is_branch = '1' and branch_taken = '1' then
-      next_pc <= std_logic_vector(unsigned(pc) + unsigned(imm));
+    elsif cf_taken = '1' then
+      next_pc <= cf_tgt;                             -- jal / jalr / branch tomado
     else
       next_pc <= pc4;
     end if;
@@ -230,7 +269,7 @@ begin
   dmem_addr <= alu_y;
 
   -- store: alinea el dato y arma los byte-enables segun funct3 y offset
-  process(alu_y, rs2, instr, ctrl, commit, rst)
+  process(alu_y, rs2, instr, ctrl, do_commit, rst)
     variable off  : natural range 0 to 3;
     variable base : std_logic_vector(3 downto 0);
   begin
@@ -241,7 +280,7 @@ begin
       when F3_H   => base := "0011";
       when others => base := "1111";   -- F3_W
     end case;
-    if ctrl.mem_we = '1' and commit = '1' and rst = '0' then
+    if ctrl.mem_we = '1' and do_commit = '1' and rst = '0' then
       dmem_wstrb <= std_logic_vector(shift_left(unsigned(base), off));
     else
       dmem_wstrb <= "0000";
@@ -282,7 +321,7 @@ begin
   retire <= '1' when ( (state = RUN    and ctrl.is_md = '0') or
                        (state = MDWAIT and md_done   = '1') ) else '0';
 
-  reg_we_g <= '1' when (ctrl.reg_we = '1' and commit = '1') else '0';
+  reg_we_g <= '1' when (ctrl.reg_we = '1' and do_commit = '1') else '0';
 
   process(clk)
   begin

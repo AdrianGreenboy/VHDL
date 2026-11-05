@@ -19,7 +19,13 @@ entity soc_top_pipe is
     DEPTH     : natural := 256;
     IMEM_INIT : string  := "";
     DMEM_INIT : string  := "";
-    DONE_WORD : natural := 127          -- palabra de la DMEM usada como doorbell
+    DONE_WORD : natural := 127;         -- palabra de la DMEM usada como doorbell
+    -- audit-2026-11 (defaults = legacy FPGA behaviour):
+    --   SYNC_MEM      : IMEM/DMEM with 1-cycle synchronous read (ASIC SRAM /
+    --                   BRAM); IMEM_INIT/DMEM_INIT then remain FPGA/sim-only.
+    --   BOOT_FROM_ROM : autonomous boot from rv32_bootrom_pkg (boot_loader).
+    SYNC_MEM      : boolean := false;
+    BOOT_FROM_ROM : boolean := false
   );
   port (
     aclk    : in std_logic;
@@ -63,9 +69,34 @@ architecture rtl of soc_top_pipe is
   signal dmem_axi_wstrb : std_logic_vector(3 downto 0);
 
   signal done_pulse : std_logic;
+  -- audit-2026-11: boot loader (BOOT_FROM_ROM) and IMEM port mux
+  signal ld_busy : std_logic := '0';
+  signal ld_addr, ld_wdata : word_t := (others => '0');
+  signal ld_wstrb : std_logic_vector(3 downto 0) := "0000";
+  signal im_addr, im_wdata : word_t;
+  signal im_wstrb : std_logic_vector(3 downto 0);
+  signal im_owns  : std_logic;
+
 begin
 
-  cpu_rst <= '1' when (aresetn = '0' or cpu_hold_reset = '1') else '0';
+  cpu_rst <= '1' when (aresetn = '0' or cpu_hold_reset = '1' or ld_busy = '1') else '0';
+
+  -- Boot path. BOOT_FROM_ROM = false: the host loads the IMEM through the
+  -- axil_soc window while the core is held (CONTROL.bit0 = 1 at reset).
+  -- BOOT_FROM_ROM = true: boot_loader copies rv32_bootrom_pkg into the IMEM
+  -- after reset and the core starts on its own (no host needed).
+  g_rom : if BOOT_FROM_ROM generate
+    u_boot : entity work.boot_loader
+      generic map (DEPTH => DEPTH)
+      port map (clk => aclk, aresetn => aresetn, busy => ld_busy,
+                addr => ld_addr, wdata => ld_wdata, wstrb => ld_wstrb);
+  end generate;
+
+  im_addr  <= ld_addr  when ld_busy = '1' else imem_axi_addr;
+  im_wdata <= ld_wdata when ld_busy = '1' else imem_axi_wdata;
+  im_wstrb <= ld_wstrb when ld_busy = '1' else imem_axi_wstrb;
+  im_owns  <= axi_owns or ld_busy;
+
 
   -- doorbell: el core escribio la palabra DONE_WORD de la DMEM
   done_pulse <= '1' when (dmem_wstrb /= "0000" and
@@ -73,6 +104,7 @@ begin
                 else '0';
 
   u_cpu : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (
       clk => aclk, rst => cpu_rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
@@ -83,18 +115,18 @@ begin
     );
 
   u_imem : entity work.dp_ram
-    generic map (DEPTH => DEPTH, INIT_FILE => IMEM_INIT)
+    generic map (DEPTH => DEPTH, INIT_FILE => IMEM_INIT, SYNC_READ => SYNC_MEM)
     port map (
       clk => aclk,
       cpu_addr => imem_addr, cpu_wdata => ZERO_WORD, cpu_wstrb => "0000",
       cpu_rdata => imem_instr,
-      axi_addr => imem_axi_addr, axi_wdata => imem_axi_wdata,
-      axi_wstrb => imem_axi_wstrb, axi_rdata => imem_axi_rdata,
-      axi_owns => axi_owns
+      axi_addr => im_addr, axi_wdata => im_wdata,
+      axi_wstrb => im_wstrb, axi_rdata => imem_axi_rdata,
+      axi_owns => im_owns
     );
 
   u_dmem : entity work.dp_ram
-    generic map (DEPTH => DEPTH, INIT_FILE => DMEM_INIT)
+    generic map (DEPTH => DEPTH, INIT_FILE => DMEM_INIT, SYNC_READ => SYNC_MEM)
     port map (
       clk => aclk,
       cpu_addr => dmem_addr, cpu_wdata => dmem_wdata, cpu_wstrb => dmem_wstrb,
@@ -105,7 +137,7 @@ begin
     );
 
   u_axil : entity work.axil_soc
-    generic map (ADDR_W => ADDR_W)
+    generic map (ADDR_W => ADDR_W, MEM_SYNC => SYNC_MEM, BOOT_HALTED => not BOOT_FROM_ROM)
     port map (
       aclk => aclk, aresetn => aresetn,
       s_axi_awaddr => s_axi_awaddr, s_axi_awvalid => s_axi_awvalid, s_axi_awready => s_axi_awready,

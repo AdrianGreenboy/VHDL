@@ -15,6 +15,9 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_master is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_master;
 
 architecture sim of tb_master is
@@ -62,7 +65,7 @@ begin
   aresetn <= not rst;
 
   u_imem : entity work.dp_ram
-    generic map (DEPTH => 256, INIT_FILE => "accel_ddr.mem")
+    generic map (DEPTH => 256, INIT_FILE => "accel_ddr.mem", SYNC_READ => SYNC_MEM)
     port map (
       clk => clk,
       cpu_addr => imem_addr, cpu_wdata => ZERO_WORD, cpu_wstrb => "0000",
@@ -72,6 +75,7 @@ begin
     );
 
   u_cpu : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (
       clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
@@ -83,7 +87,7 @@ begin
     );
 
   u_mem : entity work.mem_subsys
-    generic map (DEPTH => 256, INIT_FILE => "", ADDR_W => AXI_AW,
+    generic map (DEPTH => 256, INIT_FILE => "", ADDR_W => AXI_AW, SYNC_READ => SYNC_MEM,
                  AXI_BASE => to_unsigned(0, AXI_AW))
     port map (
       clk => clk, aresetn => aresetn,

@@ -15,6 +15,9 @@ use std.textio.all;
 use work.riscv_pkg.all;
 
 entity tb_accel_pipe is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_accel_pipe;
 
 architecture sim of tb_accel_pipe is
@@ -56,7 +59,7 @@ begin
   aclk <= not aclk after TCK/2;
 
   dut : entity work.soc_top_pipe
-    generic map (ADDR_W => AW, DEPTH => 256)
+    generic map (ADDR_W => AW, DEPTH => 256, SYNC_MEM => SYNC_MEM)
     port map (
       aclk => aclk, aresetn => aresetn,
       s_axi_awaddr => awaddr, s_axi_awvalid => awvalid, s_axi_awready => awready,

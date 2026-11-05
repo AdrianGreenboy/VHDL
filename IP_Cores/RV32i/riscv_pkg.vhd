@@ -130,9 +130,25 @@ package riscv_pkg is
   constant CSR_MTVAL    : std_logic_vector(11 downto 0) := x"343";
   constant CSR_MIP      : std_logic_vector(11 downto 0) := x"344";
 
+  -- machine information / ISA CSRs (read-only, except misa which is WARL and
+  -- ignores writes in this core)
+  constant CSR_MISA      : std_logic_vector(11 downto 0) := x"301";
+  constant CSR_MVENDORID : std_logic_vector(11 downto 0) := x"F11";
+  constant CSR_MARCHID   : std_logic_vector(11 downto 0) := x"F12";
+  constant CSR_MIMPID    : std_logic_vector(11 downto 0) := x"F13";
+  constant CSR_MHARTID   : std_logic_vector(11 downto 0) := x"F14";
+  -- misa: MXL=1 (RV32), extensions I (bit 8) and M (bit 12)
+  constant MISA_VALUE    : word_t := x"40001100";
+
   -- causas de trap (mcause) usadas por este core
-  constant CAUSE_EBREAK  : word_t := x"00000003";
-  constant CAUSE_ECALL_M : word_t := x"0000000B";
+  constant CAUSE_INSTR_MISALIGNED : word_t := x"00000000";
+  constant CAUSE_ILLEGAL_INSTR    : word_t := x"00000002";
+  constant CAUSE_EBREAK           : word_t := x"00000003";
+  constant CAUSE_LOAD_MISALIGNED  : word_t := x"00000004";
+  constant CAUSE_LOAD_ACCESS      : word_t := x"00000005";
+  constant CAUSE_STORE_MISALIGNED : word_t := x"00000006";
+  constant CAUSE_STORE_ACCESS     : word_t := x"00000007";
+  constant CAUSE_ECALL_M          : word_t := x"0000000B";
 
   -- causas de interrupcion (bit 31 = interrupcion asincrona)
   constant CAUSE_IRQ_SOFT_M  : word_t := x"80000003";  -- software (MSI)
@@ -160,6 +176,9 @@ package riscv_pkg is
     is_ecall  : std_logic;
     is_ebreak : std_logic;
     is_mret   : std_logic;
+    is_illegal: std_logic;     -- illegal / unsupported encoding -> trap cause 2
+    use_rs1   : std_logic;     -- instruction reads rs1 (load-use hazard detection)
+    use_rs2   : std_logic;     -- instruction reads rs2 (load-use hazard detection)
   end record;
 
   -- Control por defecto: no escribe nada (equivale a una burbuja/NOP)
@@ -169,7 +188,26 @@ package riscv_pkg is
     mem_re => '0', mem_we => '0', is_branch => '0', is_jal => '0',
     is_jalr => '0', wb_sel => WB_ALU,
     is_csr => '0', csr_cmd => CSR_RW, csr_imm => '0',
-    is_ecall => '0', is_ebreak => '0', is_mret => '0'
+    is_ecall => '0', is_ebreak => '0', is_mret => '0',
+    is_illegal => '0', use_rs1 => '0', use_rs2 => '0'
   );
 
+  -- Load/store address alignment check (no misaligned access support in HW:
+  -- a misaligned access raises a load/store address-misaligned exception).
+  -- f3 is the load/store funct3; returns true if the access is misaligned.
+  function is_misaligned (f3 : std_logic_vector(2 downto 0);
+                          a  : std_logic_vector(1 downto 0)) return boolean;
+
 end package riscv_pkg;
+
+package body riscv_pkg is
+  function is_misaligned (f3 : std_logic_vector(2 downto 0);
+                          a  : std_logic_vector(1 downto 0)) return boolean is
+  begin
+    case f3(1 downto 0) is
+      when "00"   => return false;           -- byte: always aligned
+      when "01"   => return a(0) = '1';      -- half: 2-byte aligned
+      when others => return a /= "00";       -- word: 4-byte aligned
+    end case;
+  end function;
+end package body riscv_pkg;

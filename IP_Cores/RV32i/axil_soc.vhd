@@ -22,7 +22,15 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity axil_soc is
-  generic ( ADDR_W : natural := 16 );
+  generic (
+    ADDR_W      : natural := 16;
+    -- true: the IMEM/DMEM behind the windows have a 1-cycle synchronous read
+    -- (dp_ram SYNC_READ): one address cycle is inserted before the capture.
+    MEM_SYNC    : boolean := false;
+    -- reset value of CONTROL.bit0: true = core held in reset until the host
+    -- releases it (legacy); false = autonomous boot (boot ROM loader)
+    BOOT_HALTED : boolean := true
+  );
   port (
     aclk    : in  std_logic;
     aresetn : in  std_logic;
@@ -74,14 +82,20 @@ architecture rtl of axil_soc is
   constant REG_DMEM : std_logic_vector(1 downto 0) := "10";
 
   type wstate_t is (W_IDLE, W_WRITE, W_RESP);
-  type rstate_t is (R_IDLE, R_DATA);
+  type rstate_t is (R_IDLE, R_ADDR, R_DATA);
   signal wstate : wstate_t := W_IDLE;
   signal rstate : rstate_t := R_IDLE;
 
   signal awaddr_q, araddr_q : std_logic_vector(ADDR_W-1 downto 0) := (others => '0');
   signal wdata_q  : std_logic_vector(31 downto 0) := (others => '0');
   signal wstrb_q  : std_logic_vector(3 downto 0)  := (others => '0');
-  signal ctrl_reg : std_logic_vector(31 downto 0) := (0 => '1', others => '0');
+  function ctrl_rst return std_logic_vector is
+    variable v : std_logic_vector(31 downto 0) := (others => '0');
+  begin
+    if BOOT_HALTED then v(0) := '1'; end if;
+    return v;
+  end function;
+  signal ctrl_reg : std_logic_vector(31 downto 0) := ctrl_rst;
   signal rdata_q  : std_logic_vector(31 downto 0) := (others => '0');
   signal mem_wstrb : std_logic_vector(3 downto 0) := "0000";
   signal irq_sticky : std_logic := '0';
@@ -99,10 +113,17 @@ begin
   s_axi_rresp <= "00";
   s_axi_rdata <= rdata_q;
 
-  -- ready combinacional
-  s_axi_awready <= '1' when (wstate = W_IDLE and s_axi_awvalid = '1' and s_axi_wvalid = '1') else '0';
+  -- ready combinacional.
+  -- audit-2026-11: reads and writes share the single memory port (address
+  -- mux below), so they are serialised: a write is accepted only while no
+  -- read is in flight, and a read only when no write is in flight or being
+  -- accepted (writes have priority). Before, a read overlapping W_WRITE
+  -- sampled the memory at the WRITE address.
+  s_axi_awready <= '1' when (wstate = W_IDLE and rstate = R_IDLE and
+                             s_axi_awvalid = '1' and s_axi_wvalid = '1') else '0';
   s_axi_wready  <= s_axi_awready;
-  s_axi_arready <= '1' when (rstate = R_IDLE and s_axi_arvalid = '1') else '0';
+  s_axi_arready <= '1' when (rstate = R_IDLE and wstate = W_IDLE and s_axi_arvalid = '1' and
+                             not (s_axi_awvalid = '1' and s_axi_wvalid = '1')) else '0';
 
   -- direccion/dato hacia las RAMs
   imem_axi_addr <= std_logic_vector(resize(unsigned(awaddr_q), 32)) when wstate = W_WRITE
@@ -124,14 +145,14 @@ begin
     if rising_edge(aclk) then
       if aresetn = '0' then
         wstate       <= W_IDLE;
-        ctrl_reg     <= (0 => '1', others => '0');
+        ctrl_reg     <= ctrl_rst;
         s_axi_bvalid <= '0';
         ddr_base_lo  <= (others => '0');
         ddr_base_hi  <= (others => '0');
       else
         case wstate is
           when W_IDLE =>
-            if s_axi_awvalid = '1' and s_axi_wvalid = '1' then
+            if s_axi_awready = '1' then
               awaddr_q <= s_axi_awaddr;
               wdata_q  <= s_axi_wdata;
               wstrb_q  <= s_axi_wstrb;
@@ -173,10 +194,15 @@ begin
       else
         case rstate is
           when R_IDLE =>
-            if s_axi_arvalid = '1' then
+            if s_axi_arready = '1' then
               araddr_q <= s_axi_araddr;
-              rstate   <= R_DATA;
+              if MEM_SYNC then rstate <= R_ADDR; else rstate <= R_DATA; end if;
             end if;
+
+          when R_ADDR =>
+            -- synchronous memories: araddr_q is on the RAM address this cycle,
+            -- the word is on *_axi_rdata in R_DATA
+            rstate <= R_DATA;
 
           when R_DATA =>
             case araddr_q(13 downto 12) is
