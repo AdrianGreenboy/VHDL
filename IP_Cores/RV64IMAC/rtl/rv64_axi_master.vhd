@@ -113,7 +113,7 @@ begin
   m_arvalid <= '1' when st = AR else '0';
   m_rready  <= '1' when st = R else '0';
   -- canales AW/W/B
-  m_awid    <= "0000";
+  m_awid    <= "000" & cli;                           -- same ID scheme as AR (only D$ writes)
   m_awaddr  <= addr;
   m_awlen   <= x"07" when line_k else x"00";
   m_awsize  <= "011" when line_k else '0' & size;

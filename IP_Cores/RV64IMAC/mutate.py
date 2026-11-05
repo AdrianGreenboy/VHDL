@@ -34,6 +34,9 @@ MUTS = [
   ('c.j: bit 10 del offset cruzado', 'rv64_pkg.vhd',
    """(20 downto 11 => c(12)) & c(8) & c(10 downto 9)""", """(20 downto 11 => c(12)) & c(9) & c(10) & c(8)""",
    ['unit:tb_rvc', T('rv64uc-p-rvc')], []),
+  ('UART: divisor 0 sin proteger (audit-2026-11)', 'rv64_uart.vhd',
+   """  bitlen   <= (divisor & "0000") when divisor /= 0 else to_unsigned(16, 20);""",
+   """  bitlen   <= divisor & "0000";""", ['unit:tb_uart'], []),
   ('signo del resto en division', 'rv64_muldiv.vhd',
    """                neg_r <= sa;""", """                neg_r <= sa xor sb;""", [T('rv64um-p-rem')], []),
   ('medeleg delega ecall-M', 'rv64_csr.vhd',
@@ -134,8 +137,9 @@ def main():
             sys.exit(f'build del mutante fallo ({name}): no se puede juzgar la mutacion')
         killed, first = False, []
         for u in [t for t in tests if t.startswith('unit:')]:
-            vec = {'tb_rvc': 'rvc_vectors.txt', 'tb_muldiv': 'muldiv_vectors.txt'}[u[5:]]
-            ru = subprocess.run([os.path.join(sim, u[5:]), f'-gVECTORS={os.path.join(HERE, "sim", vec)}'],
+            vec = {'tb_rvc': 'rvc_vectors.txt', 'tb_muldiv': 'muldiv_vectors.txt'}.get(u[5:])
+            gen = [f'-gVECTORS={os.path.join(HERE, "sim", vec)}'] if vec else []
+            ru = subprocess.run([os.path.join(sim, u[5:])] + gen,
                                 cwd=sim, capture_output=True, text=True)
             if ru.returncode != 0 or 'PASS' not in ru.stdout + ru.stderr:
                 killed, first = True, ['FAIL', u]
