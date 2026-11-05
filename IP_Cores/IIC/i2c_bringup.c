@@ -38,6 +38,7 @@
 #define IMEM_WIN    (0x1000/4)
 
 // programa i2c_test.s ensamblado (asm.py); parches en addi separadas
+// (regenerated audit 2026-11: STAT is W1C, the program writes 0xFFFFFFFF)
 #define PROG_SCLDIV_IDX 4         // addi x5, x0, <scldiv>
 #define PROG_SADDR_IDX  6         // addi x5, x0, <saddr>
 #define PROG_CTRL_IDX   8         // addi x5, x0, <ctrl>
@@ -52,6 +53,7 @@ static uint32_t prog[] = {
   0x0050AA23,
   0x08700293,
   0x0050A023,
+  0xFFF00B13,
   0x15400293,
   0x0050A623,
   0x0D000FEF,
@@ -90,7 +92,7 @@ static uint32_t prog[] = {
   0x015373B3,
   0x0123D393,
   0x00702A23,
-  0x0000A223,
+  0x0160A223,
   0x000012B7,
   0x20028293,
   0x0050A623,
@@ -109,7 +111,7 @@ static uint32_t prog[] = {
   0x0040A303,
   0x014373B3,
   0xFE038CE3,
-  0x0000A223,
+  0x0160A223,
   0x000F8067
 };
 #define PROG_LEN (sizeof(prog)/sizeof(prog[0]))

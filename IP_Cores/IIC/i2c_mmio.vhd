@@ -12,15 +12,21 @@
 --   0x04 STAT   vivos:   [0] MBUSY [1] BUS_BUSY [2] XACT_OPEN [3] ADDRESSED
 --                        [4] RD_ACTIVE [5] SRX_EMPTY [6] SRX_FULL
 --                        [7] STX_EMPTY [8] STX_FULL
---               stickies (CUALQUIER escritura a STAT los limpia; un evento
---               simultáneo a la limpieza GANA y no se pierde):
+--                        [9] SCL level [10] SDA level (filtered; audit)
+--               stickies (WRITE-1-TO-CLEAR per bit since audit 2026-11; a
+--               set event in the same cycle as the clear WINS):
 --                        [16] MDONE [17] ARB_LOST [18] NACK [19] SRX_OVF
 --                        [20] STX_UR [21] START_DET [22] STOP_DET
 --                        [23] CMD_DROP [24] STX_OVF
+--                        [25] TIMEOUT (stretch / stuck-bus timeout, audit)
 --   0x08 SCLDIV [15:0]  F_SCL = Fclk/(4*(div+1)); default 249 (100 kHz)
 --   0x0C CMD    [7:0] dato [8] START [9] STOP [10] READ [11] ACKOUT
---               [12] NOBYTE — la ESCRITURA dispara; si EN=0 o el maestro
---               está ocupado se DESCARTA + sticky CMD_DROP
+--               [12] NOBYTE [13] BUS_CLEAR (audit: 9 SCL pulses + STOP)
+--               — la ESCRITURA dispara; si el maestro está ocupado, o si
+--               EN=0 para un comando que no sea NOBYTE/BUS_CLEAR, se
+--               DESCARTA + sticky CMD_DROP. NOBYTE (STOP) and BUS_CLEAR are
+--               accepted with EN=0 so a disabled master can always release
+--               the bus (audit 2026-11).
 --   0x10 MRD    RO: [7:0] último byte leído  [8] ACK_IN vivo
 --   0x14 SADDR  [6:0] dirección propia del esclavo
 --   0x18 STX    escritura -> push al FIFO TX del esclavo
@@ -29,11 +35,18 @@
 --               [7:0] dato  [8] VALID (pre-pop)
 --   0x20 LVL    RO: [8:0] nivel SRX  [24:16] nivel STX
 --   0x24 IRQ_EN [0] MDONE [1] ARB_LOST [2] NACK [3] SRX_OVF [4] STX_UR
---               [5] STOP_DET [6] SRX_WM [7] STX_WM
+--               [5] STOP_DET [6] SRX_WM [7] STX_WM [8] TIMEOUT (audit)
 --   0x28 IRQ_STAT RO: espejo de causas (0-5 stickies, 6-7 por nivel);
 --               irq = OR(IRQ_STAT and IRQ_EN), por NIVEL, sin acknowledge
 --   0x2C WM     [8:0] SRX_WM (causa 6 activa si nivel>=WM y WM/=0)
 --               [24:16] STX_WM (causa 7 activa si nivel<=WM)
+--               (audit 2026-11: both values clamped to the FIFO depth)
+--   0x30 TOUT   [15:0] master timeout in quarter-bit periods (audit
+--               2026-11): clock-stretch timeout and stuck-bus timeout in
+--               WAITFREE. 0 = disabled (reset default, legacy behaviour).
+--               Example: 25 ms SMBus tTIMEOUT at 100 kHz = 10000.
+--
+--  rdata is gated by sel (audit 2026-11): reads 0 when not selected.
 --
 --  NACK sticky: solo se arma en el done de comandos de ESCRITURA (en
 --  lecturas ack_in no se toca -> sin falsos positivos).
@@ -49,7 +62,7 @@
 --  (v1 sin árbitro; el CPU gana en colisión de push y el push DMA se
 --  descarta con sticky STX_OVF).
 --
---  Sin timeout de stretching en v1 (watchdog en software o mmio v1.1).
+--  Clock-stretch / stuck-bus timeout: see TOUT (audit 2026-11).
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -96,17 +109,20 @@ architecture rtl of i2c_mmio is
   signal scldiv : std_logic_vector(15 downto 0)
                 := std_logic_vector(to_unsigned(249, 16));
   signal saddr  : std_logic_vector(6 downto 0) := (others => '0');
-  signal irq_en : std_logic_vector(7 downto 0) := (others => '0');
+  signal irq_en : std_logic_vector(8 downto 0) := (others => '0');
+  signal tout_r : std_logic_vector(15 downto 0) := (others => '0');
   signal srx_wm : unsigned(8 downto 0) := to_unsigned(1, 9);
   signal stx_wm : unsigned(8 downto 0) := (others => '0');
 
   -- ---------------- stickies ----------------
   signal st_mdone, st_arb, st_nack, st_srxovf, st_stxur : std_logic := '0';
   signal st_start, st_stop, st_cmddrop, st_stxovf       : std_logic := '0';
+  signal st_tout                                        : std_logic := '0';
 
   -- ---------------- comando al maestro ----------------
   signal c_valid, c_start, c_stop, c_read, c_ack, c_nob : std_logic := '0';
   signal c_data     : std_logic_vector(7 downto 0) := (others => '0');
+  signal c_clear    : std_logic := '0';
   signal pend_read  : std_logic := '0';
   signal pend_nob   : std_logic := '0';
   signal issue_pend : std_logic := '0';
@@ -114,6 +130,7 @@ architecture rtl of i2c_mmio is
   -- ---------------- maestro ----------------
   signal m_busy, m_done, m_ackin, m_arb, m_busbusy, m_xopen : std_logic;
   signal m_rdata : std_logic_vector(7 downto 0);
+  signal m_tout, m_lscl, m_lsda : std_logic;
   signal m_scl_t, m_sda_t : std_logic;
 
   -- ---------------- esclavo ----------------
@@ -125,7 +142,6 @@ architecture rtl of i2c_mmio is
   signal s_scl_t, s_sda_t : std_logic;
 
   -- ---------------- FIFOs ----------------
-  signal aresetn : std_logic;
   signal srx_full, srx_empty : std_logic;
   signal srx_rd_en : std_logic;
   signal srx_rdd   : std_logic_vector(7 downto 0);
@@ -147,11 +163,10 @@ architecture rtl of i2c_mmio is
   signal acc_wr, acc_rd : std_logic;
   signal cpu_srx_pop, cpu_stx_push : std_logic;
 
-  signal cause : std_logic_vector(7 downto 0);
+  signal cause : std_logic_vector(8 downto 0);
+  constant DEPTH : natural := 2**FIFO_LOG2;
 
 begin
-
-  aresetn <= not rst;
 
   acc_wr <= sel and req when wstrb /= "0000" else '0';
   acc_rd <= sel and req when wstrb  = "0000" else '0';
@@ -186,8 +201,10 @@ begin
       cmd_valid => c_valid, cmd_start => c_start, cmd_stop => c_stop,
       cmd_read => c_read, cmd_ackout => c_ack,
       cmd_nobyte => c_nob, cmd_wdata => c_data,
+      cmd_clear => c_clear, tout_q => tout_r,
       busy => m_busy, done => m_done, rdata => m_rdata, ack_in => m_ackin,
       arb_lost => m_arb, bus_busy => m_busbusy, xact_open => m_xopen,
+      timeout => m_tout, line_scl => m_lscl, line_sda => m_lsda,
       scl_i => eng_scl_in, scl_t => m_scl_t,
       sda_i => eng_sda_in, sda_t => m_sda_t
     );
@@ -207,19 +224,19 @@ begin
     );
 
   -- ---------------- FIFOs del esclavo ----------------
-  u_srx : entity work.byte_fifo
+  u_srx : entity work.i2c_byte_fifo           -- sync reset (audit 2026-11)
     generic map ( LOG2_DEPTH => FIFO_LOG2 )
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => s_rx_valid, wr_data => s_rx_data, full => srx_full,
       rd_en => srx_rd_en, rd_data => srx_rdd, empty => srx_empty,
       level => srx_lvl
     );
 
-  u_stx : entity work.byte_fifo
+  u_stx : entity work.i2c_byte_fifo
     generic map ( LOG2_DEPTH => FIFO_LOG2 )
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => stx_wr_en, wr_data => stx_wrd, full => stx_full,
       rd_en => s_tx_ren, rd_data => s_tx_data, empty => stx_empty,
       level => stx_lvl
@@ -236,6 +253,7 @@ begin
   cause(5) <= st_stop;
   cause(6) <= '1' when (srx_wm /= 0) and (resize(srx_lvl, 9) >= srx_wm) else '0';
   cause(7) <= '1' when resize(stx_lvl, 9) <= stx_wm else '0';
+  cause(8) <= st_tout;
 
   -- ---------------- regfile ----------------
   main : process(clk)
@@ -253,28 +271,31 @@ begin
             ctrl_stretch <= wdata(2);
             ctrl_loop    <= wdata(7);
 
-          when "000001" =>                          -- STAT: limpia stickies
-            st_mdone   <= '0';
-            st_arb     <= '0';
-            st_nack    <= '0';
-            st_srxovf  <= '0';
-            st_stxur   <= '0';
-            st_start   <= '0';
-            st_stop    <= '0';
-            st_cmddrop <= '0';
-            st_stxovf  <= '0';
+          when "000001" =>                          -- STAT: W1C per bit (audit)
+            if wdata(16) = '1' then st_mdone   <= '0'; end if;
+            if wdata(17) = '1' then st_arb     <= '0'; end if;
+            if wdata(18) = '1' then st_nack    <= '0'; end if;
+            if wdata(19) = '1' then st_srxovf  <= '0'; end if;
+            if wdata(20) = '1' then st_stxur   <= '0'; end if;
+            if wdata(21) = '1' then st_start   <= '0'; end if;
+            if wdata(22) = '1' then st_stop    <= '0'; end if;
+            if wdata(23) = '1' then st_cmddrop <= '0'; end if;
+            if wdata(24) = '1' then st_stxovf  <= '0'; end if;
+            if wdata(25) = '1' then st_tout    <= '0'; end if;
 
           when "000010" =>                          -- SCLDIV
             scldiv <= wdata(15 downto 0);
 
           when "000011" =>                          -- CMD: la escritura dispara
-            if ctrl_en = '1' and m_busy = '0' and issue_pend = '0' then
+            if (ctrl_en = '1' or wdata(12) = '1' or wdata(13) = '1') and
+               m_busy = '0' and issue_pend = '0' then
               c_data     <= wdata(7 downto 0);
               c_start    <= wdata(8);
               c_stop     <= wdata(9);
               c_read     <= wdata(10);
               c_ack      <= wdata(11);
               c_nob      <= wdata(12);
+              c_clear    <= wdata(13);
               c_valid    <= '1';
               pend_read  <= wdata(10);
               pend_nob   <= wdata(12);
@@ -292,11 +313,22 @@ begin
             end if;
 
           when "001001" =>                          -- IRQ_EN
-            irq_en <= wdata(7 downto 0);
+            irq_en <= wdata(8 downto 0);
 
-          when "001011" =>                          -- WM
-            srx_wm <= unsigned(wdata(8 downto 0));
-            stx_wm <= unsigned(wdata(24 downto 16));
+          when "001011" =>                          -- WM, clamped to DEPTH
+            if unsigned(wdata(8 downto 0)) > DEPTH then
+              srx_wm <= to_unsigned(DEPTH, 9);
+            else
+              srx_wm <= unsigned(wdata(8 downto 0));
+            end if;
+            if unsigned(wdata(24 downto 16)) > DEPTH then
+              stx_wm <= to_unsigned(DEPTH, 9);
+            else
+              stx_wm <= unsigned(wdata(24 downto 16));
+            end if;
+
+          when "001100" =>                          -- TOUT (audit 2026-11)
+            tout_r <= wdata(15 downto 0);
 
           when others => null;                      -- STAT ya arriba; RO: nada
         end case;
@@ -317,6 +349,9 @@ begin
       if m_arb = '1' then
         st_arb <= '1';
       end if;
+      if m_tout = '1' then
+        st_tout <= '1';
+      end if;
       if s_rx_ovf = '1' then
         st_srxovf <= '1';
       end if;
@@ -331,12 +366,12 @@ begin
       end if;
 
       -- ventana de emisión: cubre el hueco entre c_valid y busy del motor
-      if m_busy = '1' or m_done = '1' or m_arb = '1' then
+      if m_busy = '1' or m_done = '1' or m_arb = '1' or m_tout = '1' then
         issue_pend <= '0';
       end if;
 
       -- ============ IRQ por nivel ============
-      if (cause and irq_en) /= x"00" then
+      if (cause and irq_en) /= "000000000" then
         irq_r <= '1';
       else
         irq_r <= '0';
@@ -362,6 +397,9 @@ begin
         st_stop      <= '0';
         st_cmddrop   <= '0';
         st_stxovf    <= '0';
+        st_tout      <= '0';
+        tout_r       <= (others => '0');
+        c_clear      <= '0';
         c_valid      <= '0';
         pend_read    <= '0';
         pend_nob     <= '0';
@@ -377,6 +415,7 @@ begin
   rd_mux : process(all)
   begin
     rdata <= (others => '0');
+    if sel = '1' then                             -- gated by sel (audit)
     case addr(7 downto 2) is
       when "000000" =>                            -- CTRL
         rdata(0) <= ctrl_en;
@@ -393,6 +432,8 @@ begin
         rdata(6)  <= srx_full;
         rdata(7)  <= stx_empty;
         rdata(8)  <= stx_full;
+        rdata(9)  <= m_lscl;
+        rdata(10) <= m_lsda;
         rdata(16) <= st_mdone;
         rdata(17) <= st_arb;
         rdata(18) <= st_nack;
@@ -402,6 +443,7 @@ begin
         rdata(22) <= st_stop;
         rdata(23) <= st_cmddrop;
         rdata(24) <= st_stxovf;
+        rdata(25) <= st_tout;
       when "000010" =>                            -- SCLDIV
         rdata(15 downto 0) <= scldiv;
       when "000100" =>                            -- MRD
@@ -416,15 +458,18 @@ begin
         rdata(8 downto 0)   <= std_logic_vector(resize(srx_lvl, 9));
         rdata(24 downto 16) <= std_logic_vector(resize(stx_lvl, 9));
       when "001001" =>                            -- IRQ_EN
-        rdata(7 downto 0) <= irq_en;
+        rdata(8 downto 0) <= irq_en;
       when "001010" =>                            -- IRQ_STAT
-        rdata(7 downto 0) <= cause;
+        rdata(8 downto 0) <= cause;
       when "001011" =>                            -- WM
         rdata(8 downto 0)   <= std_logic_vector(srx_wm);
         rdata(24 downto 16) <= std_logic_vector(stx_wm);
+      when "001100" =>                            -- TOUT
+        rdata(15 downto 0) <= tout_r;
       when others =>
         rdata <= (others => '0');
     end case;
+    end if;
   end process;
 
   irq <= irq_r;

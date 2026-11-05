@@ -11,3 +11,8 @@ xvhdl --2008 i2c_master.vhd
 xvhdl --2008 tb_i2c_master.vhd
 xelab --debug typical tb_i2c_master -s i2c_master_sim
 xsim i2c_master_sim --runall
+
+# audit 2026-11: escape paths (timeouts, bus clear, STOP in HELD, tBUF)
+xvhdl --2008 tb_i2c_master_audit.vhd
+xelab --debug typical tb_i2c_master_audit -s i2c_master_audit_sim
+xsim i2c_master_audit_sim --runall

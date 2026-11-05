@@ -31,8 +31,8 @@ set_property target_language Verilog [current_project]
 add_files -norecurse [glob ~/rv32i/riscv_pkg.vhd ~/rv32i/alu.vhd ~/rv32i/regfile.vhd \
   ~/rv32i/muldiv.vhd ~/rv32i/immgen.vhd ~/rv32i/control.vhd ~/rv32i/csr.vhd \
   ~/rv32i/dp_ram.vhd ~/rv32i/cpu_pipeline.vhd ~/rv32i/dma_burst.vhd ~/rv32i/axil_soc.vhd]
-add_files -norecurse ~/spi_ip/byte_fifo.vhd
-add_files -norecurse [glob ~/i2c_ip/i2c_master.vhd ~/i2c_ip/i2c_slave.vhd \
+# audit 2026-11: private FIFO of the IIC core (no shared ~/spi_ip/byte_fifo)
+add_files -norecurse [glob ~/i2c_ip/i2c_byte_fifo.vhd ~/i2c_ip/i2c_master.vhd ~/i2c_ip/i2c_slave.vhd \
   ~/i2c_ip/i2c_mmio.vhd ~/i2c_ip/mem_subsys_i2c.vhd ~/i2c_ip/soc_top_i2c.vhd \
   ~/i2c_ip/soc_top_i2c_wrap.v]
 set_property file_type {VHDL 2008} [get_files *.vhd]
