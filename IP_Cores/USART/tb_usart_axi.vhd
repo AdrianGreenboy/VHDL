@@ -262,7 +262,7 @@ begin
     assert d(4) = '0' report "A1: flushed sin razon (cierre por cuenta)"
       severity failure;
     chk_region(64, 48, 7, 3, "A1");
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A1] PASS";
 
     ----------------------------------------------------------------------------
@@ -278,7 +278,7 @@ begin
     assert to_integer(unsigned(d)) = 48
       report "A2: RX_COUNT /= 48" severity failure;
     chk_region(512, 48, 7, 3, "A2");
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A2] PASS";
 
     ----------------------------------------------------------------------------
@@ -289,7 +289,7 @@ begin
     push_region(16, 11, 5);
     poll_bit(D_STA, 3, 300 us, "A3a-rxdone");
     chk_region(1022, 16, 11, 5, "A3a");
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A3a] PASS";
 
     ----------------------------------------------------------------------------
@@ -302,7 +302,7 @@ begin
     poll_bit(D_STA, 2, 300 us, "A3b-txdone");
     poll_bit(D_STA, 3, 300 us, "A3b-rxdone");
     chk_region(1536, 16, 11, 5, "A3b");
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A3b] PASS";
 
     ----------------------------------------------------------------------------
@@ -319,7 +319,7 @@ begin
       report "A4: RX_COUNT /= 10, es " & integer'image(to_integer(unsigned(d)))
       severity failure;
     chk_region(256, 10, 13, 1, "A4");
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A4] PASS";
 
     ----------------------------------------------------------------------------
@@ -339,7 +339,7 @@ begin
     mm_rd(D_CNT, d);
     assert to_integer(unsigned(d)) = 0
       report "A5: RX_COUNT /= 0 tras abort" severity failure;
-    mm_wr(D_STA, x"00000000");
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[A5] PASS";
 
     ----------------------------------------------------------------------------
@@ -349,7 +349,7 @@ begin
     mm_wr(D_CTL, x"00000011");                          -- tx_start + irq_en_tx
     wait until irq_out = '1' for 100 us;
     assert irq_out = '1' report "A6: irq de tx_done no disparo" severity failure;
-    mm_wr(D_STA, x"00000000");                          -- limpiar stickies
+    mm_wr(D_STA, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)                          -- limpiar stickies
     wait for 1 us;
     assert irq_out = '0' report "A6: irq no cayo al limpiar DMA_STAT"
       severity failure;
@@ -370,6 +370,45 @@ begin
       report "A6: stickies de error/overflow al final de la corrida: " &
              to_hstring(d) severity failure;
     report "[A6] PASS";
+
+    ----------------------------------------------------------------------------
+    -- Audit 2026-11: TX-channel abort (escape for a TX DMA stuck on a full
+    -- FIFO) and per-bit W1C of DMA_STAT.
+    report "[A7] tx_abort escape + DMA_STAT W1C per bit";
+    mm_wr(D_STA, x"FFFFFFFF");
+    mm_wr(A_CTRL, x"00000085");                         -- en|rx|loop, tx_en=0
+    mm_wr(D_TXA, x"00000000");
+    mm_wr(D_TXL, std_logic_vector(to_unsigned(200, 32)));
+    mm_wr(D_CTL, x"00000001");                          -- tx_start
+    wait for 20 us;                                     -- FIFO fills, DMA blocks
+    mm_rd(D_STA, d);
+    assert d(0) = '1' and d(2) = '0'
+      report "A7: TX DMA should be blocked on a full FIFO" severity failure;
+    mm_wr(D_CTL, x"00000008");                          -- tx_abort
+    poll_bit(D_STA, 2, 50 us, "A7-txabort");
+    mm_rd(D_STA, d);
+    assert d(0) = '0' and d(7) = '1'
+      report "A7: tx_aborted sticky / busy wrong: 0x" & to_hstring(d)
+      severity failure;
+    mm_wr(D_STA, x"00000080");                          -- clear tx_aborted only
+    mm_rd(D_STA, d);
+    assert d(7) = '0' and d(2) = '1'
+      report "A7: DMA_STAT is not W1C per bit: 0x" & to_hstring(d)
+      severity failure;
+    mm_wr(D_STA, x"00000000");                          -- 0 clears nothing
+    mm_rd(D_STA, d);
+    assert d(2) = '1' report "A7: write of 0 cleared tx_done" severity failure;
+    mm_wr(D_STA, x"FFFFFFFF");
+    -- drain the 16 residual bytes through the loopback and discard them
+    mm_wr(A_CTRL, x"00000087");
+    poll_bit(A_STAT, 1, 200 us, "A7-txempty");
+    wait for 10 us;
+    for k in 0 to 15 loop mm_rd(A_RXD, d); end loop;
+    mm_rd(A_RXL, d);
+    assert to_integer(unsigned(d)) = 0 report "A7: residue not drained"
+      severity failure;
+    mm_wr(A_STAT, x"FFFFFFFF");
+    report "[A7] PASS";
 
     ----------------------------------------------------------------------------
     report "==================================================";

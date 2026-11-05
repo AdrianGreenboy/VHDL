@@ -161,9 +161,15 @@ begin
   p_sync : process(clk)
   begin
     if rising_edge(clk) then
-      rxd_m <= rxd_i;      rxd_s <= rxd_m;
-      lin_m <= txd_line_i; lin_s <= lin_m;
-      cts_m <= cts_n_i;    cts_s <= cts_m;
+      if rst_n = '0' then                -- idle level, no init-value reliance
+        rxd_m <= '1'; rxd_s <= '1';
+        lin_m <= '1'; lin_s <= '1';
+        cts_m <= '1'; cts_s <= '1';
+      else
+        rxd_m <= rxd_i;      rxd_s <= rxd_m;
+        lin_m <= txd_line_i; lin_s <= lin_m;
+        cts_m <= cts_n_i;    cts_s <= cts_m;
+      end if;
     end if;
   end process;
 
@@ -207,7 +213,16 @@ begin
   begin
     if rising_edge(clk) then
       tx_ready <= '0';
-      if rst_n = '0' or en = '0' or tx_en = '0' then
+      if rst_n = '0' then
+        -- audit 2026-11: full datapath reset (no reliance on init values,
+        -- required for ASIC flows)
+        txs     <= T_IDLE;
+        txd_int <= '1';
+        tx_sh   <= (others => '0');
+        tx_parb <= '0';
+        tx_cnt  <= (others => '0');
+        tx_bit  <= (others => '0');
+      elsif en = '0' or tx_en = '0' then
         txs     <= T_IDLE;
         txd_int <= '1';
       elsif tick16 = '1' then
@@ -317,7 +332,19 @@ begin
       break_det <= '0';
       rx_line_q <= rx_line;
 
-      if rst_n = '0' or en = '0' or rx_en = '0' then
+      if rst_n = '0' then
+        -- audit 2026-11: full datapath reset (no reliance on init values)
+        rxs       <= R_IDLE;
+        rx_line_q <= '1';
+        rx_cnt    <= (others => '0');
+        rx_bit    <= (others => '0');
+        rx_sh     <= (others => '0');
+        s7        <= '1';
+        s8        <= '1';
+        rx_allz   <= '0';
+        rx_perr   <= '0';
+        rx_data   <= (others => '0');
+      elsif en = '0' or rx_en = '0' then
         rxs <= R_IDLE;
       else
         case rxs is

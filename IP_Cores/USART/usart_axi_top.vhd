@@ -14,13 +14,19 @@
 --    0x38 DMA_RXA   (rw) offset DDR de escritura, alineado a 4
 --    0x3C DMA_RXLEN (rw) [23:0] bytes maximos del canal RX
 --    0x40 DMA_CTRL  (w)  [0]=tx_start [1]=rx_start [2]=rx_abort
+--                        [3]=tx_abort (audit 2026-11)
 --                        [4]=irq_en_txdone [5]=irq_en_rxdone
+--                        aborts are latched by the DMA and honoured at the
+--                        next burst boundary (see usart_dma.vhd)
 --                        (los bits [5:4] se actualizan en CADA escritura)
 --                   (r)  readback de [5:4]
 --    0x44 DMA_STAT  (r)  [0]=tx_busy(pegajoso) [1]=rx_busy(pegajoso)
 --                        [2]=tx_done* [3]=rx_done* [4]=rx_flushed*
 --                        [5]=tx_rerr* [6]=rx_berr*
---                   (w)  cualquier escritura limpia los stickies (*)
+--                        [7]=tx_aborted* [8]=rx_aborted* (audit 2026-11)
+--                   (w)  WRITE-1-TO-CLEAR per bit (audit 2026-11): writing a
+--                        '1' clears that sticky only; '0' bits are kept. A
+--                        set event in the same cycle wins over the clear.
 --    0x48 DMA_RXCNT (r)  bytes realmente escritos a DDR (valido en done)
 --
 --  Semantica de done: tx_done = el DMA termino de MOVER bytes a los FIFOs,
@@ -106,6 +112,9 @@ architecture rtl of usart_axi_top is
   signal txlen_r, rxlen_r : unsigned(23 downto 0) := (others => '0');
   signal ientx_r, ienrx_r : std_logic := '0';
   signal tx_start_p, rx_start_p, rx_abort_p : std_logic := '0';
+  signal tx_abort_p                         : std_logic := '0';
+  signal txab_s, rxab_s                     : std_logic := '0';
+  signal d_txab, d_rxab                     : std_logic;
   signal go_tx, go_rx     : std_logic;
 
   -- stickies (busy pegajoso + dones + errores de respuesta)
@@ -160,11 +169,12 @@ begin
     port map (
       clk => clk, aresetn => aresetn, ddr_base => ddr_base,
       tx_addr => txa_r, tx_len => txlen_r,
-      tx_start => tx_start_p, tx_busy => open,
-      tx_done => d_txdone, tx_rerr => d_txrerr,
+      tx_start => tx_start_p, tx_abort => tx_abort_p, tx_busy => open,
+      tx_done => d_txdone, tx_rerr => d_txrerr, tx_aborted => d_txab,
       rx_addr => rxa_r, rx_len => rxlen_r,
       rx_start => rx_start_p, rx_abort => rx_abort_p,
       rx_busy => open, rx_done => d_rxdone, rx_flushed => d_rxflush,
+      rx_aborted => d_rxab,
       rx_berr => d_rxberr, rx_count => d_rxcnt,
       idle_to => h_idle_to,
       txf_wr => h_txf_wr, txf_wdata => h_txf_wdata, txf_lvl => h_txf_lvl,
@@ -201,12 +211,15 @@ begin
         txlen_r <= (others => '0'); rxlen_r <= (others => '0');
         ientx_r <= '0'; ienrx_r <= '0';
         tx_start_p <= '0'; rx_start_p <= '0'; rx_abort_p <= '0';
+        tx_abort_p <= '0';
         txb_s <= '0'; rxb_s <= '0'; txd_s <= '0'; rxd_s <= '0';
         rxf_s <= '0'; terr_s <= '0'; berr_s <= '0';
+        txab_s <= '0'; rxab_s <= '0';
       else
         tx_start_p <= '0';
         rx_start_p <= '0';
         rx_abort_p <= '0';
+        tx_abort_p <= '0';
 
         if wr_acc = '1' then
           case addr is
@@ -220,22 +233,34 @@ begin
               if wdata(0) = '1' then tx_start_p <= '1'; end if;
               if wdata(1) = '1' then rx_start_p <= '1'; end if;
               if wdata(2) = '1' then rx_abort_p <= '1'; end if;
-            when x"44" =>                -- limpia stickies
-              txd_s <= '0'; rxd_s <= '0'; rxf_s <= '0';
-              terr_s <= '0'; berr_s <= '0';
+              if wdata(3) = '1' then tx_abort_p <= '1'; end if;
+            when x"44" =>                -- W1C per bit (audit 2026-11)
+              if wdata(2) = '1' then txd_s  <= '0'; end if;
+              if wdata(3) = '1' then rxd_s  <= '0'; end if;
+              if wdata(4) = '1' then rxf_s  <= '0'; end if;
+              if wdata(5) = '1' then terr_s <= '0'; end if;
+              if wdata(6) = '1' then berr_s <= '0'; end if;
+              if wdata(7) = '1' then txab_s <= '0'; end if;
+              if wdata(8) = '1' then rxab_s <= '0'; end if;
             when others => null;
           end case;
         end if;
 
         -- busy pegajoso desde el ciclo del start; done real lo baja
-        if go_tx = '1' then txb_s <= '1'; txd_s <= '0'; end if;
-        if go_rx = '1' then rxb_s <= '1'; rxd_s <= '0'; rxf_s <= '0'; end if;
+        if go_tx = '1' then txb_s <= '1'; txd_s <= '0'; txab_s <= '0'; end if;
+        if go_rx = '1' then
+          rxb_s <= '1'; rxd_s <= '0'; rxf_s <= '0'; rxab_s <= '0';
+        end if;
 
-        if d_txdone = '1' then txb_s <= '0'; txd_s <= '1'; end if;
+        if d_txdone = '1' then
+          txb_s <= '0'; txd_s <= '1';
+          if d_txab = '1' then txab_s <= '1'; end if;
+        end if;
         if d_rxdone = '1' then
           rxb_s <= '0';
           rxd_s <= '1';
           if d_rxflush = '1' then rxf_s <= '1'; end if;
+          if d_rxab = '1' then rxab_s <= '1'; end if;
         end if;
 
         if d_txrerr = '1' then terr_s <= '1'; end if;
@@ -261,6 +286,7 @@ begin
           rdata_dma(2) <= txd_s;  rdata_dma(3) <= rxd_s;
           rdata_dma(4) <= rxf_s;
           rdata_dma(5) <= terr_s; rdata_dma(6) <= berr_s;
+          rdata_dma(7) <= txab_s; rdata_dma(8) <= rxab_s;
         when x"48" =>
           rdata_dma(23 downto 0) <= std_logic_vector(d_rxcnt);
         when others => null;

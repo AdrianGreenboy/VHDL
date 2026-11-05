@@ -234,7 +234,7 @@ begin
     mm_rd(A_STAT, d);
     assert d(6) = '1' report "M3: tx_ovf no se marco" severity failure;
     assert d(5) = '0' report "M3: rx_ovf marcado sin razon" severity failure;
-    mm_wr(A_STAT, x"00000000");                         -- limpia stickies
+    mm_wr(A_STAT, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)                         -- limpia stickies
     mm_rd(A_STAT, d);
     assert d(6) = '0' report "M3: STAT-write no limpio tx_ovf" severity failure;
     report "[M3] PASS";
@@ -258,7 +258,7 @@ begin
     mm_rd(A_RXL, d);
     assert to_integer(unsigned(d)) = 0
       report "M4: 0xEE no fue descartado" severity failure;
-    mm_wr(A_STAT, x"00000000");
+    mm_wr(A_STAT, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[M4] PASS";
 
     ----------------------------------------------------------------------------
@@ -331,7 +331,7 @@ begin
     mm_rd(A_RXD, d);
     assert d(7 downto 0) = x"55"
       report "M7: dato con frame error no empujado" severity failure;
-    mm_wr(A_STAT, x"00000000");
+    mm_wr(A_STAT, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     tb_rxd <= '0';                                      -- break
     wait for 13 * BITP;
     tb_rxd <= '1';
@@ -341,7 +341,7 @@ begin
     mm_rd(A_RXL, d);
     assert to_integer(unsigned(d)) = 0
       report "M7: break empujo datos" severity failure;
-    mm_wr(A_STAT, x"00000000");
+    mm_wr(A_STAT, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     mm_wr(A_CTRL, x"0000000D");                         -- en|rx_en|par_en (8E1)
     uart_tx_beh(tb_rxd, x"3A", BITP, paren => true, force_perr => true);
     wait for 2 us;
@@ -350,7 +350,7 @@ begin
     mm_rd(A_RXD, d);
     assert d(7 downto 0) = x"3A"
       report "M7: dato con error de paridad no empujado" severity failure;
-    mm_wr(A_STAT, x"00000000");
+    mm_wr(A_STAT, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     report "[M7] PASS";
 
     ----------------------------------------------------------------------------
@@ -398,6 +398,74 @@ begin
     assert to_integer(unsigned(d)) = 0
       report "M9: eco no suprimido en half duplex" severity failure;
     report "[M9] PASS";
+
+    ----------------------------------------------------------------------------
+    -- Audit 2026-11 regression tests
+    ----------------------------------------------------------------------------
+    report "[M10] STAT is write-1-to-clear per bit";
+    mm_wr(A_STAT, x"FFFFFFFF");
+    mm_wr(A_CTRL, x"00000000");                         -- engine off: TX FIFO fills
+    for i in 0 to 16 loop                               -- 17 pushes -> tx_ovf
+      mm_wr(A_TXD, x"00000055");
+    end loop;
+    mm_wr(A_CTRL, x"00000085");                         -- en|rx_en|loop_int (no tx)
+    for i in 0 to 16 loop                               -- 17 bytes in -> rx_ovf
+      uart_tx_beh(tb_rxd, x"3C", BITP);
+    end loop;
+    -- loop_int is set, so the external line is ignored: use the pins instead
+    mm_wr(A_CTRL, x"00000005");                         -- en|rx_en, pins
+    for i in 0 to 16 loop
+      uart_tx_beh(tb_rxd, x"3C", BITP);
+    end loop;
+    wait for 2 us;
+    mm_rd(A_STAT, d);
+    assert d(5) = '1' and d(6) = '1'
+      report "M10: precondition rx_ovf/tx_ovf not both set: 0x" & to_hstring(d)
+      severity failure;
+    mm_wr(A_STAT, x"00000000");                         -- writing 0 clears nothing
+    mm_rd(A_STAT, d);
+    assert d(5) = '1' and d(6) = '1'
+      report "M10: a write of 0 cleared stickies (not W1C)" severity failure;
+    mm_wr(A_STAT, x"00000040");                         -- clear tx_ovf only
+    mm_rd(A_STAT, d);
+    assert d(6) = '0' and d(5) = '1'
+      report "M10: W1C bit 6 cleared the wrong bits: 0x" & to_hstring(d)
+      severity failure;
+    mm_wr(A_STAT, x"00000020");                         -- clear rx_ovf only
+    mm_rd(A_STAT, d);
+    assert d(5) = '0' report "M10: W1C bit 5 failed" severity failure;
+    for i in 0 to 15 loop mm_rd(A_RXD, d); end loop;    -- drain RX
+    mm_wr(A_CTRL, x"00000003");                         -- en|tx_en: drain TX on pins
+    poll_eq(A_TXL, 0, 200 us, "M10-txdrain");
+    wait for 6 us;                                      -- last char on the wire
+    mm_wr(A_CTRL, x"00000000");
+    mm_wr(A_STAT, x"FFFFFFFF");
+    report "[M10] PASS";
+
+    report "[M11] WM values are clamped to DEPTH";
+    mm_wr(A_WM, x"001F001F");                           -- 31 > DEPTH=16
+    mm_rd(A_WM, d);
+    assert to_integer(unsigned(d(LOG2 downto 0))) = 16 and
+           to_integer(unsigned(d(16 + LOG2 downto 16))) = 16
+      report "M11: WM not clamped: 0x" & to_hstring(d) severity failure;
+    mm_wr(A_WM, x"00040008");
+    report "[M11] PASS";
+
+    report "[M12] RS-485 DE polarity bit CTRL[10]";
+    mm_wr(A_CTRL, x"00000607");                         -- en|tx|rx|half_dup|de_inv
+    wait for 1 us;
+    assert rts_n_o = '1' report "M12: inverted DE not high at rest" severity failure;
+    mm_rd(A_CTRL, d);
+    assert d(10) = '1' report "M12: CTRL[10] readback" severity failure;
+    mm_wr(A_TXD, x"0000005A");
+    wait until txd_t = '0' for 20 us;
+    wait for 100 ns;
+    assert rts_n_o = '0' report "M12: inverted DE not low while sending" severity failure;
+    wait until txd_t = '1' for 20 us;
+    wait for 1 us;
+    assert rts_n_o = '1' report "M12: inverted DE not released" severity failure;
+    mm_wr(A_CTRL, x"00000000");
+    report "[M12] PASS";
 
     ----------------------------------------------------------------------------
     report "==================================================";

@@ -1,5 +1,7 @@
 # MMUSART — Memory-Mapped USART IP Core with Dual-Channel AXI4 DMA
 
+> **Audit 2026-11:** register semantics changed (W1C stickies, new bits). See the section *Audit 2026-11 changes* at the end and `AUDIT_FIXES.md`.
+
 A complete, silicon-validated USART (Universal Synchronous/Asynchronous
 Receiver-Transmitter) peripheral IP core written in VHDL-2008, designed for
 the RV32I SoC v3 and validated on a Trenz TE0950 board (AMD Versal
@@ -679,3 +681,24 @@ Result: WNS +2.430 ns. **SILICON PASS (functional):** `usart-bringup`
 reported PIO {2,0x5A,0xC3} + concurrent 32-byte DMA echo OK (IRQ=0x0) at
 115200 baud. The clean BD is captured in `regenera_bd_usart.tcl`.
 
+## Audit 2026-11 changes (supersedes conflicting statements above)
+
+Details, file:line references and verification: `AUDIT_FIXES.md`.
+
+* **FIFO**: the core now ships its private `usart_byte_fifo.vhd` (unique
+  entity name, synchronous active-high reset, SRAM-mappable registered read
+  with a 1-deep prefetch; FWFT timing unchanged). `~/spi_ip/byte_fifo.vhd`
+  is no longer needed by any USART script or TCL.
+* **STAT (0x04) and DMA_STAT (0x44) are write-1-to-clear per bit.** Writing
+  `0` clears nothing; write `0xFFFFFFFF` to clear everything.
+* **DMA_CTRL[3] = tx_abort**; DMA_STAT[7] = tx_aborted*, [8] = rx_aborted*.
+  rx_abort/tx_abort are latched and honoured at the next burst boundary (a
+  pulse is never lost).
+* DMA offsets use all 32 bits; RLAST is checked (mismatch -> tx_rerr).
+* **CTRL[10] = de_inv**: RS-485 DE polarity in half-duplex mode (0 = active
+  high, default/legacy).
+* WM values are clamped to the FIFO depth. A PIO TXDATA write colliding with
+  a DMA push in the same cycle raises tx_ovf.
+* All USART engine datapath registers are reset (ASIC flows).
+* GHDL regression: `./run_ghdl.sh all` (adds `tb_usart_byte_fifo`,
+  `tb_usart_dma`).
