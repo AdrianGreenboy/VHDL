@@ -29,11 +29,19 @@
 -- Comportamiento BIT-IDENTICO a dsp_oracle.py::fft_fixed (mismas cuentas,
 -- mismo orden). Interfaz IDENTICA a versiones anteriores (no cambia un puerto).
 --
--- Contrato numerico:
---   qmul(a,b) = (a*b + 0x4000) >> 15  (Q1.15, round-half-up)
+-- Numeric contract (AUDIT 2026-11, identical in dsp_oracle.py::fft_fixed):
+--   qmul(a,b) = (a*b + 0x4000) >> 15  (Q1.15, round-half-up), kept at FULL
+--     width (17 bits): qmul(-32768,-32768) = +32768 is NOT wrapped any more.
 --   tr = qmul(re[l],wr) - qmul(im[l],wi) ; ti = qmul(re[l],wi) + qmul(im[l],wr)
---   re[k],im[k] = rshift_round(u +/- t, 1)  (shift 1 por etapa, escala 1/N)
---   IFFT: wi -> -wi
+--     computed in 18 bits (|tr|,|ti| <= 65536; <= 46341 for in-range data).
+--   re[k],im[k] = sat16( (u +/- t + 1) >> 1 )   (sum in 19 bits, shift 1 per
+--     stage => total scale 1/N, then SATURATE to int16 -- never wrap).
+--   IFFT: wi -> -wi (17 bits, so -(-32768) = +32768 is exact).
+--   Overflow guarantee: the 1/2-per-stage schedule bounds the complex
+--   magnitude (|X| <= max|x| + ~1 LSB rounding per stage). Saturation can only
+--   trigger for inputs outside the Q1.15 unit circle (e.g. |re|=|im|=FS
+--   corners, where |x| = 1.414*FS) or within LOG2N LSB of it. Every saturation
+--   event sets the sticky 'sat' output for that run (cleared on start).
 -------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -59,7 +67,8 @@ entity fft_dp is
     busy    : out std_logic;
     rd_idx  : in  std_logic_vector(9 downto 0);
     rd_re   : out std_logic_vector(15 downto 0);
-    rd_im   : out std_logic_vector(15 downto 0)
+    rd_im   : out std_logic_vector(15 downto 0);
+    sat     : out std_logic   -- sticky: >=1 butterfly output saturated (this run)
   );
 end entity;
 
@@ -126,23 +135,36 @@ architecture rtl of fft_dp is
   -- ------------------------------------------------------------------
   -- funciones aritmeticas (idem versiones anteriores)
   -- ------------------------------------------------------------------
+  -- Q1.15 product, round-half-up, FULL-width 17-bit result (range +-32768).
   function qmul(a, b : signed(15 downto 0)) return signed is
     variable p : signed(31 downto 0);
   begin
     p := a*b; p := p + to_signed(16384,32);
-    return resize(shift_right(p,15),16);
+    return resize(shift_right(p,15),17);
   end function;
+  -- 16b x 17b (conjugated twiddle may be +32768): 33-bit product, 17-bit result.
   function qmul17(a : signed(15 downto 0); b : signed(16 downto 0)) return signed is
     variable p : signed(32 downto 0);
   begin
     p := a*b; p := p + to_signed(16384,33);
-    return resize(shift_right(p,15),16);
+    return resize(shift_right(p,15),17);
   end function;
-  function rsr1(v : signed) return signed is
+  -- (v + 1) >> 1 at full width (one guard bit added, no truncation of range).
+  function rs1w(v : signed) return signed is
     variable t : signed(v'length downto 0);
   begin
     t := resize(v,v'length+1)+1;
-    return resize(shift_right(t,1),16);
+    return shift_right(t,1);
+  end function;
+  function ovf16(v : signed) return boolean is
+  begin
+    return v > to_signed(32767, v'length) or v < to_signed(-32768, v'length);
+  end function;
+  function sat16(v : signed) return signed is
+  begin
+    if v > to_signed(32767, v'length) then return to_signed(32767,16);
+    elsif v < to_signed(-32768, v'length) then return to_signed(-32768,16);
+    else return resize(v,16); end if;
   end function;
   function bitrev(val, bits : integer) return integer is
     variable r : integer := 0; variable x : integer := val;
@@ -178,7 +200,8 @@ architecture rtl of fft_dp is
 
   -- capturas del butterfly
   signal ur_r, ui_r, lr_r, li_val : signed(15 downto 0) := (others=>'0');
-  signal tr_r, ti_r : signed(15 downto 0) := (others=>'0');
+  signal tr_r, ti_r : signed(17 downto 0) := (others=>'0');
+  signal sat_r      : std_logic := '0';
 
 begin
 
@@ -226,7 +249,8 @@ begin
   process(clk)
     variable wr_v : signed(15 downto 0);
     variable wi_v : signed(16 downto 0);
-    variable tr, ti : signed(15 downto 0);
+    variable tr, ti : signed(17 downto 0);
+    variable sr, si : signed(19 downto 0);   -- rs1w of a 19-bit sum
     variable rr : integer;
   begin
     if rising_edge(clk) then
@@ -238,6 +262,7 @@ begin
         state <= S_IDLE;
         busy  <= '0';
         j_r <= 0; k_r <= 0; brev_i <= 0; src_sel <= '0';
+        sat_r <= '0';
       else
 
         case state is
@@ -264,6 +289,7 @@ begin
               log2n_r <= to_integer(unsigned(log2n));
               n_r     <= 2 ** to_integer(unsigned(log2n));
               inv_r   <= inv;
+              sat_r   <= '0';
               brev_i  <= 0;
               src_sel <= '0';         -- fuente = b0 (donde se cargo la entrada)
               state   <= S_BREV_RD;
@@ -335,18 +361,21 @@ begin
             wr_v := rom_wr;
             wi_v := resize(rom_wi, 17);
             if inv_r = '1' then wi_v := -wi_v; end if;
-            tr := resize(qmul(lr_r, wr_v) - qmul17(li_val, wi_v), 16);
-            ti := resize(qmul17(lr_r, wi_v) + qmul(li_val, wr_v), 16);
-            -- escribir res_k en el banco DESTINO (el contrario a fuente)
+            tr := resize(qmul(lr_r, wr_v), 18) - resize(qmul17(li_val, wi_v), 18);
+            ti := resize(qmul17(lr_r, wi_v), 18) + resize(qmul(li_val, wr_v), 18);
+            -- res_k = sat16((u + t + 1) >> 1), written to the DESTINATION bank
+            sr := rs1w(resize(ur_r,19) + resize(tr,19));
+            si := rs1w(resize(ui_r,19) + resize(ti,19));
+            if ovf16(sr) or ovf16(si) then sat_r <= '1'; end if;
             if src_sel = '0' then
               wr_addr1 <= k_r;
-              wd_re1 <= rsr1(resize(ur_r,17) + resize(tr,17));
-              wd_im1 <= rsr1(resize(ui_r,17) + resize(ti,17));
+              wd_re1 <= sat16(sr);
+              wd_im1 <= sat16(si);
               we1 <= '1';
             else
               wr_addr0 <= k_r;
-              wd_re0 <= rsr1(resize(ur_r,17) + resize(tr,17));
-              wd_im0 <= rsr1(resize(ui_r,17) + resize(ti,17));
+              wd_re0 <= sat16(sr);
+              wd_im0 <= sat16(si);
               we0 <= '1';
             end if;
             tr_r <= tr;
@@ -354,16 +383,19 @@ begin
             state <= S_WR_L;
 
           when S_WR_L =>
-            -- escribir res_l = u - t en destino, indice l
+            -- res_l = sat16((u - t + 1) >> 1), destination bank, index l
+            sr := rs1w(resize(ur_r,19) - resize(tr_r,19));
+            si := rs1w(resize(ui_r,19) - resize(ti_r,19));
+            if ovf16(sr) or ovf16(si) then sat_r <= '1'; end if;
             if src_sel = '0' then
               wr_addr1 <= li_r;
-              wd_re1 <= rsr1(resize(ur_r,17) - resize(tr_r,17));
-              wd_im1 <= rsr1(resize(ui_r,17) - resize(ti_r,17));
+              wd_re1 <= sat16(sr);
+              wd_im1 <= sat16(si);
               we1 <= '1';
             else
               wr_addr0 <= li_r;
-              wd_re0 <= rsr1(resize(ur_r,17) - resize(tr_r,17));
-              wd_im0 <= rsr1(resize(ui_r,17) - resize(ti_r,17));
+              wd_re0 <= sat16(sr);
+              wd_im0 <= sat16(si);
               we0 <= '1';
             end if;
             -- avanzar recorrido (k += m ; si excede, j++ ; si j==half, siguiente etapa)
@@ -407,5 +439,6 @@ begin
   -- lectura de resultados: del banco DESTINO final (not src_sel), 1 ciclo lat.
   rd_re <= std_logic_vector(rq_re1) when src_sel='0' else std_logic_vector(rq_re0);
   rd_im <= std_logic_vector(rq_im1) when src_sel='0' else std_logic_vector(rq_im0);
+  sat   <= sat_r;
 
 end architecture;

@@ -8,9 +8,21 @@
 --   0x000 ID      RO  0xD5B10100
 --   0x004 CTRL    RW  bit0=START(autoclear) bits[3:1]=FUNC bit4=REAL_PACK bit5=FLUSH
 --                     FUNC: 000 FFT_fwd 001 FFT_inv 010 FIR 011 CORDIC_rot 100 CORDIC_vec
---   0x008 STATUS  RO/W1C  bit0=BUSY bit1=DONE(sticky) bit2=ERR
---   0x00C LOG2N   RW  3..10
+--   0x008 STATUS  RO/W1C  bit0=BUSY bit1=DONE(sticky) bit2=ERR(sticky)
+--                         bit3=FFT_SAT(sticky): a butterfly/unsplit output
+--                         saturated during the last FFT run (W1C)
+--   0x00C LOG2N   RW  FFT 1..10 ; real-pack 2..10 (log2 of 2N)
 --   0x010 FIR_LEN RW  1..64
+--   0x024 DATA_LEN RW FIR: 1..1024 samples ; real-pack: must equal 2**LOG2N
+--
+-- AUDIT 2026-11: START validates its parameters. An out-of-range LOG2N,
+-- FIR_LEN or DATA_LEN does NOT launch the datapath: the core completes
+-- immediately with STATUS.DONE=1 and STATUS.ERR=1 (so polling firmware never
+-- hangs) and DATA is left untouched.
+-- AUDIT 2026-11: DATA-window reads are ready only on the 3rd cycle of a held
+-- request with the BRAM read address equal to the requested one, so a read
+-- right after a write to the same word (or a coincidental address match from
+-- the previous access / the internal FSM) can no longer return stale data.
 --   0x014 CORDIC_A RW  angulo(rot) / X(vec)
 --   0x018 CORDIC_B RW  Y(vec)
 --   0x01C RES_LO  RO  cos/mag
@@ -54,7 +66,10 @@ architecture rtl of dsp_mmio is
 
   signal status_busy : std_logic := '0';
   signal status_done : std_logic := '0';   -- sticky
-  signal status_err  : std_logic := '0';
+  signal status_err  : std_logic := '0';   -- sticky, W1C
+  signal status_sat  : std_logic := '0';   -- sticky, W1C
+  signal fft_sat, uns_sat : std_logic;
+  signal data_rd_cnt : integer range 0 to 2 := 0;
 
   -- COEF: 32 words
   type coef_arr_t is array (0 to 31) of std_logic_vector(31 downto 0);
@@ -175,7 +190,18 @@ begin
       dr_raddr_q <= dr_raddr;
     end if;
   end process;
-  data_rd_ready <= '1' when (dr_raddr_q = widx) else '0';
+  -- Count consecutive cycles of a pending DATA read (req held by the master).
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' or req = '0' or is_data = '0' or we = '1' or data_rd_ready = '1' then
+        data_rd_cnt <= 0;
+      elsif data_rd_cnt < 2 then
+        data_rd_cnt <= data_rd_cnt + 1;
+      end if;
+    end if;
+  end process;
+  data_rd_ready <= '1' when (dr_raddr_q = widx and data_rd_cnt = 2) else '0';
 
   ---------------------------------------------------------------------------
   -- decodificacion combinacional
@@ -205,7 +231,8 @@ begin
         when x"00"  => rdata <= ID_VAL;
         when x"04"  => rdata <= ctrl_r;
         when x"08"  => rdata <= (0 => status_busy, 1 => status_done,
-                                 2 => status_err, others => '0');
+                                 2 => status_err, 3 => status_sat,
+                                 others => '0');
         when x"0C"  => rdata <= log2n_r;
         when x"10"  => rdata <= firlen_r;
         when x"14"  => rdata <= corda_r;
@@ -245,7 +272,8 @@ begin
     port map (clk=>clk, rst=>rst, log2n=>fft_log2n, inv=>fft_inv,
               wr_en=>fft_wr_en, wr_idx=>fft_wr_idx, wr_re=>fft_wr_re, wr_im=>fft_wr_im,
               start=>fft_start, done=>fft_done, busy=>fft_busy,
-              rd_idx=>fft_rd_idx, rd_re=>fft_rd_re, rd_im=>fft_rd_im);
+              rd_idx=>fft_rd_idx, rd_re=>fft_rd_re, rd_im=>fft_rd_im,
+              sat=>fft_sat);
 
   u_uns : entity work.fft_unsplit_dp
     generic map (NMAX=>512, LOG2MAX=>9)
@@ -259,6 +287,10 @@ begin
   ---------------------------------------------------------------------------
   process(clk)
     variable func : std_logic_vector(2 downto 0);
+    variable l2v  : integer range 0 to 15;
+    variable dlv  : integer range 0 to 4095;
+    variable flv  : integer range 0 to 127;
+    variable bad  : boolean;
   begin
     if rising_edge(clk) then
       cor_start   <= '0';
@@ -278,7 +310,8 @@ begin
         ctrl_r <= (others=>'0'); log2n_r<=(others=>'0'); firlen_r<=(others=>'0');
         corda_r<=(others=>'0'); cordb_r<=(others=>'0');
         reslo_r<=(others=>'0'); reshi_r<=(others=>'0');
-        status_busy<='0'; status_done<='0'; status_err<='0';
+        status_busy<='0'; status_done<='0'; status_err<='0'; status_sat<='0';
+        datalen_r<=(others=>'0');
         op_state<=OP_IDLE;
       else
         -- escrituras
@@ -292,16 +325,45 @@ begin
               when x"04" =>
                 ctrl_r <= wdata;
                 -- START (bit0)
-                if wdata(0)='1' then
+                if wdata(0)='1' and op_state /= OP_IDLE then
+                  -- START while an operation is running: rejected, flagged.
+                  status_err <= '1';
+                elsif wdata(0)='1' then
                   func := wdata(3 downto 1);
+                  -- parameter validation (AUDIT 2026-11)
+                  l2v := to_integer(unsigned(log2n_r(3 downto 0)));
+                  dlv := to_integer(unsigned(datalen_r(11 downto 0)));
+                  flv := to_integer(unsigned(firlen_r(6 downto 0)));
+                  bad := false;
+                  if log2n_r(31 downto 4) /= x"0000000" or datalen_r(31 downto 12) /= x"00000"
+                     or firlen_r(31 downto 7) /= "0000000000000000000000000" then
+                    bad := (func = F_FFTF or func = F_FFTI or func = F_FIR);
+                  end if;
+                  case func is
+                    when F_FFTF =>
+                      if wdata(4)='1' then
+                        if l2v < 2 or l2v > 10 or dlv /= 2**l2v then bad := true; end if;
+                      elsif l2v < 1 or l2v > 10 then bad := true; end if;
+                    when F_FFTI =>
+                      if l2v < 1 or l2v > 10 then bad := true; end if;
+                    when F_FIR =>
+                      if flv < 1 or flv > 64 or dlv < 1 or dlv > 1024 then bad := true; end if;
+                    when F_CROT | F_CVEC => null;
+                    when others => bad := true;   -- reserved FUNC codes
+                  end case;
                   cur_func <= func;
                   status_busy <= '1';
                   status_done <= '0';
                   status_err  <= '0';
+                  if func = F_FFTF or func = F_FFTI then status_sat <= '0'; end if;
                   -- FLUSH (bit5) para FIR
                   if wdata(5)='1' then fir_flush <= '1'; end if;
                   real_pack_r <= wdata(4);
                   op_state <= OP_RUN;
+                  if bad then
+                    status_err <= '1';
+                    op_state   <= OP_FINISH;      -- DONE+ERR, datapath untouched
+                  else
                   -- lanzar el datapath adecuado
                   case func is
                     when F_CROT => cor_mode<='0'; cor_start<='1';
@@ -335,11 +397,13 @@ begin
                       xfer_idx<=0; op_state<=OP_FFT_LOAD;
                     when others => null;
                   end case;
+                  end if;
                 end if;
               when x"08" =>
-                -- W1C sobre DONE/ERR
+                -- W1C sobre DONE/ERR/FFT_SAT
                 if wdata(1)='1' then status_done<='0'; end if;
                 if wdata(2)='1' then status_err <='0'; end if;
+                if wdata(3)='1' then status_sat <='0'; end if;
               when x"0C" => log2n_r  <= wdata;
               when x"10" => firlen_r <= wdata;
               when x"14" => corda_r  <= wdata;
@@ -396,6 +460,7 @@ begin
 
           when OP_FFT_RUN =>
             if fft_done='1' then
+              if fft_sat='1' then status_sat <= '1'; end if;
               xfer_idx <= 0;
               op_state <= OP_FFT_STORE;
             end if;
@@ -500,6 +565,7 @@ begin
 
           when OP_RP_FFTRUN =>
             if fft_done='1' then
+              if fft_sat='1' then status_sat <= '1'; end if;
               xfer_idx <= 0;
               op_state <= OP_RP_TOUNS;
             end if;
@@ -531,14 +597,15 @@ begin
             end if;
 
           when OP_RP_STORE =>
-            -- unsplit produce X[0..N]; escribir a DATA in-place (skew 1 ciclo)
+            -- unsplit produce X[0..N]; escribir a DATA in-place. Skew 2: 1 cycle
+            -- for uns_rd_idx + 1 cycle for the registered X read port.
             if xfer_idx <= rp_n then
               uns_rd_idx <= std_logic_vector(to_unsigned(xfer_idx,10));
             end if;
-            if xfer_idx > 0 then
-              dr_waddr <= xfer_idx-1; dr_wdata <= uns_rd_xi & uns_rd_xr; dr_we <= '1';
+            if xfer_idx > 1 then
+              dr_waddr <= xfer_idx-2; dr_wdata <= uns_rd_xi & uns_rd_xr; dr_we <= '1';
             end if;
-            if xfer_idx = rp_n + 1 then
+            if xfer_idx = rp_n + 2 then
               op_state <= OP_FINISH;
             else
               xfer_idx <= xfer_idx + 1;

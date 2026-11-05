@@ -12,6 +12,13 @@ Contrato numerico congelado (scope freeze v1.0):
   - Saturacion: a [-32768, 32767] en cada salida de producto/suma final.
   - FFT radix-2 DIT in-place, shift fijo de 1 por etapa (escala total 1/N).
     Inversa = mismo shift por etapa (1/N exacto) + conjugacion de twiddles.
+    AUDIT 2026-11 -- saturating fixed-point semantics shared with fft_dp.vhd:
+      t = W*x[l] with each qmul at full width (no wrap of +32768), the
+      butterfly output is sat16((u +/- t + 1) >> 1) AT EVERY STAGE (the RTL
+      stores int16 between stages, so the model must too). Twiddles are read
+      from the single W_1024 ROM with stride 1024/N, exactly like the RTL.
+      fft_fixed() also counts saturation events (fft_fixed.last_sat) which
+      the RTL reports as the sticky FFT_SAT status bit.
   - FIR: simetrico (fase lineal), pre-suma x[n-k]+x[n-(L-1-k)], 32 coefs.
   - CORDIC: 16 iteraciones, ganancia compensada (mult final por 1/K),
     angulo Q2.14 (+-pi -> rango int16 completo).
@@ -99,25 +106,48 @@ def bit_reverse(a, log2n):
 # FFT radix-2 DIT in-place, shift fijo por etapa
 # ----------------------------------------------------------------------------
 
+NMAX_ROM = 1024
+_W1024 = None
+
+
+def rom1024():
+    """The single W_1024 twiddle ROM shared by fft_dp and fft_unsplit_dp."""
+    global _W1024
+    if _W1024 is None:
+        _W1024 = twiddle_rom(NMAX_ROM)
+    return _W1024
+
+
+def _sat_count(v):
+    v = int(v)
+    return 1 if (v > INT16_MAX or v < INT16_MIN) else 0
+
+
 def fft_fixed(re_in, im_in, log2n, inverse=False):
     """
     FFT/IFFT radix-2 DIT in-place, int16 Q1.15, shift de 1 por etapa.
-    re_in, im_in: arrays int (len N). Devuelve (re, im) int32 saturados.
+    re_in, im_in: arrays int (len N). Devuelve (re, im) int32.
+    Every butterfly output is saturated to int16 (same as the RTL bank write).
+    fft_fixed.last_sat = number of butterfly outputs that saturated.
     """
     n = 1 << log2n
+    assert 1 <= log2n <= 10
     assert len(re_in) == n and len(im_in) == n
+    re_in = np.asarray(re_in, dtype=np.int64)
+    im_in = np.asarray(im_in, dtype=np.int64)
+    assert re_in.min() >= INT16_MIN and re_in.max() <= INT16_MAX
+    assert im_in.min() >= INT16_MIN and im_in.max() <= INT16_MAX
 
-    re = bit_reverse(np.asarray(re_in, dtype=np.int64), log2n)
-    im = bit_reverse(np.asarray(im_in, dtype=np.int64), log2n)
+    re = bit_reverse(re_in, log2n)
+    im = bit_reverse(im_in, log2n)
 
-    w_re, w_im = twiddle_rom(n if n > 1 else 2)
-    # para N<Nmax el stride seria Nmax//n; aqui generamos ROM de tamano N
-    # (equivalente exacto a subindexar la ROM grande con stride).
+    w_re, w_im = rom1024()
+    nsat = 0
 
     m = 2
     while m <= n:
         half = m // 2
-        stride = n // m
+        stride = NMAX_ROM // m       # RTL: rom_addr = j << log2(NMAX/m)
         for j in range(half):
             widx = j * stride
             wr = w_re[widx]
@@ -131,14 +161,24 @@ def fft_fixed(re_in, im_in, log2n, inverse=False):
                 ti = qmul(re[l], wi) + qmul(im[l], wr)
                 ur = re[k]
                 ui = im[k]
-                # shift de 1 por etapa con round-half-up (escala 1/N total)
-                re[k] = rshift_round(ur + tr, 1)
-                im[k] = rshift_round(ui + ti, 1)
-                re[l] = rshift_round(ur - tr, 1)
-                im[l] = rshift_round(ui - ti, 1)
+                # shift de 1 por etapa con round-half-up (escala 1/N total),
+                # then saturate to int16 (the RTL banks hold int16)
+                o = (rshift_round(ur + tr, 1), rshift_round(ui + ti, 1),
+                     rshift_round(ur - tr, 1), rshift_round(ui - ti, 1))
+                # RTL flags per write (re/im pair): count pairs
+                nsat += 1 if (_sat_count(o[0]) or _sat_count(o[1])) else 0
+                nsat += 1 if (_sat_count(o[2]) or _sat_count(o[3])) else 0
+                re[k] = int(np.clip(o[0], INT16_MIN, INT16_MAX))
+                im[k] = int(np.clip(o[1], INT16_MIN, INT16_MAX))
+                re[l] = int(np.clip(o[2], INT16_MIN, INT16_MAX))
+                im[l] = int(np.clip(o[3], INT16_MIN, INT16_MAX))
         m <<= 1
 
-    return sat16(re), sat16(im)
+    fft_fixed.last_sat = nsat
+    return re.astype(np.int32), im.astype(np.int32)
+
+
+fft_fixed.last_sat = 0
 
 
 def fft_real_packed(x_real, log2n2, inverse=False):
@@ -159,7 +199,24 @@ def fft_real_packed(x_real, log2n2, inverse=False):
     Zr, Zi = fft_fixed(zr, zi, log2n, inverse=False)
 
     # unsplit: X[k] = 0.5(Z[k]+conj(Z[N-k])) - 0.5 j W_2N^k (Z[k]-conj(Z[N-k]))
-    w_re, w_im = twiddle_rom(n2)
+    Xr, Xi = unsplit_fixed(Zr, Zi, log2n2)
+    return Xr, Xi
+
+
+def unsplit_fixed(Zr, Zi, log2n2):
+    """
+    Unsplit stage alone (bit-exact model of fft_unsplit_dp.vhd).
+    A, B are exact (17 bit), W*B exact (18 bit), output sat16 (19-bit sum).
+    Twiddle W_2N^k = W_1024[k * 1024/2N] (single ROM + stride, as the RTL).
+    """
+    n2 = 1 << log2n2
+    n = n2 // 2
+    Zr = np.asarray(Zr, dtype=np.int64)
+    Zi = np.asarray(Zi, dtype=np.int64)
+    w_re_full, w_im_full = rom1024()
+    stride = NMAX_ROM // n2
+    w_re = w_re_full[0::stride]
+    w_im = w_im_full[0::stride]
     Xr = np.zeros(n + 1, dtype=np.int64)
     Xi = np.zeros(n + 1, dtype=np.int64)
     for k in range(n + 1):
@@ -404,6 +461,68 @@ def golden_vectors():
     return vecs
 
 
+def corner_fft_cases():
+    """Deterministic full-scale / corner FFT cases: (name, log2n, inv, re, im)."""
+    rng = np.random.default_rng(0xC0DE)
+    cs = []
+    def full(n, v): return np.full(n, v, dtype=np.int64)
+    def imp(n, i, a, b):
+        r = np.zeros(n, dtype=np.int64); q = np.zeros(n, dtype=np.int64)
+        r[i] = a; q[i] = b; return r, q
+    n = 1024
+    cs.append(("dc_neg_fs", 10, 0, full(n, -32768), full(n, -32768)))
+    cs.append(("dc_pos_fs", 10, 1, full(n, 32767), full(n, 32767)))
+    r, q = imp(n, 0, -32768, -32768); cs.append(("impulse0_corner", 10, 0, r, q))
+    r, q = imp(n, 1, -32768, -32768); cs.append(("impulse1_corner", 10, 0, r, q))
+    r, q = imp(n, 1, -32768, -32768); cs.append(("impulse1_corner_inv", 10, 1, r, q))
+    r, q = imp(n, 3, 32767, -32768); cs.append(("impulse3_mixed", 10, 1, r, q))
+    t = np.arange(n)
+    cs.append(("tone_c_fs_bin37", 10, 0,
+               np.rint(32767*np.cos(2*np.pi*37*t/n)).astype(np.int64),
+               np.rint(32767*np.sin(2*np.pi*37*t/n)).astype(np.int64)))
+    cs.append(("tone_real_fs_bin100", 10, 1,
+               np.rint(32767*np.cos(2*np.pi*100*t/n)).astype(np.int64), full(n, 0)))
+    cs.append(("nyquist_alt_fs", 10, 0,
+               np.where(t % 2 == 0, 32767, -32768).astype(np.int64), full(n, 0)))
+    n = 256
+    sg = rng.integers(0, 4, n)
+    cs.append(("square_corners_rand", 8, 0,
+               np.where(sg & 1, 32767, -32768).astype(np.int64),
+               np.where(sg & 2, 32767, -32768).astype(np.int64)))
+    sg = rng.integers(0, 4, n)
+    cs.append(("square_corners_rand_inv", 8, 1,
+               np.where(sg & 1, -32768, 32767).astype(np.int64),
+               np.where(sg & 2, -32768, 32767).astype(np.int64)))
+    cs.append(("full_range_rand", 6, 0,
+               rng.integers(-32768, 32768, 64, dtype=np.int64),
+               rng.integers(-32768, 32768, 64, dtype=np.int64)))
+    cs.append(("full_range_rand_inv", 9, 1,
+               rng.integers(-32768, 32768, 512, dtype=np.int64),
+               rng.integers(-32768, 32768, 512, dtype=np.int64)))
+    cs.append(("n8_corner", 3, 1, full(8, -32768), np.array([-32768, 32767]*4, dtype=np.int64)))
+    cs.append(("n2_corner", 1, 0, np.array([-32768, -32768]), np.array([-32768, 32767])))
+    cs.append(("n4_corner_inv", 2, 1, np.array([32767, -32768, 32767, -32768]),
+               np.array([-32768, -32768, 32767, 32767])))
+    return cs
+
+
+def corner_unsplit_cases():
+    """Corner Z inputs for the unsplit stage alone: (name, log2n2, Zr, Zi)."""
+    rng = np.random.default_rng(0x5717)
+    cs = []
+    for l2n2 in (10, 8):
+        n = (1 << l2n2) // 2
+        cs.append((f"z_neg_fs_{n}", l2n2, np.full(n, -32768, dtype=np.int64),
+                   np.full(n, -32768, dtype=np.int64)))
+        sg = rng.integers(0, 4, n)
+        cs.append((f"z_corners_{n}", l2n2,
+                   np.where(sg & 1, 32767, -32768).astype(np.int64),
+                   np.where(sg & 2, 32767, -32768).astype(np.int64)))
+    cs.append(("z_full_rand_256", 9, rng.integers(-32768, 32768, 256, dtype=np.int64),
+               rng.integers(-32768, 32768, 256, dtype=np.int64)))
+    return cs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dump', action='store_true',
@@ -518,6 +637,53 @@ def main():
                 for t in range(n+1):
                     f.write(f"{int(Xr[t])&0xFFFF:04X} {int(Xi[t])&0xFFFF:04X}\n")
         print("volcado tb_unsplit.mem")
+
+        # ------- AUDIT 2026-11: full-scale / corner vectors -------
+        # Same formats as tb_fft.mem / tb_unsplit.mem. These exercise the
+        # +32768 product, the -32768 twiddle, |re|=|im|=FS square corners
+        # (which MUST saturate), impulses and full-scale tones -- the regime
+        # that the +-8000 random vectors never reached.
+        fc = corner_fft_cases()
+        with open("tb_fft_corner.mem", "w") as f:
+            f.write(f"{len(fc)}\n")
+            for (name, l2, inv, ar, ai) in fc:
+                er, ei = fft_fixed(ar, ai, l2, inverse=bool(inv))
+                print(f"  corner {name:22s} N={1<<l2:5d} inv={inv} sat_events={fft_fixed.last_sat}")
+                n = 1 << l2
+                # 5th field: expected sticky FFT_SAT (1 if any saturation)
+                f.write(f"CASE {l2} {inv} {n} {1 if fft_fixed.last_sat else 0}\n")
+                for t in range(n):
+                    f.write(f"{int(ar[t])&0xFFFF:04X} {int(ai[t])&0xFFFF:04X} "
+                            f"{int(er[t])&0xFFFF:04X} {int(ei[t])&0xFFFF:04X}\n")
+        print("volcado tb_fft_corner.mem")
+        uc = corner_unsplit_cases()
+        with open("tb_unsplit_corner.mem", "w") as f:
+            f.write(f"{len(uc)}\n")
+            for (name, l2n2, Zr, Zi) in uc:
+                n = (1 << l2n2) // 2
+                Xr, Xi = unsplit_fixed(Zr, Zi, l2n2)
+                f.write(f"CASE {l2n2} {n}\n")
+                for t in range(n):
+                    f.write(f"{int(Zr[t])&0xFFFF:04X} {int(Zi[t])&0xFFFF:04X}\n")
+                for t in range(n+1):
+                    f.write(f"{int(Xr[t])&0xFFFF:04X} {int(Xi[t])&0xFFFF:04X}\n")
+        print("volcado tb_unsplit_corner.mem")
+        # Layer 2d (AUDIT 2026-11): FFT via MMIO with expected FFT_SAT bit.
+        # Format tb_fft_sat_mmio.mem: NCASES ; "CASE LOG2N INV N SAT" then N
+        # lines "in_word out_word" (word = im[31:16] & re[15:0]).
+        sm = [c for c in fc if c[0] in ("square_corners_rand", "full_range_rand",
+                                        "n4_corner_inv")]
+        with open("tb_fft_sat_mmio.mem", "w") as f:
+            f.write(f"{len(sm)}\n")
+            for (name, l2, inv, ar, ai) in sm:
+                er, ei = fft_fixed(ar, ai, l2, inverse=bool(inv))
+                n = 1 << l2
+                f.write(f"CASE {l2} {inv} {n} {1 if fft_fixed.last_sat else 0}\n")
+                for t in range(n):
+                    inw  = ((int(ai[t])&0xFFFF)<<16)|(int(ar[t])&0xFFFF)
+                    outw = ((int(ei[t])&0xFFFF)<<16)|(int(er[t])&0xFFFF)
+                    f.write(f"{inw:08X} {outw:08X}\n")
+        print("volcado tb_fft_sat_mmio.mem")
         # volcado para Layer 2b: FFT completa via MMIO. Formato tb_fft_mmio.mem:
         #   linea 1: NCASES
         #   por caso: "CASE LOG2N INV N" luego N lineas "in_word out_word" (hex 8)

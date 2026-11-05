@@ -10,6 +10,7 @@ use std.textio.all;
 use ieee.std_logic_textio.all;
 
 entity tb_fft_unsplit_dp is
+  generic (MEMFILE : string := "tb_unsplit.mem");
 end entity;
 
 architecture sim of tb_fft_unsplit_dp is
@@ -39,7 +40,7 @@ begin
   clk <= not clk after CLK_P/2 when not sim_done else '0';
 
   stim : process
-    file fh : text open read_mode is "tb_unsplit.mem";
+    file fh : text open read_mode is MEMFILE;
     variable ln : line;
     variable ncases, l2n2, n : integer;
     variable tag : string(1 to 4);
@@ -74,7 +75,7 @@ begin
       wait until rising_edge(clk);
       start<='1'; wait until rising_edge(clk); start<='0';
 
-      for w in 0 to 5000 loop
+      for w in 0 to 20000 loop   -- AUDIT: serialized Z reads, ~8 cyc/bin
         wait until rising_edge(clk); exit when done='1';
       end loop;
       assert done='1' report "TIMEOUT c="&integer'image(c) severity failure;
