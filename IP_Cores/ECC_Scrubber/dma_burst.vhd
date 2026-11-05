@@ -13,6 +13,10 @@
 --    len   : numero total de palabras (1..256)
 --    dir   : '0' = DDR->local ; '1' = local->DDR
 --    start : pulso ; busy : '1' mientras transfiere
+--
+--  Audit 2026-11: each AXI burst is limited to 256 beats (AxLEN is 8 bits);
+--  LEN 257..511 is split into several bursts instead of truncating AxLEN.
+--  A start with len = 0 is ignored (no transfer, busy stays low).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -125,7 +129,7 @@ begin
       else
         case state is
           when D_IDLE =>
-            if start = '1' then
+            if start = '1' and unsigned(len) /= 0 then
               words_left <= unsigned(len);
               is_write   <= dir;
               if dir = '0' then
@@ -138,7 +142,7 @@ begin
               state <= D_CALC;
             end if;
 
-          -- calcula el tamano del proximo burst (limitado a 4 KB)
+          -- calcula el tamano del proximo burst (limitado a 4 KB y a 256 beats)
           when D_CALC =>
             if words_left = 0 then
               state <= D_IDLE;
@@ -147,6 +151,9 @@ begin
                 this_burst := words_left;
               else
                 this_burst := resize(words_to_4k, 9);
+              end if;
+              if this_burst > 256 then
+                this_burst := to_unsigned(256, 9);   -- AxLEN max = 255
               end if;
               burst_cnt <= this_burst;
               beats     <= std_logic_vector(resize(this_burst - 1, 8));

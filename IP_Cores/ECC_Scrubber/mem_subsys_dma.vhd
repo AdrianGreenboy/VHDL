@@ -13,6 +13,17 @@
 --    0x10 STATUS(r)   bit0=busy   (busy PEGAJOSO: alto desde el start hasta que
 --                                  el DMA de verdad termina, sin ventana falsa)
 -- =============================================================================
+--
+--  Audit 2026-11 (AUDIT_FIXES.md):
+--    * The local RAM has ONE write port, owned by the DMA while dma_busy='1'.
+--      CPU stores to local RAM during a DMA used to be silently dropped
+--      (dmem_ready was hard-wired to '1'). The CPU is now stalled
+--      (dmem_ready='0') on a local-RAM store while the DMA owns the port; the
+--      store completes as soon as the DMA finishes. Loads are not stalled
+--      (both ports read asynchronously).
+--    * LEN is 9 bits (1..511); values above 511 saturate to 511 instead of
+--      wrapping. LEN = 0 is ignored by dma_burst (no transfer) and no longer
+--      arms busy_sticky (it would have stayed high forever).
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -85,6 +96,7 @@ architecture rtl of mem_subsys_dma is
   signal dloc_we    : std_logic;
   signal dloc_rdata : word_t;
   signal dloc_wstrb : std_logic_vector(3 downto 0);
+  signal cpu_st_stall : std_logic;
 begin
 
   is_local  <= '1' when dmem_addr(31 downto 30) = "00"   else '0';
@@ -141,7 +153,12 @@ begin
           case dmem_addr(7 downto 0) is
             when x"00" => dma_src <= dmem_wdata;
             when x"04" => dma_dst <= dmem_wdata;
-            when x"08" => dma_len <= dmem_wdata(8 downto 0);
+            when x"08" =>
+              if unsigned(dmem_wdata(31 downto 9)) /= 0 then
+                dma_len <= (others => '1');          -- saturate (max 511 words)
+              else
+                dma_len <= dmem_wdata(8 downto 0);
+              end if;
             when x"0C" => dma_dir <= dmem_wdata(1);
                           if dmem_wdata(0) = '1' then dma_start <= '1'; end if;
             when others => null;
@@ -150,7 +167,7 @@ begin
 
         -- busy pegajoso: se pone alto al detectar el start (combinacional, mismo
         -- ciclo que el sw CTRL) y se baja solo cuando el DMA de verdad terminó.
-        if dma_go = '1' then
+        if dma_go = '1' and unsigned(dma_len) /= 0 then
           busy_sticky <= '1';
         end if;
         if dma_busy = '1' then
@@ -171,6 +188,9 @@ begin
   dmem_rdata <= loc_rdata    when is_local  = '1' else
                 dmareg_rdata when is_dmareg = '1' else
                 (others => '0');
-  dmem_ready <= '1';
+  -- store to local RAM while the DMA owns its write port: stall the core
+  cpu_st_stall <= '1' when (is_local = '1' and dmem_req = '1' and
+                            dmem_wstrb /= "0000" and dma_busy = '1') else '0';
+  dmem_ready <= '0' when cpu_st_stall = '1' else '1';
 
 end architecture rtl;
