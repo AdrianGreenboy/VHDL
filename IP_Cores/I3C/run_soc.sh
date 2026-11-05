@@ -2,7 +2,7 @@
 # ============================================================================
 # run_soc.sh - Capa 4 del IP I3C: RV32 + mem_subsys_i3c + i3c_mmio + DDR sim
 # Fuentes compartidas desde ~/rv32i (riscv_pkg, cpu, dma_burst, axi_ddr_sim,
-# axil_soc...) y ~/spi_ip/byte_fifo.vhd, con fallback local del FIFO.
+# axil_soc...) y el FIFO privado i3c_byte_fifo.vhd (audit 2026-11).
 # Ensambla i3c_test.s con asm.py antes de compilar.
 # Uso: ./run_soc.sh   (requiere ghdl >= 4.x con --std=08 y python3)
 # Exito esperado: doorbell + 13 checks + "TEST PASSED".
@@ -16,13 +16,7 @@ if [ ! -d "$RV32" ]; then
   exit 1
 fi
 
-FIFO_SRC="$HOME/spi_ip/byte_fifo.vhd"
-if [ ! -f "$FIFO_SRC" ]; then
-  FIFO_SRC="./byte_fifo.vhd"
-  echo "AVISO: usando fallback local $FIFO_SRC"
-else
-  echo "Usando fuente compartida $FIFO_SRC"
-fi
+FIFO_SRC="./i3c_byte_fifo.vhd"
 
 # ensamblar el programa de prueba
 python3 "$RV32/asm.py" i3c_test.s i3c_test.mem

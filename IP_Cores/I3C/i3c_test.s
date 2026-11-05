@@ -45,6 +45,7 @@
         sw   x5, 40(x1)         # TSTATW
         addi x5, x0, 131        # <- prog[20]: CTRL (parcheable; 0x83=EN|TEN|LOOP)
         sw   x5, 0(x1)          # CTRL
+        addi x23, x0, -1        # x23 = 0xFFFFFFFF: STAT is W1C (audit 2026-11)
 
         # --- fase A: ENTDAA ---
         addi x5, x0, 508        # 0x1FC = START | 0x7E/W
@@ -88,7 +89,7 @@ polln:  lw   x6, 4(x1)          # STAT: esperar DONE SIN limpiar
         and  x7, x6, x22        # capturar ACK_IN (bit3)
         srli x7, x7, 3          # -> 1 (NACK)
         sw   x7, 20(x0)         # local[5] = 1
-        sw   x0, 4(x1)          # limpiar stickies
+        sw   x23, 4(x1)         # limpiar stickies (W1C, all bits)
         lui  x5, 0x1
         addi x5, x5, 512        # 0x1200 = NOBYTE | STOP
         sw   x5, 12(x1)
@@ -190,5 +191,5 @@ halt:   beq  x0, x0, halt
 wdone:  lw   x6, 4(x1)          # STAT
         and  x7, x6, x20
         beq  x7, x0, wdone
-        sw   x0, 4(x1)          # cualquier escritura a STAT limpia
+        sw   x23, 4(x1)         # W1C: clear all stickies
         jalr x0, 0(x31)

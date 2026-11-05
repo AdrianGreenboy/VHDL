@@ -1,5 +1,7 @@
 # I3C — Memory-Mapped MIPI I3C (SDR) Controller + Target IP Core for the RV32I SoC v3
 
+> **Audit 2026-11:** register semantics changed (W1C stickies, new bits). See the section *Audit 2026-11 changes* at the end and `AUDIT_FIXES.md`.
+
 Silicon-validated MIPI I3C Basic (SDR) **controller and target** IP core in
 VHDL-2008, mapped at `0x9000_0000` on the internal dmem bus of the RV32I SoC
 v3 family. Byte-level command interface (PIO + level IRQ), three FWFT byte
@@ -407,3 +409,36 @@ STATUS=1). Functional validation of the I3C peripheral pending an own
 bring-up binary (rootfs carries the cross usart-bringup; tracked as the
 bring-up debt work item).
 
+## Audit 2026-11 changes (supersedes conflicting statements above)
+
+Details, file:line references and verification: `AUDIT_FIXES.md`.
+
+* **Scope: SDR only.** HDR (ENTHDRx) is not implemented in either engine and
+  the target has no HDR-exit detection: do not use it on a bus where HDR is
+  used. CCCs handled by the target in hardware: ENEC/DISEC (bcast+direct),
+  RSTDAA (bcast), ENTDAA, SETDASA, SETMWL/SETMRL (bcast+direct),
+  GETMWL/GETMRL, GETPID, GETBCR, GETDCR, GETSTATUS; IBI with a 1-byte
+  mandatory byte (no further payload). Not implemented: SETNEWDA, GETMXDS,
+  GETCAPS, directed RSTDAA, SETAASA, DEFTGTS. The controller composes all
+  CCCs from firmware.
+* **FIFO**: private `i3c_byte_fifo.vhd` with SYNCHRONOUS reset.
+* **STAT (0x04) is write-1-to-clear per bit** (write `0xFFFFFFFF` to clear
+  all). New: STAT[11] CMD_PEND (live), STAT[28] CMD_DROP*, IRQ bit 15.
+* **CMD hand-off**: a command is kept pending until the controller really
+  accepts it (explicit `cmd_acc`); it no longer evaporates when it collides
+  with an incoming IBI START. CMD_DROP flags a CMD written while another is
+  pending, a CMD discarded because EN = 0, or a non-IBI command rejected
+  while an IBI is pending (DONE + CMD_DROP, IBI_REQ stays set).
+* **Bus hand-off robustness**: one open-drain quarter of turnaround after
+  every target-driven bit before the controller drives SDA push-pull; the
+  target releases T = 1 during SCL low (keeper holds it); OD samples and the
+  IBI START detection use a 3-sample majority filter. The pre-audit RTL had
+  8 SDA push-pull fights in `tb_i3c_engine` (now 0, monitored).
+* **Minimum div_pp = 2 for external targets** (independent clock). With
+  LOOP_INT = 0 the register file enforces max(div_pp, 2); div_pp = 1 remains
+  available for the internal loop. Verified by `tb_i3c_async` (target clock
+  80-200 MHz, +/-8 % drift).
+* rdata is gated by `sel`; WM values are clamped to 32.
+* Firmware (`i3c_test.s`, `i3c_bringup.c`) updated for W1C.
+* GHDL regression: `./run_ghdl.sh all` (adds `tb_i3c_async`,
+  `tb_i3c_byte_fifo`).
