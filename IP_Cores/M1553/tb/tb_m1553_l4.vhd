@@ -95,7 +95,8 @@ begin
       clk => aclk, rst => (not aresetn),
       sel => m_sel_req, we => m_we, addr => m_addr,
       wdata => dmem_wdata, rdata => m_rdata, irq => m_irq,
-      bus_rx_i => bus_rx, bus_tx_o => bus_tx, bus_txen_o => bus_txen);
+      bus_rx_a_i => bus_rx, bus_tx_a_o => bus_tx, bus_txen_a_o => bus_txen,
+      bus_rx_b_i => bus_rx, bus_tx_b_o => open, bus_txen_b_o => open);
 
   ------------------------------------------------------------------
   -- maestro de bus de comportamiento = firmware RV32 (mismo guion)
@@ -251,7 +252,13 @@ begin
     go_wait;
     ip_rd(O_RESULT, s0);               -- b15:0 stat1, b31:16 stat2
     store_sig(4, s0);
+    -- 4 entries: receiving RT + BC monitor copy per word (audit 2026-11)
     ip_rd(O_RXD, d0);
+    ip_rd(O_RXD, d1);
+    ip_rd(O_RXD, d2);
+    assert d1(17 downto 16) = "00"
+      report "FALLO P4: falta la copia monitorizada por el BC" severity failure;
+    d0 := d0 and d1 and d2;
     ip_rd(O_RXD, d1);
     store_sig(5, x"0000" & (d0(15 downto 0) and d1(15 downto 0)));
     ip_wr(O_STAT, x"FFFFFFFF");

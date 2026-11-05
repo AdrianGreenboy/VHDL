@@ -11,7 +11,9 @@
 #  Pines: CRUVI LS1, banco 302 HDIO, LVCMOS33 (mismo header que el CAN).
 #    m1553_rx   <- C10  (entrada; heredada del "can_rx" documentado del CAN)
 #    m1553_tx   -> D10  (salida; el pad del CAN, el mas accesible del header)
-#    m1553_txen -> E10  (salida; enable del transceptor, pin contiguo libre)
+#    m1553_txen -> A10  (salida; enable del transceptor; C_LS1_SEL del CRUVI
+#                        LS1. Audit 2026-11: el comentario decia E10 pero la
+#                        restriccion siempre fue A10)
 #
 #  ------------------------------------------------------------------------
 #  PREGUNTA ABIERTA (no bloqueante para el PASS en LOOP_INT):
@@ -38,3 +40,16 @@ set_property SLEW FAST [get_ports {m1553_tx m1553_txen}]
 # el bus en reposo del 1553 es silencio (0 V diferencial); pull-down suave en
 # la entrada para un estado definido sin transceptor durante el bring-up
 set_property PULLDOWN true [get_ports m1553_rx]
+
+# ---------------------------------------------------------------------------
+#  Bus B (dual-redundant, audit 2026-11). In the LOOP_INT bring-up the BD
+#  ties m1553_rx_b low and leaves the bus-B outputs unconnected, so no pads
+#  are needed. The CRUVI LS1 pins known from the other cores (A10/C10/D10/
+#  D11) are not enough for 6 signals: assign bus-B pins from the transceiver
+#  board schematic and uncomment.
+# ---------------------------------------------------------------------------
+# set_property PACKAGE_PIN <pin> [get_ports m1553_rx_b]
+# set_property PACKAGE_PIN <pin> [get_ports m1553_tx_b]
+# set_property PACKAGE_PIN <pin> [get_ports m1553_txen_b]
+# set_property IOSTANDARD LVCMOS33 [get_ports {m1553_rx_b m1553_tx_b m1553_txen_b}]
+# set_property PULLDOWN true [get_ports m1553_rx_b]

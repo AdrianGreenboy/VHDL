@@ -12,6 +12,19 @@
 -- muestrea 17 celdas a cuarto de semibit (s0 en ph=25, s1 en ph=75; s0 /= s1
 -- o error Manchester) y comprueba paridad IMPAR. Pulsos de 1 ciclo:
 -- valid / err_sync / err_manch / err_par. rst sincrono activo alto.
+--
+-- Idle-level independence (audit 2026-11): the sync is two opposite half
+-- runs of 1.5 bit. When the first half merges with the idle level (run >
+-- RUN_MAX) the edge is taken as a TENTATIVE centre: if the idle level was
+-- the opposite of the first half, that edge was really the START of the
+-- sync, the "second half" just checked was the first half and the true
+-- centre arrives at the start of cell 0. Cell 0 then shows no mid-cell
+-- transition; instead of an error the receiver RE-ANCHORS on the last edge
+-- (centre = that edge, word type = level before it) and keeps the cycles
+-- already elapsed. While tentative (sync + cell 0) failures are silent
+-- (noise after idle must not raise err_sync/err_manch). As a consequence a
+-- data word after idle is now decoded on either idle level (the cores
+-- ignore data words outside a message).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -46,6 +59,7 @@ architecture rtl of m1553_word_rx is
   signal ph   : integer range 0 to 99   := 0;      -- fase dentro de la celda
   signal bi   : integer range 0 to 16   := 0;      -- indice de celda (0..16)
   signal wt_i : std_logic := '0';
+  signal tent : std_logic := '0';                   -- tentative sync centre
   signal s0_r : std_logic := '0';
   signal par  : std_logic := '0';
   signal sh   : std_logic_vector(16 downto 0) := (others => '0');
@@ -86,18 +100,23 @@ begin
         case st is
 
           when HUNT =>
-            if edge and run >= RUN_MIN and run <= RUN_MAX then
+            if edge and run >= RUN_MIN then
               wt_i <= qp;             -- nivel ANTES del flanco central
               st   <= SYNC2;
               cnt  <= 1;
               par  <= '0';
+              if run > RUN_MAX then
+                tent <= '1';          -- first half merged with idle
+              else
+                tent <= '0';
+              end if;
             end if;
 
           when SYNC2 =>
             -- segunda mitad del sync: debe valer (not wt_i)
             if cnt = 25 or cnt = 75 or cnt = 125 then
               if q2 = wt_i then
-                err_sync <= '1';
+                err_sync <= not tent;   -- silent while tentative
                 st <= HUNT;
               end if;
             end if;
@@ -115,9 +134,25 @@ begin
               par  <= par xor q2;
             elsif ph = 75 then
               if q2 = s0_r then
-                err_manch <= '1';
-                st <= HUNT;
+                if tent = '1' and bi = 0 then
+                  -- tentative centre was the sync start: re-anchor on the
+                  -- edge at the start of cell 0 (it must be 50..124 cycles
+                  -- ago), otherwise drop silently
+                  if run >= 50 and run < RUN_MIN then
+                    st   <= SYNC2;
+                    wt_i <= not q2;
+                    cnt  <= run + 1;
+                    par  <= '0';
+                  else
+                    st <= HUNT;
+                  end if;
+                  tent <= '0';
+                else
+                  err_manch <= '1';
+                  st <= HUNT;
+                end if;
               else
+                tent <= '0';            -- cell 0 valid: sync confirmed
                 v_sh := sh(15 downto 0) & s0_r;
                 sh   <= v_sh;
                 if bi = 16 then

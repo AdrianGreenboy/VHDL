@@ -119,29 +119,33 @@ begin
       busy => bc_busy, done => bc_done,
       r_ok => bc_ok, r_tout => bc_tout, r_serr => bc_serr, r_me => bc_me,
       stat1 => bc_stat1, stat2 => bc_stat2,
-      tx_rd => bc_txrd, tx_wdat => bc_txdat,
+      tx_rd => bc_txrd, tx_wdat => bc_txdat, tx_empty => '0',
       rx_we => bc_rxwe, rx_wdat => bc_rxdat,
-      bus_rx => bus_v, bus_tx => bc_tx, bus_txen => bc_txen);
+      -- single-bus regression: everything on bus A (dual bus: layer 1d)
+      bus_rx_a => bus_v, bus_rx_b => '0', bus_tx => bc_tx,
+      bus_txen_a => bc_txen, bus_txen_b => open);
 
   u_rt0 : entity work.m1553_rt_core
     port map (
       clk => clk, rst => rst, en => rt0_en, rt_addr => AR0,
-      tx_rd => rt0_txrd, tx_wdat => rt0_txdat,
+      tx_rd => rt0_txrd, tx_wdat => rt0_txdat, tx_empty => '0',
       rx_we => rt0_rxwe, rx_wdat => rt0_rxdat,
       rx_sa => rt0_rxsa, rx_bcast => rt0_rxbc,
       ev_cmd => rt0_evc, ev_ok => rt0_evok, ev_err => rt0_everr,
       dbg_me => rt0_me, dbg_bcr => rt0_bcr,
-      bus_rx => bus_v, bus_tx => rt0_tx, bus_txen => rt0_txen);
+      bus_rx_a => bus_v, bus_rx_b => '0', bus_tx => rt0_tx,
+      bus_txen_a => rt0_txen, bus_txen_b => open);
 
   u_rt1 : entity work.m1553_rt_core
     port map (
       clk => clk, rst => rst, en => rt1_en, rt_addr => AR1,
-      tx_rd => rt1_txrd, tx_wdat => rt1_txdat,
+      tx_rd => rt1_txrd, tx_wdat => rt1_txdat, tx_empty => '0',
       rx_we => rt1_rxwe, rx_wdat => rt1_rxdat,
       rx_sa => rt1_rxsa, rx_bcast => rt1_rxbc,
       ev_cmd => rt1_evc, ev_ok => rt1_evok, ev_err => rt1_everr,
       dbg_me => rt1_me, dbg_bcr => rt1_bcr,
-      bus_rx => bus_v, bus_tx => rt1_tx, bus_txen => rt1_txen);
+      bus_rx_a => bus_v, bus_rx_b => '0', bus_tx => rt1_tx,
+      bus_txen_a => rt1_txen, bus_txen_b => open);
 
   ------------------------------------------------------------------
   -- bus resuelto por tx_en (un solo transmisor a la vez)

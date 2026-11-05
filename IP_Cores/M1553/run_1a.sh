@@ -2,18 +2,20 @@
 # Capa 1a del IP MIL-STD-1553: run limpio (firma) + 5 mutaciones con dientes.
 # Uso: colocar rtl/m1553_word_tx.vhd y tb/tb_m1553_1a.vhd bajo ~/m1553_ip y
 # ejecutar este script desde ~/m1553_ip. Firma esperada: 400485ns.
+# Audit 2026-11: works in sim_1a/ (it used to wipe sim/, deleting
+# sim/iss_m1553.py needed by run_l4.sh); M6 = fail-safe timer removed.
 set -u
 cd "$(dirname "$0")"
 
 echo "=== RUN LIMPIO (firma esperada: 400485ns) ==="
-( rm -rf sim && mkdir -p sim && cd sim && \
+( rm -rf sim_1a && mkdir -p sim_1a && cd sim_1a && \
   ghdl -a --std=08 ../rtl/m1553_word_tx.vhd ../tb/tb_m1553_1a.vhd && \
   ghdl -e --std=08 tb_m1553_1a && \
   ghdl -r --std=08 tb_m1553_1a ) || { echo "FALLO RUN LIMPIO"; exit 1; }
 
 echo
 echo "=== MUTACIONES (todas deben FALLAR) ==="
-for m in 1 2 3 4 5; do
+for m in 1 2 3 4 5 6; do
   d=mut/m$m; rm -rf $d; mkdir -p $d; cp rtl/m1553_word_tx.vhd $d/
   case $m in
     1) sed -i "s/variable p : std_logic := '1';/variable p : std_logic := '0';/" $d/m1553_word_tx.vhd
@@ -41,6 +43,8 @@ EOF
        desc="polaridad de bit invertida";;
     5) sed -i "s/if hb = 39 then/if hb = 38 then/" $d/m1553_word_tx.vhd
        desc="palabra corta (39 semibits)";;
+    6) sed -i "s/        fs_r <= '1';                -- latched until rst/        null;/" $d/m1553_word_tx.vhd
+       desc="sin temporizador fail-safe";;
   esac
   ( cd $d && ghdl -a --std=08 m1553_word_tx.vhd ../../tb/tb_m1553_1a.vhd >/dev/null 2>&1 && \
     ghdl -e --std=08 tb_m1553_1a >/dev/null 2>&1 && \

@@ -96,7 +96,11 @@ entity soc_top_m1553 is
     --      transceptor externo HI-1573 + transformador es roadmap v1.1) ----
     m1553_rx   : in  std_logic;
     m1553_tx   : out std_logic;
-    m1553_txen : out std_logic
+    m1553_txen : out std_logic;
+    -- bus B of the dual-redundant pair (audit 2026-11); same semantics
+    m1553_rx_b   : in  std_logic;
+    m1553_tx_b   : out std_logic;
+    m1553_txen_b : out std_logic
   );
 end entity soc_top_m1553;
 
@@ -187,7 +191,8 @@ begin
       sel => m1553_sel_req, we => m1553_we, addr => m1553_addr,
       wdata => dmem_wdata, rdata => m1553_rdata,
       irq => m1553_irq,
-      bus_rx_i => m1553_rx, bus_tx_o => m1553_tx, bus_txen_o => m1553_txen
+      bus_rx_a_i => m1553_rx,   bus_tx_a_o => m1553_tx,   bus_txen_a_o => m1553_txen,
+      bus_rx_b_i => m1553_rx_b, bus_tx_b_o => m1553_tx_b, bus_txen_b_o => m1553_txen_b
     );
 
   u_axil : entity work.axil_soc

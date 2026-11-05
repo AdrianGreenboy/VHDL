@@ -1,7 +1,8 @@
 open_project /home/adrian/m1553_ip/vivado_m1553/m1553_soc.xpr
 
 # el 1553 no usa byte_fifo: comprobar que NO queda ninguno (leccion #7)
-# (si usa spw_fifo, que es la FIFO canonica parametrizable; esa se queda)
+# (desde el audit 2026-11 usa su propia m1553_fifo; no debe quedar spw_fifo)
+foreach f [get_files -all -quiet *spw_fifo.vhd] { puts "  SOBRA: $f"; remove_files $f }
 puts "BYTEFIFO restantes (debe estar vacio):"
 foreach f [get_files -all -quiet *byte_fifo.vhd] {
   puts "  SOBRA: $f"

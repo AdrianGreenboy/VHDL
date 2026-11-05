@@ -65,10 +65,10 @@ remove_files [get_files -quiet {*spw_fifo.vhd *spw_tx.vhd *spw_rx.vhd \
   *soc_top_spw.vhd *soc_top_spw_wrap.v}]
 # por si quedara algun byte_fifo de proyectos aun mas antiguos (leccion #7)
 remove_files [get_files -quiet *byte_fifo.vhd]
-# el 1553 SI usa una FIFO: es el spw_fifo canonico (18/24 b por generic).
-# Se re-anade explicitamente desde ~/spw_ip para no duplicar la fuente.
+# audit 2026-11: el 1553 usa su PROPIA FIFO (m1553_fifo, lectura registrada);
+# ya no depende del spw_fifo del SpaceWire.
 add_files -norecurse [list \
-  $env(HOME)/spw_ip/spw_fifo.vhd \
+  $env(HOME)/m1553_ip/rtl/m1553_fifo.vhd \
   $env(HOME)/m1553_ip/rtl/m1553_word_tx.vhd \
   $env(HOME)/m1553_ip/rtl/m1553_word_rx.vhd \
   $env(HOME)/m1553_ip/rtl/m1553_rt_core.vhd \
@@ -78,7 +78,6 @@ add_files -norecurse [list \
   $env(HOME)/m1553_ip/rtl/soc_top_m1553.vhd \
   $env(HOME)/m1553_ip/rtl/soc_top_m1553_wrap.v]
 set_property file_type {VHDL 2008} [get_files $env(HOME)/m1553_ip/rtl/*.vhd]
-set_property file_type {VHDL 2008} [get_files $env(HOME)/spw_ip/spw_fifo.vhd]
 # XDC de pines del 1553 (3 pines single-ended)
 add_files -fileset constrs_1 -norecurse $env(HOME)/m1553_ip/m1553_pins.xdc
 update_compile_order -fileset sources_1
@@ -118,6 +117,22 @@ create_bd_port -dir O m1553_txen
 connect_bd_net [get_bd_ports m1553_rx]   [get_bd_pins u_soc_m1553/m1553_rx]
 connect_bd_net [get_bd_pins u_soc_m1553/m1553_tx]   [get_bd_ports m1553_tx]
 connect_bd_net [get_bd_pins u_soc_m1553/m1553_txen] [get_bd_ports m1553_txen]
+
+# ---------- 4c) bus B (dual-redundant, audit 2026-11) ----------
+# Bring-up in LOOP_INT: bus B is internal; its RX input is tied low and its
+# outputs stay unconnected (no pads), so no pin assignment is needed.
+create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 c_m1553_rxb
+set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {0}] \
+  [get_bd_cells c_m1553_rxb]
+connect_bd_net [get_bd_pins c_m1553_rxb/dout] [get_bd_pins u_soc_m1553/m1553_rx_b]
+# With the dual transceiver board, replace the 4c block by real ports:
+#   create_bd_port -dir I m1553_rx_b
+#   create_bd_port -dir O m1553_tx_b
+#   create_bd_port -dir O m1553_txen_b
+#   connect_bd_net [get_bd_ports m1553_rx_b] [get_bd_pins u_soc_m1553/m1553_rx_b]
+#   connect_bd_net [get_bd_pins u_soc_m1553/m1553_tx_b]   [get_bd_ports m1553_tx_b]
+#   connect_bd_net [get_bd_pins u_soc_m1553/m1553_txen_b] [get_bd_ports m1553_txen_b]
+# and enable the bus-B block in m1553_pins.xdc.
 
 # ---------- 5) address map (EXPLICITO) ----------
 # el maestro del PL sigue apuntando a la DDR fisica reservada; la region

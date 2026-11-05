@@ -133,9 +133,14 @@ p2rx:   lw   x10, 24(x3)          # RXD (pop-on-read)
         lw   x10, 32(x3)          # RESULT completo (stat2<<16 | stat1)
         sw   x10, 0(x9)           # firma[4]
         addi x9, x9, 4
-        # sig[5] = and de 2 datos
+        # sig[5] = and de 4 entradas RX: 2 del RT receptor + 2 copias que
+        # monitoriza el BC (audit 2026-11: ya no se pierden por colision)
         lw   x5, 24(x3)
         and  x5, x5, x6
+        lw   x10, 24(x3)
+        and  x5, x5, x10
+        lw   x10, 24(x3)
+        and  x5, x5, x10
         lw   x10, 24(x3)
         and  x10, x10, x6
         and  x10, x10, x5

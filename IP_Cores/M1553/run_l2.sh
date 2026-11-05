@@ -3,16 +3,14 @@
 # Requiere bajo ~/m1553_ip:
 #   rtl/{m1553_word_tx,m1553_word_rx,m1553_rt_core,m1553_bc_core,m1553_mmio}.vhd
 #   tb/tb_m1553_l2.vhd
-#   ~/spw_ip/spw_fifo.vhd (o ajusta FIFO abajo)
-# Firma esperada: 615665ns.
+#   rtl/m1553_fifo.vhd (FIFO propio del IP desde el audit 2026-11)
+# Firma esperada: 780885ns.
 set -u
 cd "$(dirname "$0")"
 
-FIFO="${FIFO:-$HOME/spw_ip/spw_fifo.vhd}"
-[ -f "$FIFO" ] || FIFO="./spw_fifo.vhd"
-[ -f "$FIFO" ] || { echo "No encuentro spw_fifo.vhd (exporta FIFO=/ruta)"; exit 1; }
+FIFO="$(pwd)/rtl/m1553_fifo.vhd"
 
-echo "=== RUN LIMPIO (firma esperada: 615665ns) ==="
+echo "=== RUN LIMPIO (firma esperada: 780885ns) ==="
 ( rm -rf sim_l2 && mkdir -p sim_l2 && cd sim_l2 && \
   ghdl -a --std=08 "$FIFO" ../rtl/m1553_word_tx.vhd ../rtl/m1553_word_rx.vhd \
        ../rtl/m1553_rt_core.vhd ../rtl/m1553_bc_core.vhd ../rtl/m1553_mmio.vhd \
@@ -22,23 +20,23 @@ echo "=== RUN LIMPIO (firma esperada: 615665ns) ==="
 
 echo
 echo "=== MUTACIONES DEL MMIO (todas deben FALLAR) ==="
-for m in 1 2 3 4 5 6; do
+for m in 1 2 3 4 5 6 7 8; do
   d=mut/l2_m$m; rm -rf $d; mkdir -p $d; cp rtl/m1553_mmio.vhd $d/
   case $m in
     1) sed -i 's/irq <= or (stat_v and irqen_r);/irq <= or (stat_v and (not irqen_r));/' $d/m1553_mmio.vhd
        desc="mascara IRQ negada";;
-    2) sed -i 's/stk <= (others => .0.);           -- limpiar stickies.../null;/' $d/m1553_mmio.vhd
+    2) sed -i 's/stk <= stk and not wdata(28 downto 16);/null;/' $d/m1553_mmio.vhd
        desc="STAT no limpia stickies";;
     3) sed -i 's/rxf_rd <= sel and (not we) and sel_rxd and (not rxf_empty);/rxf_rd <= '"'"'0'"'"';/' $d/m1553_mmio.vhd
        desc="RXD sin pop-on-read";;
     4) python3 - $d/m1553_mmio.vhd <<'EOF'
 import sys
 p=sys.argv[1]; s=open(p).read()
-old="  rxf_wr <= bc_rxwe or rt0_rxwe or rt1_rxwe or skid_v;"
-new="  rxf_wr <= bc_rxwe or rt0_rxwe or rt1_rxwe;  -- MUTACION"
+old="        if rt1_rxwe = '1' and vn < 4 then"
+new="        if false then  -- MUTACION"
 assert old in s; open(p,'w').write(s.replace(old,new))
 EOF
-       desc="skid del broadcast eliminado";;
+       desc="cola RX: se pierde la copia de RT1 en broadcast";;
     5) python3 - $d/m1553_mmio.vhd <<'EOF'
 import sys
 p=sys.argv[1]; s=open(p).read()
@@ -49,6 +47,10 @@ EOF
        desc="desempaquetado de RXD roto";;
     6) sed -i 's/if bc_done = .1. and bc_ok   = .1. then stk(1) <= .1.; end if;/null;/' $d/m1553_mmio.vhd
        desc="sticky OK nunca se pone";;
+    7) sed -i 's/stk <= stk and not wdata(28 downto 16);/stk <= (others => '"'"'0'"'"');/' $d/m1553_mmio.vhd
+       desc="STAT limpia todo con cualquier escritura (no W1C)";;
+    8) sed -i "s/        if bc_rxwe = '1' and vn < 4 then/        if false then/" $d/m1553_mmio.vhd
+       desc="cola RX: se pierde la copia monitorizada por el BC (RT->RT)";;
   esac
   ( cd $d && ghdl -a --std=08 "$FIFO" ../../rtl/m1553_word_tx.vhd ../../rtl/m1553_word_rx.vhd \
       ../../rtl/m1553_rt_core.vhd ../../rtl/m1553_bc_core.vhd m1553_mmio.vhd \
