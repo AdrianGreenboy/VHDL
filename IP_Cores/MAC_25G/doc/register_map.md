@@ -69,3 +69,25 @@ mutually exclusive: every received frame increments **exactly one** of
   deterministically.
 * B and R responses are issued one cycle after the AW/W and AR handshakes.
 * Do not combine `SOFT_RESET` with other bits (the reset wins).
+
+## Audit 2026-11 additions (supersede the tables above where they differ)
+
+| Offset | Name | Access | Reset | Description |
+|-------:|------|--------|-------|-------------|
+| `0x08` | `CTRL` | RW | 0 | adds b4 `RX_HOLD`: the RX FIFO consumer (checker) is stalled, to exercise back-pressure / PAUSE |
+| `0x0C` | `CMD` | W | — | adds b5 `SEND_PAUSE` (one PAUSE frame with `PAUSE_SWQ` quanta). A CMD write without byte lane 0 in `WSTRB` does nothing |
+| `0x10` | `STATUS` | RO | 0 | adds b5 `PAUSED` (pause timer running), b6 `XOFF` (RX FIFO above the high watermark) |
+| `0x38` | `GEN_COUNT` | RW | 64 | `0` with `GEN_CONT = 0` is an empty burst: `GEN_DONE` at once, no frame |
+| `0x3C` | `PAUSE_CTRL` | RW | `0xFFFF0000` | b0 `HONOR` (obey received PAUSE), b1 `AUTO` (XOFF/XON from the RX FIFO watermarks), b31:16 XOFF `pause_time` (quanta of 512 bit times) |
+| `0x80` | `PAUSE_WM` | RW | `0x01800080` | b15:0 low, b31:16 high watermark of the RX FIFO (1024 words of 8 bytes). Headroom above the high mark must hold the partner's reaction (own frame in flight + partner frame in flight + cable/pipeline): keep `1024 - high >= 640` words |
+| `0x84` | `PAUSE_SWQ` | RW | 0 | quanta of `CMD.SEND_PAUSE` |
+| `0xA0`–`0xBC` | counters 16..23 | RO | — | `RX_PAUSE` (honoured), `TX_PAUSE` (sent), `RX_CTRL` (MAC control frames consumed), `RX_FIFO_DROP` (frames dropped, no room), `TX_KEEP_ERR` (malformed `tkeep`), `BLK_FIFO_OVF`, `PAUSED_SLOTS`, `RX_FIFO_MAX` (high-water mark, words) |
+
+* All counters saturate at `0xFFFFFFFF` instead of wrapping.
+* `WSTRB` is honoured per byte lane on every RW register.
+* Unmapped or unaligned offsets answer `SLVERR` (`bresp`/`rresp = 0b10`);
+  writes to RO offsets are ignored with `OKAY`.
+* `CMD_TIMEOUT`: the timed-out command is **killed** — it is not executed
+  later when `clk_dp` comes back; the next `CMD` supersedes it.
+* `GEN_BUSY`/`GEN_DONE` and `BURST_CYCLES` now include the TX frame FIFO:
+  the burst is done when the last word has entered the MAC.

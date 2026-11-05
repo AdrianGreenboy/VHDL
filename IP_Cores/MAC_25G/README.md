@@ -328,6 +328,15 @@ worst remaining paths in the test generator (0.019), RX (0.075) and TX (0.137):
 Resource usage of the second implementation: 7 242 LUTs for the whole RV32 +
 MAC SoC (TX 1 559, RX 1 586, generator 653, checker 523, PCS 252).
 
+## Audit 2026-11
+
+See [AUDIT_FIXES.md](AUDIT_FIXES.md) for the findings, the RTL changes and
+the new tests. The silicon results quoted in this README predate those
+changes (notably the IEEE 802.3 sync-header order on the wire, the
+clause-49 block lock with bit slip, and the AXI-Lite write channel), so the
+current RTL must be re-validated on the board and against a standard 25G
+link partner before they can be claimed again.
+
 ## 9. Risks and what is not proven yet
 
 - **Timing margin at 390.625 MHz is thin** (WNS +0.019 ns): any RTL change

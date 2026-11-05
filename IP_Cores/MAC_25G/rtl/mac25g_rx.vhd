@@ -19,10 +19,13 @@
 --               la ultima palabra si la trama es mala)
 --
 -- Limitaciones v1: no se comprueban los caracteres de control dentro de los
--- bloques Tn/idle, y los sync headers invalidos (00/11) no son visibles (el RX
--- del Core 19 trata todo lo que no es "01" como control).
+-- bloques Tn/idle. Invalid sync headers (00/11) arrive as /E/ blocks since
+-- the audit 2026-11 (mac25g_pcs66_rx / mac25g_datapath), so a frame with a
+-- corrupted header is aborted.
 --
--- Filtro: unicast propio, broadcast, o todo con 'promisc'. Las tramas
+-- Filtro: unicast propio, broadcast, the PAUSE multicast 01-80-C2-00-00-01
+-- (consumed later by mac25g_pause_rx / the RX FIFO), o todo con 'promisc'.
+-- Las tramas
 -- filtradas no se entregan y solo cuentan como rx_filtered.
 -- Las tramas sin ninguna palabra (S seguido de T0 o de un aborto) cuentan como
 -- runt/aborto sin pasar por el filtro (no hay destino que mirar).
@@ -284,8 +287,11 @@ begin
         v_crc := crc_acc or (31 downto 0 => r2_sof);
         if r2_sof = '1' then
           v_cnt := (others => '0');
+          -- 01-80-C2-00-00-01: MAC Control (PAUSE) reserved multicast,
+          -- accepted so that mac25g_pause_rx can see it (audit 2026-11)
           if promisc = '1' or r2_d(47 downto 0) = own_mac or
-             r2_d(47 downto 0) = x"FFFFFFFFFFFF" then
+             r2_d(47 downto 0) = x"FFFFFFFFFFFF" or
+             r2_d(47 downto 0) = x"010000C28001" then
             v_acc := '1';
           else
             v_acc := '0';

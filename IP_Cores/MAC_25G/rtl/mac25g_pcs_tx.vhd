@@ -19,10 +19,11 @@
 -- es bit a bit identico al del Core 19 (mismo scrambler, mismo gearbox,
 -- mismo orden): lo demuestra tb_mac_pcs_tx.
 --
--- Nota de interoperabilidad (heredada del Core 19, NO cambiada aqui): el sync
--- header se forma como "01" (datos) con bit 0 = '1', que sale primero. En la
--- notacion de 802.3 Figura 49-7 eso es '10' (control). Coherente con el RX del
--- Core 19, irrelevante en loopback; a revisar antes de un PMA real.
+-- Sync header (audit 2026-11, fix A2): now in IEEE 802.3 Fig. 49-7 order.
+-- Block bit 0 leaves first, so data = "10" (bit 0 = '0', then '1') and
+-- control = "01". Before the audit data was "01" (bit 0 = '1' first), i.e.
+-- the control code on the wire; only a self-loopback could not see it.
+-- Checked bit-exactly against oracle/cl49_ref.py of Core 19 (tb_mac_cl49).
 --
 -- MIT License.
 -------------------------------------------------------------------------------
@@ -92,7 +93,8 @@ begin
       if rst = '1' then
         sync_d1 <= (others => '0');
       elsif scr_en = '1' then
-        if in_is_data = '1' then sync_d1 <= "01"; else sync_d1 <= "10"; end if;
+        -- IEEE order: data = '0','1' on the wire (block(0) first)
+        if in_is_data = '1' then sync_d1 <= "10"; else sync_d1 <= "01"; end if;
       end if;
     end if;
   end process;

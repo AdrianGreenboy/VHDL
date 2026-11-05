@@ -24,6 +24,16 @@
 --
 -- Underrun: si s_tvalid cae a mitad de trama se emite un bloque /E/, se
 -- cuenta tx_underrun y se descarta el resto de la trama de origen.
+-- This core has no internal buffering, so it needs every beat of a frame
+-- back to back: use it behind mac25g_txq (store-and-forward frame FIFO,
+-- audit 2026-11 fix M3), which makes AXIS-legal tvalid bubbles harmless.
+-- SA_DRAIN is bounded (fix M3): if the source sends nothing for DRAIN_TMO
+-- consecutive slots while draining (abandoned frame, tlast never comes) the
+-- framer returns to idle instead of swallowing the start of the next frame
+-- for ever.
+-- tkeep check (fix B5): a last beat whose tkeep is not a contiguous
+-- LSB-first mask of 1..8 bytes, or a non-last beat with tkeep /= 0xFF,
+-- raises ev_keep_err (the beat is still sent as before: 8 bytes / full).
 --
 -- Inyeccion (inj, pulso): arma un flip del bit 0 del bloque de DATOS de indice
 -- 1 de la SIGUIENTE trama que empiece (/S/ posterior al pulso), aunque llegue a
@@ -37,6 +47,9 @@ use ieee.numeric_std.all;
 use work.mac25g_pkg.all;
 
 entity mac25g_tx is
+  generic (
+    DRAIN_TMO : natural := 1023      -- idle slots that end SA_DRAIN
+  );
   port (
     clk         : in  std_logic;
     rst         : in  std_logic;
@@ -57,7 +70,8 @@ entity mac25g_tx is
     -- estadisticas (pulsos de 1 ciclo, registrados)
     ev_frame    : out std_logic;
     ev_bytes    : out unsigned(15 downto 0);   -- bytes en el cable (incl. FCS)
-    ev_underrun : out std_logic
+    ev_underrun : out std_logic;
+    ev_keep_err : out std_logic                -- malformed tkeep (pulse)
   );
 end entity mac25g_tx;
 
@@ -120,6 +134,17 @@ architecture rtl of mac25g_tx is
   signal r_evf   : std_logic := '0';
   signal r_evb   : unsigned(15 downto 0) := (others => '0');
   signal r_evu   : std_logic := '0';
+  signal r_kerr  : std_logic := '0';
+  signal drain_c : unsigned(15 downto 0) := (others => '0');
+
+  function keep_ok(k : std_logic_vector(7 downto 0); last : std_logic) return boolean is
+  begin
+    if last = '0' then return k = x"FF"; end if;
+    case k is
+      when x"01" | x"03" | x"07" | x"0F" | x"1F" | x"3F" | x"7F" | x"FF" => return true;
+      when others => return false;
+    end case;
+  end function;
 begin
 
   s_tready <= ce when (a_st = SA_DATA or a_st = SA_DRAIN) else '0';
@@ -138,9 +163,10 @@ begin
     if rising_edge(clk) then
       ev_p <= '0';
       r_evu <= '0';
+      r_kerr <= '0';
       if rst = '1' then
         a_st <= SA_IDLE; wcnt <= (others => '0'); wsm <= (others => '0');
-        a_kind <= K_BUB; a_last <= '0';
+        a_kind <= K_BUB; a_last <= '0'; drain_c <= (others => '0');
       elsif ce = '1' then
         -- por defecto: hueco
         a_kind <= K_BUB;
@@ -156,6 +182,9 @@ begin
             end if;
 
           when SA_DATA =>
+            if s_tvalid = '1' and not keep_ok(s_tkeep, s_tlast) then
+              r_kerr <= '1';
+            end if;
             if s_tvalid = '1' then
               -- mascara de bytes validos directa de tkeep (contiguo, LSB)
               for b in 0 to 7 loop
@@ -191,6 +220,7 @@ begin
               a_kind <= K_ERR;
               r_evu  <= '1';
               a_st   <= SA_DRAIN;
+              drain_c <= (others => '0');
             end if;
 
           when SA_PAD =>
@@ -214,6 +244,12 @@ begin
             -- descartar el resto de la trama de origen (s_tready alto)
             if s_tvalid = '1' and s_tlast = '1' then
               a_st <= SA_IDLE;
+            elsif s_tvalid = '1' then
+              drain_c <= (others => '0');
+            elsif drain_c = DRAIN_TMO - 1 then
+              a_st <= SA_IDLE;                -- abandoned frame: give up
+            else
+              drain_c <= drain_c + 1;
             end if;
         end case;
       end if;
@@ -405,5 +441,6 @@ begin
   ev_frame    <= r_evf;
   ev_bytes    <= r_evb;
   ev_underrun <= r_evu;
+  ev_keep_err <= r_kerr;
 
 end architecture rtl;
