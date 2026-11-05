@@ -47,10 +47,13 @@ The core is three VHDL layers plus a thin Verilog wrapper:
 - **`can_engine.vhd`** — the protocol engine. One clocked process with a
   programmable bit-time generator (quantum = `(brp+1)` clocks, bit =
   `1 + (tseg1+1) + (tseg2+1)` quanta, sample at the end of TSEG1), hard sync in
-  IDLE/SUSPEND, and SJW-limited resynchronization. It handles TX with automatic
-  retry, RX with left-aligned data, bit stuffing / destuffing, CRC-15
-  (`0x4599`), ACK, EOF, interframe, overload and error frames, and the TEC/REC
-  counters that drive the error-active / passive / bus-off state.
+  IDLE/SUSPEND and on an SOF in the 3rd intermission bit, and SJW-limited
+  resynchronization. It handles TX with automatic retry, RX with left-aligned
+  data, bit stuffing / destuffing over SOF..CRC sequence **inclusive** (a run
+  of 5 ending at the last CRC bit gets a stuff bit before the CRC delimiter),
+  CRC-15 (`0x4599`), ACK, EOF, interframe, overload and error frames, and the
+  ISO 11898-1 fault-confinement rules (see section 5.1). Reset is synchronous,
+  active high (`rst`), like the rest of the IP.
 - **`can_mmio.vhd`** — the register bank. It wraps **two** `can_engine`
   instances (nodes A and B) and a **128-byte FWFT receive FIFO per node**. Each
   received frame is packed into a fixed 13-byte record
@@ -69,9 +72,9 @@ The core is three VHDL layers plus a thin Verilog wrapper:
 
 | Offset | Name       | Notes |
 |-------:|------------|-------|
-| `0x00` | `CTRL`     | b0 `EN_A`, b1 `EN_B`, b7 `LOOP_INT`, b8 `SELFACK_A`, b9 `SELFACK_B` |
-| `0x04` | `STAT`     | live b0..; sticky b16.. (write clears stickies; same-cycle sets win) |
-| `0x08` | `BTR`      | b7:0 BRP, b11:8 TSEG1, b14:12 TSEG2, b17:16 SJW (default `0x00015C09`) |
+| `0x00` | `CTRL`     | b0 `EN_A`, b1 `EN_B`, b7 `LOOP_INT`, b8 `SELFACK_A`, b9 `SELFACK_B` (b8/b9 only written when b31:24 = key `0xA5`) |
+| `0x04` | `STAT`     | live b0..; sticky b16..b27, **write-1-to-clear per bit** (same-cycle sets win) |
+| `0x08` | `BTR`      | b7:0 BRP, b11:8 TSEG1, b14:12 TSEG2, b17:16 SJW (default `0x00015C09`); **write ignored while EN_A or EN_B = 1** |
 | `0x10` | `TXID_A`   | b28:0 ID, b29 RTR, b30 IDE |
 | `0x14` | `TXDLC_A`  | b3:0 DLC |
 | `0x18` | `TXDH_A`   | data bytes 0–3 (`tx_data[63:32]`) |
@@ -113,7 +116,8 @@ Bit timing on a 100 MHz `aclk` with 20 tq/bit (TSEG1=12, TSEG2=5, +sync):
 |------|------|
 | `can_engine.vhd`      | CAN 2.0B protocol engine |
 | `can_mmio.vhd`        | Two-node register bank + RX FIFOs + IRQ |
-| `byte_fifo.vhd`       | FWFT byte FIFO (local fallback, from the SPI core) |
+| `can_byte_fifo.vhd`   | FWFT byte FIFO, registered-read RAM + 1-deep prefetch (entity `can_byte_fifo`) |
+| `byte_fifo.vhd`       | **Obsolete** (pre-audit `byte_fifo`, async reset, combinational read); no longer referenced, kept until removed from git |
 | `mem_subsys_can.vhd`  | dmem decode (CAN @ `0xA000_0000`) + DMA master |
 | `soc_top_can.vhd`     | SoC top (CPU + mem subsystem + CAN) |
 | `soc_top_can_wrap.v`  | BD wrapper (single IOBUF, ASSOCIATED_BUSIF) |
@@ -127,6 +131,7 @@ Bit timing on a 100 MHz `aclk` with 20 tq/bit (TSEG1=12, TSEG2=5, +sync):
 | `can_pins.xdc`        | Pin constraints (`can_bus` on D10) |
 | `bd_can_steps.tcl`    | Block-design transplant recipe (one command at a time) |
 | `run_*.sh`            | Runners for each layer + cross-compile |
+| `run_audit_mut.sh`    | Audit 2026-11 mutation proof (each fix reverted must fail a TB) |
 
 ---
 
@@ -148,11 +153,12 @@ Run them:
 ```bash
 cd ~/can_ip
 chmod +x *.sh
-./run_engine.sh      # layer 1a  -> simulation finished @8923067ns
-./run_engine_rx.sh   # layer 1b  -> @10507958ns
+./run_engine.sh      # layer 1a  -> simulation finished @11520757ns
+./run_engine_rx.sh   # layer 1b  -> @11393888ns
 ./run_bus.sh         # layer 1c  -> @1763886ns
-./run_mmio.sh        # layer 2   -> @313946ns
+./run_mmio.sh        # layer 2   -> @325365ns
 ./run_soc.sh         # layer 4   -> TEST PASSED @586058ns
+./run_audit_mut.sh   # audit mutations -> AUDIT MUTATIONS OK
 ```
 
 `run_soc.sh` reassembles `can_test.s` with `asm.py` and needs the RV32I core;
@@ -167,6 +173,23 @@ patching BRP into the assembled program: all four rates give `TEST PASSED`, with
 finish times scaling exactly (`2336058 / 1169058 / 586058 / 294058 ns`).
 
 ---
+
+### 5.1 Fault confinement (ISO 11898-1), audit 2026-11
+
+| Rule | Implementation | Test |
+|------|----------------|------|
+| Receiver error REC+1, transmitter error TEC+8 | `p_err` | T6/T7, R7..R11 |
+| Passive TX, ACK error, no dominant during the passive flag: no TEC change | deferred via `ackexc`; a dominant bit in the passive flag applies +8 | T8 |
+| Stuff error in arbitration on a recessive stuff bit: no TEC change | `p_err(..., noinc)` | T12 |
+| Receiver: dominant 1st bit after its error flag: REC+8 | `S_EWAIT`, `fst` | R14 |
+| Bit error while sending an active error / overload flag: +8, new flag | `p_flagbiterr` | T13 |
+| 8 consecutive dominant after a flag (14th after an active/overload flag) and every further 8: +8 | `p_domafter` | R15 |
+| Dominant bit in an error/overload delimiter: form error (last bit: overload) | `S_EDEL`/`S_ODEL` | R16 |
+| Successful TX TEC-1, RX REC-1 (REC>127 -> 119) | unchanged | T8, R11 |
+
+Bus-off now **drops the pending request** (`tx_busy`/`BUSY_x` fall) and a
+`GO` while bus-off is rejected with a `TXERR` pulse; firmware re-requests after
+the 128x11-recessive recovery (previously the frame was silently retried).
 
 ## 6. How to use it (software)
 
@@ -185,7 +208,8 @@ sw  TXDH_A <- 0x01234567
 sw  TXDL_A <- 0x89ABCDEF
 sw  CMD_A  <- 0x00000001        # GO
 
-# 3. poll STAT until TXDONE_A (b16) and RXV_B (b25); clear stickies
+# 3. poll STAT until TXDONE_A (b16) and RXV_B (b25); clear the observed
+#    stickies by writing the read value back (STAT is W1C per bit)
 # 4. read node B's FIFO: 13 pops (RXFIFO_B), each with VALID in b8
 ```
 
@@ -227,7 +251,7 @@ delete_bd_objs [get_bd_cells u_soc_i3c]
 remove_files [get_files -quiet {*i3c_controller.vhd *i3c_target.vhd *i3c_mmio.vhd *mem_subsys_i3c.vhd *soc_top_i3c.vhd *soc_top_i3c_wrap.v}]
 remove_files -fileset constrs_1 [get_files -quiet *i3c_pins.xdc]
 add_files -norecurse [list \
-  $env(HOME)/can_ip/byte_fifo.vhd $env(HOME)/can_ip/can_engine.vhd \
+  $env(HOME)/can_ip/can_byte_fifo.vhd $env(HOME)/can_ip/can_engine.vhd \
   $env(HOME)/can_ip/can_mmio.vhd  $env(HOME)/can_ip/mem_subsys_can.vhd \
   $env(HOME)/can_ip/soc_top_can.vhd $env(HOME)/can_ip/soc_top_can_wrap.v]
 set_property file_type {VHDL 2008} [get_files $env(HOME)/can_ip/*.vhd]

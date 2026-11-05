@@ -55,7 +55,7 @@ remove_files [get_files -quiet {*i3c_controller.vhd *i3c_target.vhd \
   *i3c_mmio.vhd *mem_subsys_i3c.vhd *soc_top_i3c.vhd *soc_top_i3c_wrap.v}]
 remove_files -fileset constrs_1 [get_files -quiet *i3c_pins.xdc]
 add_files -norecurse [list \
-  $env(HOME)/can_ip/byte_fifo.vhd \
+  $env(HOME)/can_ip/can_byte_fifo.vhd \
   $env(HOME)/can_ip/can_engine.vhd \
   $env(HOME)/can_ip/can_mmio.vhd \
   $env(HOME)/can_ip/mem_subsys_can.vhd \

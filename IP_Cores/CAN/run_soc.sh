@@ -2,7 +2,7 @@
 set -u
 (
   cd "$(dirname "$0")" || exit 1
-  RV=/home/adrian/vhdl_repo/IP_Cores/RV32i
+  RV=${RV:-/home/adrian/vhdl_repo/IP_Cores/RV32i}   # override: RV=/path ./run_soc.sh
 
   # ensamblar el programa (asm.py del core RV32i)
   python3 "$RV/asm.py" can_test.s can_test.mem || exit 1
@@ -20,7 +20,7 @@ set -u
 
   # IP CAN + subsistema + TB
   ghdl -a --std=08 \
-    byte_fifo.vhd can_engine.vhd can_mmio.vhd \
+    can_byte_fifo.vhd can_engine.vhd can_mmio.vhd \
     mem_subsys_can.vhd tb_can_soc.vhd || exit 1
 
   ghdl -e --std=08 tb_can_soc || exit 1

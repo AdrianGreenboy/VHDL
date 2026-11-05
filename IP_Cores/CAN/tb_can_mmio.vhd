@@ -168,7 +168,7 @@ begin
       report "FALLO: M2 RXNE_B no activo" severity failure;
     assert d(0) = '0'
       report "FALLO: M2 BUSY_A tras el done" severity failure;
-    mwr(x"04", x"00000000"); -- limpiar stickies
+    mwr(x"04", x"FFFFFFFF"); -- limpiar stickies
     mrd(x"50", d);
     assert d(15 downto 8) = x"0D"
       report "FALLO: M2 nivel del FIFO B distinto de 13" severity failure;
@@ -196,7 +196,7 @@ begin
     mwr(x"34", x"00000005");
     mwr(x"40", x"00000001"); -- GO_B
     poll_stat(x"01020000", d, "M3 TXDONE_B y RXV_A");
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
       rd_frame(x"24", frv, "M3");
       assert frv(103 downto 96) = x"75"
         report "FALLO: M3 flags/ID alto incorrectos" severity failure;
@@ -226,7 +226,7 @@ begin
       report "FALLO: M4 ARB_B no marcado" severity failure;
     assert d(18) = '0'
       report "FALLO: M4 ARB_A marcado indebidamente" severity failure;
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
       rd_frame(x"44", frv, "M4 trama de A en B");
       assert frv(79 downto 72) = x"F0" and frv(63 downto 56) = x"AA"
         report "FALLO: M4 trama ganadora incorrecta" severity failure;
@@ -260,12 +260,20 @@ begin
       report "FALLO: M5 BUSY_A tras el abort" severity failure;
     mrd(x"28", d);
     teca := to_integer(unsigned(d(8 downto 0)));
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
     -- SELFACK: completar sin segundo nodo (documentado NO conforme)
-    mwr(x"00", x"00000181"); -- EN_A | LOOP | SELFACK_A
+    -- without the key the SELFACK bits are not writable
+    mwr(x"00", x"00000181");
+    mrd(x"00", d);
+    assert d(8) = '0'
+      report "FALLO: M5 SELFACK_A aceptado sin llave" severity failure;
+    mwr(x"00", x"A5000181"); -- key 0xA5 | EN_A | LOOP | SELFACK_A
+    mrd(x"00", d);
+    assert d(8) = '1'
+      report "FALLO: M5 SELFACK_A no aceptado con llave" severity failure;
     mwr(x"20", x"00000001"); -- GO_A
     poll_stat(x"00010000", d, "M5 TXDONE_A con selfack");
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
     mrd(x"28", d);
     assert to_integer(unsigned(d(8 downto 0))) = teca - 1
       report "FALLO: M5 TEC no decremento con selfack" severity failure;
@@ -282,7 +290,7 @@ begin
     mwr(x"14", x"00000002");
     mwr(x"1C", x"00000000");
     for i in 1 to 10 loop
-      mwr(x"04", x"00000000"); -- limpiar antes del GO: el RXOVF de la
+      mwr(x"04", x"FFFFFFFF"); -- limpiar antes del GO: el RXOVF de la
                                -- trama descartada llega antes del TXDONE
       mwr(x"18", std_logic_vector(to_unsigned(i, 8)) & x"110000");
       mwr(x"20", x"00000001");
@@ -294,7 +302,7 @@ begin
     mrd(x"04", d);
     assert d(27) = '1'
       report "FALLO: M6 sticky RXOVF_B no marcado" severity failure;
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
       for i in 1 to 9 loop
         rd_frame(x"44", frv, "M6 drenaje " & integer'image(i));
         assert frv(63 downto 56) = std_logic_vector(to_unsigned(i, 8))
@@ -320,7 +328,7 @@ begin
     wait for 1 ns;
     assert irq = '1'
       report "FALLO: M7 IRQ no subio con TXDONE_A" severity failure;
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
     tick1;
     wait for 1 ns;
     assert irq = '0'
@@ -330,7 +338,7 @@ begin
     mwr(x"5C", x"00000D00"); -- WM_B = 13
     mwr(x"20", x"00000001");
     poll_stat(x"00010000", d, "M7 trama para watermark");
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");
     wait for 1 ns;
     assert irq = '1'
       report "FALLO: M7 IRQ no subio con el watermark de B" severity failure;
@@ -339,6 +347,57 @@ begin
     wait for 1 ns;
     assert irq = '0'
       report "FALLO: M7 IRQ no bajo al drenar el FIFO B" severity failure;
+
+    -- ------------------------------------------------------------------
+    -- M8: STAT stickies are W1C per bit
+    -- ------------------------------------------------------------------
+    report "M8: STAT W1C por bit";
+    mwr(x"00", x"A5000083");  -- EN_A | EN_B | LOOP, SELFACK off (keyed)
+    mwr(x"54", x"00000000");
+    mwr(x"10", x"00000321");
+    mwr(x"14", x"00000001");
+    mwr(x"18", x"77000000");
+    mwr(x"20", x"00000001");
+    poll_stat(x"02010000", d, "M8 TXDONE_A y RXV_B");
+    mwr(x"04", x"00000000");   -- writing 0 clears nothing
+    mrd(x"04", d);
+    assert d(16) = '1' and d(25) = '1'
+      report "FALLO: M8 una escritura de 0 limpio stickies" severity failure;
+    mwr(x"04", x"00010000");   -- clear TXDONE_A only
+    mrd(x"04", d);
+    assert d(16) = '0' and d(25) = '1'
+      report "FALLO: M8 W1C no es por bit" severity failure;
+    mwr(x"04", d);              -- write back what was read: clears RXV_B
+    mrd(x"04", d);
+    assert d(25) = '0' and d(27 downto 16) = x"000"
+      report "FALLO: M8 escritura del valor leido no limpio" severity failure;
+    rd_frame(x"44", frv, "M8 drenaje");
+    assert frv(63 downto 56) = x"77"
+      report "FALLO: M8 trama incorrecta" severity failure;
+
+    -- ------------------------------------------------------------------
+    -- M9: BTR locked while a node is enabled; SELFACK keeps its value on
+    -- unkeyed CTRL writes
+    -- ------------------------------------------------------------------
+    report "M9: BTR bloqueado con nodos habilitados";
+    mrd(x"08", d2);
+    mwr(x"08", x"00012301");
+    mrd(x"08", d);
+    assert d = d2
+      report "FALLO: M9 BTR escrito con EN activo" severity failure;
+    mwr(x"00", x"A5000300");   -- disable, SELFACK_A|B via key
+    mwr(x"08", x"00012301");
+    mrd(x"08", d);
+    assert d = x"00012301"
+      report "FALLO: M9 BTR no escrito con EN inactivo" severity failure;
+    mwr(x"00", x"00000000");   -- unkeyed: SELFACK bits unchanged
+    mrd(x"00", d);
+    assert d(9 downto 8) = "11"
+      report "FALLO: M9 escritura sin llave altero SELFACK" severity failure;
+    mwr(x"00", x"A5000000");
+    mrd(x"00", d);
+    assert d(9 downto 8) = "00"
+      report "FALLO: M9 SELFACK no se limpio con llave" severity failure;
 
     report "CAPA 2 OK: can_mmio contra BFM dmem";
     finish;
