@@ -70,7 +70,7 @@ ghdl -a --std=08 --workdir=$WORK \
     $SOC/alu.vhd $SOC/control.vhd $SOC/immgen.vhd $SOC/regfile.vhd \
     $SOC/csr.vhd $SOC/muldiv.vhd $SOC/cpu_pipeline.vhd \
     $SOC/dp_ram.vhd $SOC/axi4_master.vhd $SOC/dma_burst.vhd $SOC/axil_soc.vhd \
-    $RTL/fp32_pkg.vhd $RTL/fp32_fma.vhd $RTL/adcs_pkg.vhd \
+    $RTL/fp32_pkg.vhd $RTL/fp32_cfg_pkg.vhd $RTL/fp32_fma_rtl.vhd $RTL/fp32_fma.vhd $RTL/adcs_pkg.vhd \
     $RTL/mpc_dot_row.vhd $RTL/mpc_dot_x8.vhd $RTL/adcs_mem_banks.vhd \
     $RTL/mpc_engine.vhd $RTL/adcs_regfile.vhd $RTL/axi_dma_engine.vhd \
     $RTL/adcs_accel_top.vhd $RTL/mem_subsys_dma_adcs.vhd \

@@ -21,6 +21,14 @@
 -- ante latencia efectiva del FPO distinta de la configurada — la clase de
 -- hazard que causo el bug NACC=12 sim-OK/silicio-FALLA.
 --
+-- Audit 2026-11:
+--   * n_dim = 0 or maxiter = 0 (engine driven directly, regfile clamps
+--     bypassed) finishes immediately instead of wrapping (n_dim-1 / maxiter-1
+--     underflow ran 256 rows / 65536 iterations). n_dim > D is clamped to D.
+--   * clamp: a NaN result is no longer saturated silently to +/-umax; it is
+--     propagated into U and flagged on nan_err (sticky until the next start),
+--     which the sequencer turns into STATUS.ERR.
+--
 -- MUT (solo verificacion, 0 en uso normal):
 --   1 = snapshot roto: tick tambien por grupo (Gauss-Seidel accidental)
 --   2 = clamp no satura negativos
@@ -52,6 +60,7 @@ entity mpc_engine is
     done       : out std_logic;
     iter_cnt   : out std_logic_vector(15 downto 0);
     iter_tick  : out std_logic;      -- el top/u_bank refresca el snapshot
+    nan_err    : out std_logic;      -- a NaN reached the clamp (sticky)
     -- BRAM H (RO), fila completa
     h_rd_en    : out std_logic;
     h_rd_row   : out std_logic_vector(IDX_W-1 downto 0);
@@ -104,10 +113,15 @@ architecture rtl of mpc_engine is
 
   signal u_i_reg  : std_logic_vector(FP_W-1 downto 0);
   signal hu_reg_c : std_logic_vector(FP_W-1 downto 0);
+  signal is_nan   : std_logic;
+  signal nan_q    : std_logic;
+  signal n_eff    : std_logic_vector(IDX_W-1 downto 0);
 
 begin
 
   busy <= '1' when (state /= S_IDLE) and (state /= S_DONE) else '0';
+  nan_err <= nan_q;
+  n_eff <= std_logic_vector(to_unsigned(D, IDX_W)) when unsigned(n_dim) > D else n_dim;
   iter_cnt <= std_logic_vector(it);
 
   neg_step <= (not step_f(31)) & step_f(30 downto 0)
@@ -121,7 +135,7 @@ begin
     generic map (LAT_FMA => LAT_FMA, NLANES => NLANES)
     port map (
       clk => clk, rst_n => rst_n,
-      start => dot_start, n_dim => n_dim, lane_en => lane_en,
+      start => dot_start, n_dim => n_eff, lane_en => lane_en,
       h_rows => h_rows_fl, u_vec => u_vec_data,
       done => dot_done, results => hu_flat);
 
@@ -141,9 +155,13 @@ begin
       out_valid => fma_v_out, result => fma_res);
 
   -- clamp entero signo-magnitud (combinacional): |x|>|umax| => {sig_x, |umax|}
+  is_nan <= '1' when fma_res(30 downto 23) = x"FF" and unsigned(fma_res(22 downto 0)) /= 0
+            else '0';
   p_clamp : process (all)
   begin
-    if unsigned(fma_res(30 downto 0)) > unsigned(umax_f(30 downto 0)) then
+    if is_nan = '1' then
+      clamp_out <= fma_res;                              -- propagate NaN (flagged)
+    elsif unsigned(fma_res(30 downto 0)) > unsigned(umax_f(30 downto 0)) then
       if MUT = 2 and fma_res(31) = '1' then
         clamp_out <= fma_res;                            -- MUT2: negativos sin saturar
       else
@@ -181,6 +199,7 @@ begin
       u_i_reg    <= (others => '0');
       lane_en    <= (others => '0');
       h_rows_reg <= (others => (others => '0'));
+      nan_q      <= '0';
     elsif rising_edge(clk) then
       -- defaults de pulsos
       done      <= '0';
@@ -199,14 +218,19 @@ begin
           if start = '1' then
             it    <= (others => '0');
             ucnt  <= (others => '0');
-            state <= S_INIT_U;
+            nan_q <= '0';
+            if unsigned(n_dim) = 0 or unsigned(maxiter) = 0 then
+              state <= S_DONE;                 -- nothing to solve: no wrap
+            else
+              state <= S_INIT_U;
+            end if;
           end if;
 
         when S_INIT_U =>
           u_wr_en   <= '1';
           u_wr_addr <= std_logic_vector(ucnt);
           u_wr_data <= (others => '0');
-          if ucnt = unsigned(n_dim) - 1 then
+          if ucnt = unsigned(n_eff) - 1 then
             ucnt     <= (others => '0');
             grp_base <= (others => '0');
             state    <= S_INIT_TICK;
@@ -240,7 +264,7 @@ begin
         -- captura de la fila 'load_i' (pedida el ciclo anterior, latencia 1)
         when S_LOAD_CAP =>
           h_rows_reg(load_i) <= h_row_data;
-          if grp_base + load_i < unsigned(n_dim) then
+          if grp_base + load_i < unsigned(n_eff) then
             lane_en(load_i) <= '1';
           else
             lane_en(load_i) <= '0';
@@ -313,6 +337,7 @@ begin
         -- esperar out_valid del fma; clamp_out combinacional valido ese ciclo
         when S_UPD_FMAW =>
           if fma_v_out = '1' then
+            if is_nan = '1' then nan_q <= '1'; end if;
             u_wr_en   <= '1';
             u_wr_addr <= std_logic_vector(grp_base + upd_i);
             u_wr_data <= clamp_out;
@@ -328,7 +353,7 @@ begin
           if MUT = 1 then
             iter_tick <= '1';        -- MUT1: snapshot por grupo (Gauss-Seidel)
           end if;
-          if grp_base + NLANES >= unsigned(n_dim) then
+          if grp_base + NLANES >= unsigned(n_eff) then
             grp_base <= (others => '0');
             state    <= S_FLUSH;
           else

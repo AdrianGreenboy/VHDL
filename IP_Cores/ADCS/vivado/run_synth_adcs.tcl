@@ -7,14 +7,18 @@ foreach f [get_files -all -quiet {*byte_fifo.vhd *spw_fifo.vhd}] {
   remove_files $f
 }
 
-# CRITICO: la arquitectura behav (fp32_fma.vhd, acumulador 480b) NO debe estar
-# en el fileset de sintesis. Solo fp32_fma_xil.vhd. Comprobar y sacar.
-puts "fp32_fma.vhd (behav) en sintesis (debe estar vacio):"
-foreach f [get_files -all -quiet *fp32_fma.vhd] {
-  if {![string match *fp32_fma_xil.vhd $f]} {
-    puts "  SOBRA (behav no sintetizable): $f"
-    remove_files $f
-  }
+# Audit 2026-11: fp32_fma.vhd es el selector (debe estar). La implementacion
+# la fija el paquete de configuracion: en este flujo FPGA debe estar
+# fp32_cfg_pkg_xil.vhd (FPO) y NO fp32_cfg_pkg.vhd (RTL portable) a la vez.
+puts "configuracion FMA:"
+set cfg_rtl [get_files -all -quiet */fp32_cfg_pkg.vhd]
+set cfg_xil [get_files -all -quiet */fp32_cfg_pkg_xil.vhd]
+if {[llength $cfg_rtl] > 0 && [llength $cfg_xil] > 0} {
+  puts "  AMBOS paquetes de configuracion presentes: se quita fp32_cfg_pkg.vhd"
+  remove_files $cfg_rtl
+}
+foreach f {fp32_pkg.vhd fp32_fma.vhd fp32_fma_rtl.vhd fp32_fma_xil.vhd} {
+  if {[llength [get_files -all -quiet */$f]] == 0} { puts "  FALTA: $f" }
 }
 
 # confirmar que el core fp_fma existe (generado por package_fpo.tcl)

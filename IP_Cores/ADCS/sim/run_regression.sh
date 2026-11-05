@@ -3,7 +3,7 @@
 set -u
 cd "$(dirname "$0")"
 FAIL=0
-for r in run_l1a_fma run_l1b_dot run_l1c_engine run_l2_regfile run_l2_dma run_l3_top run_l4_soc; do
+for r in run_l1a_fma run_l1b_dot run_l1c_engine run_l2_regfile run_l2_dma run_l3_top run_l4_soc run_audit; do
     echo "### $r ###"
     ./$r.sh || FAIL=1
     echo

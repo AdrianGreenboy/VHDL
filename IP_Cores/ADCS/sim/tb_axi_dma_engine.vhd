@@ -56,6 +56,10 @@ architecture sim of tb_axi_dma_engine is
   signal awprot : std_logic_vector(2 downto 0);
   signal awcache: std_logic_vector(3 downto 0);
   signal awvalid, awready : std_logic;
+  -- audit 2026-11: AXI beats per command are counted (MUT2 used to be caught
+  -- only by a simulator out-of-range crash on g_bank(DP); the banks now
+  -- ignore out-of-range addresses, so the extra beat must be seen on the bus)
+  signal n_ar_hs, n_aw_hs : natural := 0;
   signal wdata_ax : std_logic_vector(31 downto 0);
   signal wstrb  : std_logic_vector(3 downto 0);
   signal wlast, wvalid, wready : std_logic;
@@ -99,6 +103,15 @@ architecture sim of tb_axi_dma_engine is
     return s(14 downto 0) & (s(15) xor s(13) xor s(12) xor s(10));
   end function;
 begin
+  -- audit 2026-11: count AXI address handshakes
+  p_hs_cnt : process(clk)
+  begin
+    if rising_edge(clk) then
+      if arvalid = '1' and arready = '1' then n_ar_hs <= n_ar_hs + 1; end if;
+      if awvalid = '1' and awready = '1' then n_aw_hs <= n_aw_hs + 1; end if;
+    end if;
+  end process;
+
 
   clk <= not clk after TCLK/2 when not fin else '0';
 
@@ -236,7 +249,9 @@ begin
     procedure run_cmd(op : std_logic_vector(1 downto 0);
                       base : std_logic_vector(31 downto 0);
                       words : natural) is
+      variable ar0, aw0 : natural;
     begin
+      ar0 := n_ar_hs; aw0 := n_aw_hs;
       wait until rising_edge(clk);
       cmd_op    <= op;
       cmd_addr  <= base;
@@ -251,6 +266,13 @@ begin
       end loop;
       if polls >= 200000 then
         report "TIMEOUT/DEADLOCK en DMA op=" & to_hstring(op) severity failure;
+      end if;
+      wait until rising_edge(clk);
+      if (n_ar_hs - ar0) + (n_aw_hs - aw0) /= words then
+        errores := errores + 1;
+        report "DMA op=" & to_hstring(op) & " issued " &
+               integer'image((n_ar_hs - ar0) + (n_aw_hs - aw0)) & " AXI beats, expected " &
+               integer'image(words) severity note;
       end if;
     end procedure;
   begin

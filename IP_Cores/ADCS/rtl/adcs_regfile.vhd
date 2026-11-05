@@ -19,6 +19,11 @@
 -- Registros v1: 0x00..0x2C activos; 0x30..0x40 RESERVADOS (QR fase 2, RAZ/WI);
 -- 0x44 DEBUG (RO); 0x48 DBGTAG (RO, tag de presencia 0xADC5_0101).
 --
+-- Audit 2026-11: NDIM is clamped to 1..D (the decision-variable size: H has
+-- D columns and the U mirror D entries; values above D indexed beyond the
+-- arrays) and MAXITER to >= 1 (0 wrapped to 65536 iterations). The clamped
+-- value is what reads back, so firmware can detect it.
+--
 -- MUT (solo verificacion, 0 en uso normal):
 --   1 = rdata registrado (rompe el contrato combinacional; capa 2 lo caza)
 --   2 = START no auto-limpia (pulso se vuelve nivel)
@@ -140,8 +145,26 @@ begin
               start_clr   := true;   -- clear con prioridad sobre done_set
             end if;
           when x"08"    => reg_mode    <= dmem_wdata;
-          when x"0C"    => reg_ndim    <= dmem_wdata;
-          when x"10" => reg_maxiter <= dmem_wdata;
+          when x"0C" =>
+            if unsigned(dmem_wdata) = 0 then
+              reg_ndim <= std_logic_vector(to_unsigned(1, 32));
+            elsif unsigned(dmem_wdata) > D then
+              reg_ndim <= std_logic_vector(to_unsigned(D, 32));
+            else
+              reg_ndim <= dmem_wdata;
+            end if;
+          when x"10" =>
+            if unsigned(dmem_wdata(15 downto 0)) = 0 or
+               unsigned(dmem_wdata(31 downto 16)) /= 0 then
+              -- 0 -> 1 ; above 16 bits -> saturate at 65535
+              if unsigned(dmem_wdata) = 0 then
+                reg_maxiter <= std_logic_vector(to_unsigned(1, 32));
+              else
+                reg_maxiter <= std_logic_vector(to_unsigned(65535, 32));
+              end if;
+            else
+              reg_maxiter <= dmem_wdata;
+            end if;
           when x"14"    => reg_step    <= dmem_wdata;
           when x"18"    => reg_umax    <= dmem_wdata;
           when x"1C"   => reg_hbase   <= dmem_wdata;
