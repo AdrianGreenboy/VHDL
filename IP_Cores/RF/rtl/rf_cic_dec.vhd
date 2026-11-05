@@ -7,6 +7,9 @@
 -- Normalizacion: shift aritmetico 3*(dec_sel+2), saturacion a Q1.15.
 -- Cambio de dec_sel: limpieza sincrona total del estado (la muestra de ese ciclo
 -- se descarta). Reset asincrono activo bajo. VHDL-2008.
+-- AUDIT 2026-11: the normalisation ROUNDS HALF-UP, (c3 + 2**(sh-1)) >> sh,
+-- instead of truncating (truncation added a -0.5 LSB DC bias). Same contract
+-- as the DSP family and as model/rf_model.py.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -85,8 +88,8 @@ begin
           c2_q := c1_q - d2_q_r;
           c3_q := c2_q - d3_q_r;
           d1_q_r <= v_q; d2_q_r <= c1_q; d3_q_r <= c2_q;
-          i_o     <= sat16(shift_right(c3_i, sh_v));
-          q_o     <= sat16(shift_right(c3_q, sh_v));
+          i_o     <= sat16(shift_right(c3_i + shift_left(to_signed(1, 32), sh_v - 1), sh_v));
+          q_o     <= sat16(shift_right(c3_q + shift_left(to_signed(1, 32), sh_v - 1), sh_v));
           valid_o <= '1';
           cnt_r   <= (others => '0');
         else

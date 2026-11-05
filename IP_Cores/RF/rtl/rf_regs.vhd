@@ -7,7 +7,8 @@
 -- Direcciones (offset de palabra, addr en bytes con 2 LSB ignorados):
 --   0x00 CTRL       RW  bit0 rx_en, bit1 tx_en, bit2 loop_en, bit3 agc_en,
 --                       bit4 nco_reset (autolimpia)
---   0x04 STATUS     RO  bit0 rx_empty,1 rx_full,2 tx_empty,3 tx_full,4 irq
+--   0x04 STATUS     RO  bit0 rx_empty,1 rx_full,2 tx_empty,3 tx_full,4 irq,
+--                       5 dma_busy, 6 rx_ovf (= IRQ_STAT bit1, AUDIT 2026-11)
 --   0x08 NCO_FTW    RW
 --   0x0C RSSI       RO
 --   0x10 AGC_CTRL   RW  [2:0] shift_man, [18:3]? -> se empaqueta th_high/low
@@ -21,9 +22,14 @@
 --   0x18 FIR_COEF_DATA WO  escribir dispara coef_we un ciclo (rx FIR)
 --   0x1C RX_FIFO_LEVEL RO
 --   0x20 RX_FIFO_DATA  RO  leer hace pop (rd_en un ciclo)
---   0x24 TX_FIFO_DATA  WO  escribir hace push (wr_en un ciclo)
+--   0x24 TX_FIFO_DATA  WO  RESERVED (AUDIT 2026-11): the TX FIFO was pushed but
+--                       never drained (no DUC input path); it was removed.
+--                       Writes are ignored, STATUS reports tx_empty=1.
 --   0x28 IRQ_EN     RW
 --   0x2C IRQ_STAT   RO/W1C  escribir 1 limpia el bit
+--                       bit0 rx_level >= IRQ_THRESH (set priority)
+--                       bit1 RX FIFO overflow, sticky (AUDIT 2026-11)
+--                   irq_o = OR(IRQ_STAT(1:0) and IRQ_EN(1:0))
 --   0x30 IRQ_THRESH RW  nivel de rx_fifo que dispara irq
 --   0x34 DMA_ADDR   RW  (cableado en paso 6)
 --   0x38 DMA_LEN    RW
@@ -66,6 +72,8 @@ entity rf_regs is
     rxf_empty_i  : in  std_logic;
     rxf_full_i   : in  std_logic;
     rxf_level_i  : in  std_logic_vector(9 downto 0);
+    rxf_ovf_i    : in  std_logic := '0';   -- sticky overflow of the RX FIFO
+    rxf_ovf_clr_o: out std_logic;          -- pulse: W1C of IRQ_STAT bit1
     -- TX FIFO (escritura por MMIO)
     txf_wr_en_o  : out std_logic;
     txf_wr_data_o: out std_logic_vector(31 downto 0);
@@ -121,6 +129,7 @@ architecture rtl of rf_regs is
 
   signal aw : std_logic_vector(7 downto 0);
   signal irq_s : std_logic;
+  signal ovfclr_r : std_logic := '0';
 begin
 
   -- alinear direccion a palabra (ignora 2 LSB)
@@ -152,7 +161,8 @@ begin
   irq_s <= '1' when (unsigned(irqthr_r(9 downto 0)) > 0)
                     and (unsigned(rxf_level_i) >= unsigned(irqthr_r(9 downto 0)))
                     and (irqen_r(0) = '1') else '0';
-  irq_o <= irqstat_r(0) and irqen_r(0);
+  irq_o <= (irqstat_r(0) and irqen_r(0)) or (irqstat_r(1) and irqen_r(1));
+  rxf_ovf_clr_o <= ovfclr_r;
 
   -- ---------- LECTURA COMBINACIONAL (mux directo) ----------
   proc_rd : process (aw, ctrl_r, ftw_r, toneftw_r, agc_r, coefa_r, irqen_r, irqstat_r,
@@ -164,8 +174,10 @@ begin
       when A_CTRL   => rdata_o <= ctrl_r;
       when A_STATUS => rdata_o <= (0 => rxf_empty_i, 1 => rxf_full_i,
                                    2 => txf_empty_i, 3 => txf_full_i,
-                                   4 => (irqstat_r(0) and irqen_r(0)),
+                                   4 => (irqstat_r(0) and irqen_r(0)) or
+                                        (irqstat_r(1) and irqen_r(1)),
                                    5 => dma_busy_i,
+                                   6 => irqstat_r(1),
                                    others => '0');
       when A_FTW    => rdata_o <= ftw_r;
       when A_TONE   => rdata_o <= toneftw_r;
@@ -202,6 +214,7 @@ begin
       dmac_r    <= (others => '0');
       ncorst_r  <= '0';
       coefwe_r  <= '0';
+      ovfclr_r  <= '0';
       coefd_r   <= (others => '0');
       txwr_r    <= '0';
       txwd_r    <= (others => '0');
@@ -210,6 +223,7 @@ begin
       ncorst_r <= '0';
       coefwe_r <= '0';
       txwr_r   <= '0';
+      ovfclr_r <= '0';
 
       -- IRQ pendiente (bit0): semantica W1C con PRIORIDAD DE SET. Primero se
       -- aplica el clear W1C (si el acceso lo pide), luego se re-evalua la
@@ -221,8 +235,16 @@ begin
         if irq_s = '1' then
           irqstat_r(0) <= '1';
         end if;
+        if wdata_i(1) = '1' then
+          ovfclr_r <= '1';           -- clear the FIFO's own sticky as well
+        end if;
       elsif irq_s = '1' then
         irqstat_r(0) <= '1';
+      end if;
+      -- RX FIFO overflow: sticky in the FIFO, mirrored here (set priority
+      -- except in the W1C cycle, whose clear pulse also clears the FIFO flag)
+      if rxf_ovf_i = '1' and not (we_i = '1' and aw = A_IRQST and wdata_i(1) = '1') then
+        irqstat_r(1) <= '1';
       end if;
 
       if we_i = '1' then

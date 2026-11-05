@@ -128,6 +128,8 @@ architecture rtl of mem_subsys_rf is
 
   -- RX FIFO (compartida entre MMIO y el segundo maestro)
   signal rxf_rd_en_mmio, rxf_rd_en_dma, rxf_rd_en : std_logic;
+  signal rxdat_hold : std_logic;
+  signal rxf_ovf, rxf_ovf_clr : std_logic;
   signal rxf_rd_data : std_logic_vector(31 downto 0);
   signal rxf_empty, rxf_full : std_logic;
   signal rxf_level : std_logic_vector(9 downto 0);
@@ -231,6 +233,7 @@ begin
       rxf_full_i=>rxf_full, rxf_level_i=>rxf_level,
       txf_wr_en_o=>txf_wr_en, txf_wr_data_o=>txf_wr_data,
       txf_empty_i=>txf_empty, txf_full_i=>txf_full,
+      rxf_ovf_i=>rxf_ovf, rxf_ovf_clr_o=>rxf_ovf_clr,
       irq_o=>rf_irq, dma_addr_o=>rf_dma_addr, dma_len_o=>rf_dma_len, dma_ctrl_o=>rf_dma_ctrl,
       tone_ftw_o=>tone_ftw);
 
@@ -241,15 +244,24 @@ begin
       coef_we_i=>coef_we, coef_addr_i=>cfa, coef_data_i=>cfd,
       rssi_o=>rssi,
       rxf_rd_en_i=>rxf_rd_en, rxf_rd_data_o=>rxf_rd_data,
-      rxf_empty_o=>rxf_empty, rxf_full_o=>rxf_full, rxf_level_o=>rxf_level);
+      rxf_empty_o=>rxf_empty, rxf_full_o=>rxf_full, rxf_level_o=>rxf_level,
+      rxf_ovf_o=>rxf_ovf, rxf_ovf_clr_i=>rxf_ovf_clr);
 
-  rxf_rd_en <= rxf_rd_en_mmio or rxf_rd_en_dma;
+  -- AUDIT 2026-11: exclusive FIFO grant. The RF DMA pops only while busy;
+  -- an MMIO read of RX_FIFO_DATA during that time is HELD OFF (dmem_ready=0,
+  -- no pop) until the DMA releases the FIFO, so the two masters can never pop
+  -- in the same cycle nor interleave words of one capture.
+  rxf_rd_en <= (rxf_rd_en_mmio and not rf_dma_busy) or rxf_rd_en_dma;
+  rxdat_hold <= '1' when (is_rf = '1' and dmem_req = '1' and dmem_wstrb = "0000"
+                          and dmem_addr(7 downto 2) = "001000" and rf_dma_busy = '1')
+                else '0';
 
-  -- TX FIFO (presente por completitud del banco; sin uso en bring-up)
-  u_txf : entity work.word_fifo
-    generic map (LOG2_DEPTH=>9)
-    port map (clk=>clk, aresetn=>aresetn, wr_en=>txf_wr_en, wr_data=>txf_wr_data,
-              full=>txf_full, rd_en=>'0', rd_data=>open, empty=>txf_empty, level=>txf_level);
+  -- AUDIT 2026-11: the TX FIFO was pushed by TX_FIFO_DATA but never drained
+  -- (rd_en tied '0'; the DUC is tone-driven, there is no TX sample input).
+  -- It is removed (saves a 512x32 RAM on the ASIC); TX_FIFO_DATA is reserved.
+  txf_empty <= '1';
+  txf_full  <= '0';
+  txf_level <= (others => '0');
 
   u_rfdma : entity work.rf_dma_axi
     generic map (ADDR_W => ADDR_W)
@@ -278,6 +290,6 @@ begin
                 dmareg_rdata when is_dmareg = '1' else
                 rf_rdata_bus when is_rf     = '1' else
                 (others => '0');
-  dmem_ready <= '1';
+  dmem_ready <= not rxdat_hold;
 
 end architecture rtl;

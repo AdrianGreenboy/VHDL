@@ -28,7 +28,9 @@ entity rf_datapath is
     rxf_rd_data_o  : out std_logic_vector(31 downto 0);
     rxf_empty_o    : out std_logic;
     rxf_full_o     : out std_logic;
-    rxf_level_o    : out std_logic_vector(9 downto 0)
+    rxf_level_o    : out std_logic_vector(9 downto 0);
+    rxf_ovf_o      : out std_logic;              -- sticky RX FIFO overflow
+    rxf_ovf_clr_i  : in  std_logic := '0'
   );
 end entity rf_datapath;
 
@@ -142,11 +144,12 @@ begin
   rxf_wr_en   <= agc_v;
   rxf_wr_data <= agc_i & agc_q;
 
-  u_rxf : entity work.word_fifo
+  u_rxf : entity work.rf_word_fifo
     generic map (LOG2_DEPTH=>9)
     port map (clk=>clk_i, aresetn=>aresetn_i, wr_en=>rxf_wr_en, wr_data=>rxf_wr_data,
               full=>rxf_full_o, rd_en=>rxf_rd_en_i, rd_data=>rxf_rd_data_o,
-              empty=>rxf_empty_o, level=>rxf_level_u);
+              empty=>rxf_empty_o, level=>rxf_level_u,
+              ovf=>rxf_ovf_o, ovf_clr=>rxf_ovf_clr_i);
 
   rxf_level_o <= std_logic_vector(rxf_level_u);
 
