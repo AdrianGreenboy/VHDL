@@ -1,5 +1,5 @@
 -- tb_ptp_tx.vhd — integracion del motor TX-PTP (capa 1a extendida).
--- Conecta ptp_tx -> spw_fifo -> eth_tx_mii(+override), con ptp_clock y
+-- Conecta ptp_tx -> ptp_fifo -> eth_tx_mii(+override), con ptp_clock y
 -- ptp_tstamp enganchado a tx_sfd_pulse. Envia un Sync, captura el stream MII
 -- (dst..FCS) y lo compara byte a byte contra ref_sync_frame.txt (del ISS).
 -- La clave: el originTimestamp lo inserta el OVERRIDE con el TS del SFD real.
@@ -105,9 +105,9 @@ begin
               fifo_wr => f_wr, fifo_din => f_din, fifo_full => f_full,
               ovr_en => ovr_en, ovr_off => ovr_off, ovr_len => ovr_len, ovr_data => ovr_data);
 
-  u_fifo : entity work.spw_fifo
+  u_fifo : entity work.ptp_fifo
     generic map (LOG2_DEPTH => 11, WIDTH => 9)
-    port map (clk => clk, aresetn => not rst, clr => '0',
+    port map (clk => clk, rst => rst, clr => '0',
               wr_en => f_wr, wdata => f_din, full => f_full,
               rdata => f_dout, rd_en => f_rd, empty => f_empty,
               level => open);

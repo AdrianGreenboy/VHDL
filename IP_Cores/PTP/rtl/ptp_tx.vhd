@@ -2,6 +2,17 @@
 -- FSM que genera Sync, Pdelay_Req, Pdelay_Resp desde plantillas ROM y parchea
 -- campos variables. Override 1-step por tipo: originTimestamp (Sync/Req) o
 -- correctionField=residence (Resp). Interfaz de escritura explicita a FIFO.
+--
+-- Audit 2026-11:
+--   * Pdelay_Resp.sequenceId = sequenceId of the Pdelay_Req being answered
+--     (req_seqid input; 802.1AS 11.4.x). v1 used the local counter.
+--   * seq_out: sequenceId used by the frame accepted on the last 'send'
+--     (lets the initiator match the Resp to its outstanding Req).
+--   * S_PUSH/S_WAIT_TS are bounded by tmo_cycles (0 = wait forever, legacy):
+--     on expiry the engine returns to idle, pulses ts_timeout (the caller
+--     flushes/aborts the frame) and still pulses done.
+--   * a stale TX timestamp sticky (e.g. from an aborted frame) is acked when a
+--     new frame is accepted, so it can never patch the next frame.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -22,6 +33,10 @@ entity ptp_tx is
     req_rx_sec : in  std_logic_vector(SEC_W-1 downto 0);
     req_rx_ns  : in  std_logic_vector(NS_W-1 downto 0);
     req_portid : in  std_logic_vector(79 downto 0);
+    req_seqid  : in  std_logic_vector(15 downto 0) := (others => '0');  -- Req seq (for Resp)
+    seq_out    : out std_logic_vector(15 downto 0);  -- seq of the last accepted frame
+    tmo_cycles : in  unsigned(31 downto 0) := (others => '0');  -- 0 = no timeout
+    ts_timeout : out std_logic;                      -- pulse: TS never arrived
     ts_sec     : in  std_logic_vector(SEC_W-1 downto 0);
     ts_ns      : in  std_logic_vector(NS_W-1 downto 0);
     ts_valid   : in  std_logic;
@@ -50,6 +65,9 @@ architecture rtl of ptp_tx is
   signal busy_r   : std_logic := '0';
   signal done_r   : std_logic := '0';
   signal ack_r    : std_logic := '0';
+  signal seq_o_r  : std_logic_vector(15 downto 0) := (others => '0');
+  signal tmo_r    : std_logic := '0';
+  signal wcnt     : unsigned(31 downto 0) := (others => '0');
 
   signal fwr_r    : std_logic := '0';
   signal fdin_r   : std_logic_vector(8 downto 0) := (others => '0');
@@ -129,6 +147,8 @@ begin
   dbg_st   <= "000" when st = S_IDLE else "001" when st = S_PUSH else "010" when st = S_WAIT_TS else "011";
   done     <= done_r;
   ts_ack   <= ack_r;
+  seq_out  <= seq_o_r;
+  ts_timeout <= tmo_r;
   fifo_wr  <= fwr_r;
   fifo_din <= fdin_r;
   ovr_en   <= ovr_en_r;
@@ -141,6 +161,7 @@ begin
     if rising_edge(clk) then
       done_r <= '0';
       ack_r  <= '0';
+      tmo_r  <= '0';
       if rst = '1' then
         st <= S_IDLE; idx <= 0; seq_r <= (others => '0');
         busy_r <= '0'; fwr_r <= '0'; fdin_r <= (others => '0');
@@ -153,6 +174,8 @@ begin
             fwr_r <= '0';
             if send = '1' then
               busy_r <= '1'; idx <= 0; sel_r <= sel;
+              ack_r  <= '1';                      -- drop any stale TX timestamp
+              wcnt   <= (others => '0');
               ovr_en_r <= '1'; ovr_dat_r <= (others => '0');
               case sel is
                 when SEL_SYNC =>
@@ -181,7 +204,13 @@ begin
               shreg(6*8  to 12*8-1) <= src_mac;                       -- SA
               shreg(34*8 to 42*8-1) <= clock_id;                      -- clockIdentity
               shreg(42*8 to 44*8-1) <= port_num;                      -- portNumber
-              shreg(44*8 to 46*8-1) <= std_logic_vector(seq_r);       -- sequenceId
+              if sel = SEL_PDELAY_RESP then
+                shreg(44*8 to 46*8-1) <= req_seqid;                   -- = Req seq
+                seq_o_r <= req_seqid;
+              else
+                shreg(44*8 to 46*8-1) <= std_logic_vector(seq_r);     -- sequenceId
+                seq_o_r <= std_logic_vector(seq_r);
+              end if;
               if sel = SEL_PDELAY_RESP then
                 shreg(48*8 to 54*8-1) <= req_rx_sec;                  -- t2.sec
                 shreg(54*8 to 58*8-1) <= req_rx_ns;                   -- t2.ns
@@ -191,7 +220,12 @@ begin
             end if;
 
           when S_PUSH =>
-            if fifo_full = '0' then
+            wcnt <= wcnt + 1;
+            if tmo_cycles /= 0 and wcnt >= tmo_cycles then
+              fwr_r <= '0';
+              tmo_r <= '1';                       -- FIFO never drained: give up
+              st    <= S_DONE;
+            elsif fifo_full = '0' then
               fwr_r <= '1';
               if idx = frame_len-1 then
                 fdin_r <= '1' & shreg(0 to 7);
@@ -214,7 +248,11 @@ begin
 
           when S_WAIT_TS =>
             fwr_r <= '0';
-            if ts_valid = '1' then
+            wcnt  <= wcnt + 1;
+            if tmo_cycles /= 0 and wcnt >= tmo_cycles then
+              tmo_r <= '1';                       -- timestamp never came: give up
+              st    <= S_DONE;
+            elsif ts_valid = '1' then
               if sel_r = SEL_PDELAY_RESP then
                 ovr_dat_r <= calc_residence(ts_sec, req_rx_sec, ts_ns, req_rx_ns);
               else

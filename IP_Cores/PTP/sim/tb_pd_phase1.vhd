@@ -1,4 +1,4 @@
--- tb_ptp_mac_pdelay.vhd — capa 1c: peer-delay completo en LOOP_INT.
+-- tb_pd_phase1.vhd — capa 1c: peer-delay completo en LOOP_INT.
 -- Un solo core es iniciador y respondedor. Secuencia auto-ping-pong:
 --   core envia Pdelay_Req -> loopback -> core lo recibe (respondedor) ->
 --   envia Pdelay_Resp -> loopback -> core lo recibe (iniciador) -> mpd.

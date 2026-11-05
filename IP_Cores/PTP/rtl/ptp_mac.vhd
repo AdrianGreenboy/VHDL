@@ -11,7 +11,23 @@
 --   - FIFO de trama TX-PTP + gate store-and-forward
 --
 -- Rol conmutable por role_slave (CONTROL.role). LOOP_INT via eth_mac.loopback.
--- Un solo dominio de reloj a 100 MHz; el reloj PTP avanza a full clock.
+-- Core clock domain at 100 MHz; the PTP clock advances at full core clock.
+-- With loopback='0' the MII pins are a real PHY interface (mii_rx_clk /
+-- mii_tx_clk, CDC inside eth_mac); timestamps are then taken at the wire SFD
+-- (TX) / after the RX nibble FIFO (RX) with +/-1 core clock quantization.
+--
+-- Audit 2026-11 changes:
+--   * Sync slave offset = t_rx - t_origin - (correctionField >> 16) - mpd.
+--   * enable='0' holds the whole port datapath (MAC, PTP engines, FIFO) in
+--     synchronous reset; the PTP clock and servo keep running.
+--   * timeouts (tmo_cycles) on every wait of ptp_tx / ptp_pdelay_fsm; on a
+--     TX timestamp timeout the frame is aborted: frame FIFO flushed, MAC
+--     reset for one cycle, serialization released (no permanent stall).
+--   * frame FIFO = ptp_fifo (synchronous-read, sync reset). v1 drove the
+--     asynchronous aresetn pin of spw_fifo with 'not rst'.
+--   * Pdelay_Resp accepted only if sequenceId/requestingPortIdentity match.
+--   * the slave loop consumes a Sync once (v1 processed it on two
+--     consecutive cycles; ptp_clock's edge detector hid it).
 -- ---------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -27,6 +43,7 @@ entity ptp_mac is
   port (
     clk        : in  std_logic;
     rst        : in  std_logic;
+    enable     : in  std_logic := '1';              -- '0': port datapath held in reset
     loopback   : in  std_logic;                     -- '1' LOOP_INT
     -- rol e identidad (registros MMIO)
     role_slave : in  std_logic;                     -- '1' esclavo, '0' maestro
@@ -42,6 +59,19 @@ entity ptp_mac is
     -- ordenes
     send_sync    : in  std_logic;                   -- pulso: emitir un Sync (maestro)
     start_pdelay : in  std_logic;                   -- pulso: iniciar Pdelay
+    -- robustness configuration (audit 2026-11)
+    tmo_cycles   : in  unsigned(31 downto 0) := (others => '0');  -- 0 = no timeout
+    allowed_lost : in  unsigned(7 downto 0) := to_unsigned(3, 8);
+    chk_resp     : in  std_logic := '1';
+    -- error / health events (1-cycle pulses) and state
+    ev_pd_timeout    : out std_logic;
+    ev_ts_timeout    : out std_logic;
+    ev_resp_lost     : out std_logic;
+    ev_resp_mismatch : out std_logic;
+    ev_rx_oversize   : out std_logic;
+    ev_phy_err       : out std_logic;               -- CDC FIFO ovf/unf (ext PHY)
+    pd_lost_cnt      : out unsigned(7 downto 0);
+    pd_as_capable    : out std_logic;
     -- observabilidad
     now_sec    : out std_logic_vector(SEC_W-1 downto 0);
     now_ns     : out std_logic_vector(NS_W-1 downto 0);
@@ -62,6 +92,8 @@ entity ptp_mac is
     dbg_pd_corr   : out std_logic_vector(63 downto 0);
     dbg_pd_calc   : out std_logic;
     -- pines MII (externos; inertes en LOOP_INT)
+    mii_rx_clk : in  std_logic := '0';
+    mii_tx_clk : in  std_logic := '0';
     mii_txd    : out std_logic_vector(3 downto 0);
     mii_tx_en  : out std_logic;
     mii_rxd    : in  std_logic_vector(3 downto 0);
@@ -97,6 +129,17 @@ architecture rtl of ptp_mac is
   signal tx_req_rx_sec : std_logic_vector(SEC_W-1 downto 0);
   signal tx_req_rx_ns  : std_logic_vector(NS_W-1 downto 0);
   signal tx_req_portid : std_logic_vector(79 downto 0);
+  signal tx_req_seqid  : std_logic_vector(15 downto 0);
+  signal tx_seq        : std_logic_vector(15 downto 0);
+  signal ts_tmo        : std_logic;
+  -- datapath reset (port disable) and TX abort
+  signal rst_dp   : std_logic;
+  signal rst_mac  : std_logic;
+  signal abort_r  : std_logic := '0';
+  signal f_clr    : std_logic;
+  signal my_portid : std_logic_vector(79 downto 0);
+  signal mac_ovs, mac_povf, mac_punf : std_logic;
+  signal send_sync_g, start_pd_g : std_logic;
   -- arbitraje: send_sync (maestro) vs orquestador pdelay
   signal orch_send : std_logic;
   signal orch_sel  : msg_sel_t;
@@ -128,6 +171,7 @@ architecture rtl of ptp_mac is
   signal rx_seqid  : std_logic_vector(15 downto 0);
   signal rx_spid   : std_logic_vector(79 downto 0);
   signal rx_corr   : std_logic_vector(63 downto 0);
+  signal rx_reqpid : std_logic_vector(79 downto 0);
   signal rx_osec   : std_logic_vector(SEC_W-1 downto 0);
   signal rx_ons    : std_logic_vector(NS_W-1 downto 0);
   signal rx_rsec   : std_logic_vector(SEC_W-1 downto 0);
@@ -164,6 +208,18 @@ architecture rtl of ptp_mac is
   signal dbg_orch_ist  : std_logic_vector(2 downto 0);
   signal dbg_orch_rstt : std_logic_vector(1 downto 0);
 begin
+  -- port disable / TX abort
+  rst_dp  <= rst or not enable;
+  rst_mac <= rst_dp or abort_r;
+  f_clr   <= abort_r;
+  send_sync_g <= send_sync and enable;
+  start_pd_g  <= start_pdelay and enable;
+  my_portid   <= clock_id & port_num;
+
+  ev_ts_timeout  <= ts_tmo;
+  ev_rx_oversize <= mac_ovs;
+  ev_phy_err     <= mac_povf or mac_punf;
+
   -- [31:28] stickies MAC RX: ok,crc,runt,drop | [27:24] ultimo mtype parseado
   -- [23] mvalid alguna vez | [22] ack del orch | [21] ack del lazo sync
   -- [20] pd_calc alguna vez | [19:18] contador de mensajes (2b, satura)
@@ -180,7 +236,7 @@ begin
   rx_probe : process(clk)
   begin
     if rising_edge(clk) then
-      if rst = '1' then
+      if rst_dp = '1' then
         stk_ev_ok <= '0'; stk_ev_crc <= '0'; stk_ev_runt <= '0'; stk_ev_drop <= '0';
         stk_mvalid <= '0'; stk_ack_orch <= '0'; stk_ack_sync <= '0'; stk_pd_calc <= '0';
         stk_mtype <= (others => '0'); stk_mvcnt <= (others => '0'); mvalid_d <= '0';
@@ -190,7 +246,7 @@ begin
         if mac_ev_runt = '1' then stk_ev_runt <= '1'; end if;
         -- bytes discriminantes de la trama que entra a la FIFO. En un boot
         -- limpio (primera trama), f_wptr = indice del byte dentro de la trama.
-        if f_wr = '1' and f_empty = '1' then
+        if f_wr = '1' and unsigned(f_level) = 0 then
           stk_firstb <= f_din(7 downto 0);          -- byte 0: ROM (bueno 0x01)
         end if;
         if f_wr = '1' and unsigned(f_wptr) = 14 then
@@ -245,12 +301,12 @@ begin
 
   -- ---- timestamping TX y RX ----
   u_txts : entity work.ptp_tstamp
-    port map (clk => clk, rst => rst, now_sec => clk_sec, now_ns => clk_ns,
+    port map (clk => clk, rst => rst_dp, now_sec => clk_sec, now_ns => clk_ns,
               lat_ns => tx_lat, sfd_pulse => tx_sfd, rd_ack => txts_ack,
               ts_sec => txts_sec, ts_ns => txts_ns, ts_valid => txts_valid, ts_overrun => open);
 
   u_rxts : entity work.ptp_tstamp
-    port map (clk => clk, rst => rst, now_sec => clk_sec, now_ns => clk_ns,
+    port map (clk => clk, rst => rst_dp, now_sec => clk_sec, now_ns => clk_ns,
               lat_ns => rx_lat, sfd_pulse => rx_sfd, rd_ack => rxts_ack,
               ts_sec => rxts_sec, ts_ns => rxts_ns, ts_valid => rxts_valid, ts_overrun => open);
 
@@ -273,9 +329,13 @@ begin
   serialize : process(clk)
   begin
     if rising_edge(clk) then
-      if rst = '1' then
+      abort_r <= ts_tmo;                 -- 1-cycle abort after a TX timeout
+      if rst_dp = '1' then
         tx_inflight <= '0';
         sync_pend   <= '0';
+        abort_r     <= '0';
+      elsif abort_r = '1' then
+        tx_inflight <= '0';              -- frame aborted: release serialization
       else
         -- liberar la cola cuando el Sync efectivamente se lanza este ciclo
         if sync_pend = '1' and orch_send = '0'
@@ -283,7 +343,7 @@ begin
           sync_pend <= '0';
         end if;
         -- encolar CMD.send_sync (gana sobre la liberacion si coinciden)
-        if send_sync = '1' then
+        if send_sync_g = '1' then
           sync_pend <= '1';
         end if;
         if tx_send = '1' then
@@ -298,18 +358,20 @@ begin
 
   -- ---- motor TX-PTP ----
   u_tx : entity work.ptp_tx
-    port map (clk => clk, rst => rst, send => tx_send, sel => tx_sel,
+    port map (clk => clk, rst => rst_dp, send => tx_send, sel => tx_sel,
               busy => tx_busy, done => tx_done,
               clock_id => clock_id, port_num => port_num, src_mac => src_mac,
               req_rx_sec => tx_req_rx_sec, req_rx_ns => tx_req_rx_ns, req_portid => tx_req_portid,
+              req_seqid => tx_req_seqid, seq_out => tx_seq,
+              tmo_cycles => tmo_cycles, ts_timeout => ts_tmo,
               ts_sec => txts_sec, ts_ns => txts_ns, ts_valid => txts_valid, ts_ack => txts_ack,
               fifo_wr => f_wr, fifo_din => f_din, fifo_full => f_full,
               ovr_en => ovr_en, ovr_off => ovr_off, ovr_len => ovr_len, ovr_data => ovr_data, dbg_st => dbg_tx_st);
 
   -- ---- FIFO de trama + gate store-and-forward ----
-  u_fifo : entity work.spw_fifo
+  u_fifo : entity work.ptp_fifo
     generic map (LOG2_DEPTH => 11, WIDTH => 9)
-    port map (clk => clk, aresetn => not rst, clr => '0',
+    port map (clk => clk, rst => rst_dp, clr => f_clr,
               wr_en => f_wr, wdata => f_din, full => f_full,
               rdata => f_dout, rd_en => f_rd, empty => f_empty, level => f_level,
               dbg_wptr => f_wptr, dbg_rptr => f_rptr);
@@ -317,7 +379,7 @@ begin
   sf_gate : process(clk)
   begin
     if rising_edge(clk) then
-      if rst = '1' then frame_ready <= '0';
+      if rst_dp = '1' or abort_r = '1' then frame_ready <= '0';
       else
         if f_wr = '1' and f_din(8) = '1' then frame_ready <= '1'; end if;
         if frame_ready = '1' and f_empty = '1' and mac_tbusy = '0' then frame_ready <= '0'; end if;
@@ -332,14 +394,18 @@ begin
 
   -- ---- eth_mac con ganchos PTP ----
   u_mac : entity work.eth_mac
-    port map (clk => clk, rst => rst, loopback => loopback,
+    generic map (G_MAXLEN => 1518)
+    port map (clk => clk, rst => rst_mac, loopback => loopback,
               macaddr => macaddr, promisc => '0',
               tx_data => mac_txd, tx_valid => mac_tvalid, tx_last => mac_tlast,
               tx_ready => mac_tready, tx_busy => mac_tbusy, tx_underrun => mac_underrun,
               rx_data => mac_rxd, rx_valid => mac_rvalid, rx_last => mac_rlast,
               rx_ev_ok => mac_ev_ok, rx_ev_crc => mac_ev_crc,
               rx_ev_runt => mac_ev_runt, rx_ev_drop => mac_ev_drop,
+              rx_ev_oversize => mac_ovs,
               rx_dbg_dst => mac_dbg_dst, rx_dbg_nb => mac_dbg_nb,
+              phy_rx_ovf => mac_povf, phy_tx_unf => mac_punf,
+              mii_rx_clk => mii_rx_clk, mii_tx_clk => mii_tx_clk,
               mii_txd => mii_txd, mii_tx_en => mii_tx_en,
               mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv,
               tx_sfd_pulse => tx_sfd, rx_sfd_pulse => rx_sfd,
@@ -348,29 +414,38 @@ begin
   -- ---- parser RX-PTP ----
   rx_mack <= rx_mack_orch or rx_mack_sync;
   u_rx : entity work.ptp_rx
-    port map (clk => clk, rst => rst,
+    port map (clk => clk, rst => rst_dp,
               rx_data => mac_rxd, rx_valid => mac_rvalid, rx_last => mac_rlast, ev_ok => mac_ev_ok,
               rx_ts_sec => rxts_sec, rx_ts_ns => rxts_ns, rx_ts_valid => rxts_valid, rx_ts_ack => rxts_ack,
               msg_valid => rx_mvalid, msg_type => rx_mtype, seq_id => rx_seqid,
               src_port_id => rx_spid, origin_sec => rx_osec, origin_ns => rx_ons,
-              corr_field => rx_corr, rx_sec => rx_rsec, rx_ns => rx_rns, rd_ack => rx_mack);
+              corr_field => rx_corr, req_port_id => rx_reqpid,
+              rx_sec => rx_rsec, rx_ns => rx_rns, rd_ack => rx_mack);
 
   -- ---- orquestador peer-delay ----
   u_orch : entity work.ptp_pdelay_fsm
-    port map (clk => clk, rst => rst, start => start_pdelay, busy => orch_busy,
+    port map (clk => clk, rst => rst_dp, start => start_pd_g, busy => orch_busy,
               rx_mvalid => rx_mvalid, rx_mtype => rx_mtype, rx_seqid => rx_seqid,
-              rx_spid => rx_spid, rx_corr => rx_corr, rx_sec => rx_rsec, rx_ns => rx_rns,
+              rx_spid => rx_spid, rx_reqpid => rx_reqpid,
+              rx_corr => rx_corr, rx_sec => rx_rsec, rx_ns => rx_rns,
               rx_ack => rx_mack_orch,
               tx_send => orch_send, tx_sel => orch_sel,
               tx_req_rx_sec => tx_req_rx_sec, tx_req_rx_ns => tx_req_rx_ns, tx_req_portid => tx_req_portid,
+              tx_req_seqid => tx_req_seqid,
               tx_busy => tx_busy, tx_done => tx_done, tx_ready => not tx_inflight,
+              tx_seq => tx_seq,
+              my_portid => my_portid, chk_resp => chk_resp,
+              tmo_cycles => tmo_cycles, allowed_lost => allowed_lost,
+              pd_timeout => ev_pd_timeout, resp_lost => ev_resp_lost,
+              resp_mismatch => ev_resp_mismatch,
+              lost_cnt => pd_lost_cnt, as_capable => pd_as_capable,
               tx_ts_sec => txts_sec, tx_ts_ns => txts_ns, tx_ts_valid => txts_valid,
               pd_calc => pd_calc, pd_t1_sec => pd_t1_sec, pd_t1_ns => pd_t1_ns,
               pd_t4_sec => pd_t4_sec, pd_t4_ns => pd_t4_ns, pd_corr => pd_corr, dbg_ist => dbg_orch_ist, dbg_rstt => dbg_orch_rstt);
 
   -- ---- calculo meanPathDelay ----
   u_pd : entity work.ptp_pdelay
-    port map (clk => clk, rst => rst, calc => pd_calc,
+    port map (clk => clk, rst => rst_dp, calc => pd_calc,
               t1_sec => pd_t1_sec, t1_ns => pd_t1_ns, t4_sec => pd_t4_sec, t4_ns => pd_t4_ns,
               corr_field => pd_corr, delay_ns => mpd_i, valid => mpd_val_i);
 
@@ -378,7 +453,7 @@ begin
   process(clk)
   begin
     if rising_edge(clk) then
-      if rst = '1' then mpd_reg <= (others => '0');
+      if rst_dp = '1' then mpd_reg <= (others => '0');
       elsif mpd_val_i = '1' then mpd_reg <= mpd_i; end if;
     end if;
   end process;
@@ -393,7 +468,7 @@ begin
     if rising_edge(clk) then
       rx_sync_ev <= '0';
       rx_resp_ev <= '0';
-      if rst = '1' then
+      if rst_dp = '1' then
         mv_d := '0';
       else
         if rx_mvalid = '1' and mv_d = '0' then   -- flanco de subida
@@ -406,27 +481,34 @@ begin
   end process;
 
   -- ---- lazo esclavo Sync: RX Sync -> offset -> servo ----
-  -- offset = t_slave_rx - t_master_origin - meanPathDelay.
+  -- offset = t_slave_rx - t_master_origin - correctionField - meanPathDelay
+  -- (802.1AS 10.2.x: correctionField, in 2^-16 ns, carries the accumulated
+  -- residence/link delays of the path; >> 16 is an arithmetic shift).
   -- Cuando el parser entrega un Sync y somos esclavos, calculamos el offset y
   -- pulsamos offset_valid al reloj. Consumimos el mensaje (rx_mack_sync).
   sync_loop : process(clk)
     variable slave_ns  : signed(63 downto 0);
     variable master_ns : signed(63 downto 0);
     variable off       : signed(63 downto 0);
+    variable corr_ns   : signed(63 downto 0);
   begin
     if rising_edge(clk) then
       offset_valid <= '0';
       rx_mack_sync <= '0';
-      if rst = '1' then
+      if rst_dp = '1' then
         offset_err <= (others => '0');
       else
-        if rx_mvalid = '1' and rx_mtype = MT_SYNC and role_slave = '1' then
+        -- rx_mack_sync='0': the ack is in flight, the parser still shows the
+        -- same message this cycle -> do not process it twice
+        if rx_mvalid = '1' and rx_mtype = MT_SYNC and role_slave = '1'
+           and rx_mack_sync = '0' then
           -- t_slave_rx (rx TS) y t_master_origin (originTimestamp del Sync)
           slave_ns  := resize(signed('0' & rx_rsec) * to_signed(1_000_000_000, 34), 64)
                        + resize(signed('0' & rx_rns), 64);
           master_ns := resize(signed('0' & rx_osec) * to_signed(1_000_000_000, 34), 64)
                        + resize(signed('0' & rx_ons), 64);
-          off := slave_ns - master_ns - signed(mpd_reg);
+          corr_ns := shift_right(signed(rx_corr), 16);
+          off := slave_ns - master_ns - corr_ns - signed(mpd_reg);
           offset_err <= std_logic_vector(resize(off, ERR_W));
           offset_valid <= '1';
           rx_mack_sync <= '1';

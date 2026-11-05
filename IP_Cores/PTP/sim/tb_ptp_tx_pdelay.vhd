@@ -49,6 +49,7 @@ architecture sim of tb_ptp_tx_pdelay is
   signal req_rx_sec : std_logic_vector(SEC_W-1 downto 0) := (others => '0');
   signal req_rx_ns  : std_logic_vector(NS_W-1 downto 0) := (others => '0');
   signal req_portid : std_logic_vector(79 downto 0) := (others => '0');
+  signal req_seqid  : std_logic_vector(15 downto 0) := (others => '0');
   signal resid_corr : std_logic_vector(63 downto 0) := (others => '0');
 
   constant CLOCK_ID : std_logic_vector(63 downto 0) := x"0011223344556677";
@@ -88,14 +89,14 @@ begin
               busy => busy, done => tx_done,
               clock_id => CLOCK_ID, port_num => PORT_NUM, src_mac => SRC_MAC,
               req_rx_sec => req_rx_sec, req_rx_ns => req_rx_ns,
-              req_portid => req_portid,
+              req_portid => req_portid, req_seqid => req_seqid,
               ts_sec => ts_sec, ts_ns => ts_ns, ts_valid => ts_valid, ts_ack => ts_ack,
               fifo_wr => f_wr, fifo_din => f_din, fifo_full => f_full,
               ovr_en => ovr_en, ovr_off => ovr_off, ovr_len => ovr_len, ovr_data => ovr_data);
 
-  u_fifo : entity work.spw_fifo
+  u_fifo : entity work.ptp_fifo
     generic map (LOG2_DEPTH => 11, WIDTH => 9)
-    port map (clk => clk, aresetn => not rst, clr => '0',
+    port map (clk => clk, rst => rst, clr => '0',
               wr_en => f_wr, wdata => f_din, full => f_full,
               rdata => f_dout, rd_en => f_rd, empty => f_empty, level => open);
 
@@ -165,6 +166,7 @@ begin
     req_rx_sec <= std_logic_vector(to_unsigned(7, SEC_W));
     req_rx_ns  <= std_logic_vector(to_unsigned(2500, NS_W));
     req_portid <= x"00AABBCCDDEEFF00" & x"0002";   -- clockId+port del requester
+    req_seqid  <= x"00A5";   -- audit 2026-11: Resp must copy the Req sequenceId
     resid_corr <= std_logic_vector(to_unsigned(150*65536, 64)); -- 150 ns residence
     sel <= SEL_PDELAY_RESP;
     cap_file_sel <= 1; cap_enable <= '1';

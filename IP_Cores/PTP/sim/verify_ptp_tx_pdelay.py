@@ -28,7 +28,9 @@ else:
             print(f"REQ difiere byte {j}: {req[j]:#x} vs {exp_req[j]:#x}"); break
     raise SystemExit("REQ FALLO")
 
-# --- Pdelay_Resp --- (seq=1 porque el motor incremento tras el Req)
+# --- Pdelay_Resp --- audit 2026-11: sequenceId = sequenceId of the Pdelay_Req
+# being answered (802.1AS), driven by the TB as req_seqid = 0x00A5. v1 used the
+# engine's own counter (1 here), which no initiator could match.
 T2_SEC=7; T2_NS=2500; REQ_PID=0x00AABBCCDDEEFF000002
 t3=[int(x) for x in open("tx_resp_t3.txt").read().split()]
 T3_SEC,T3_NS=t3[0],t3[1]
@@ -36,7 +38,7 @@ residence_ns=(T3_SEC*10**9+T3_NS)-(T2_SEC*10**9+T2_NS)
 RESID=residence_ns<<16
 print(f"t3={T3_SEC}.{T3_NS} t2={T2_SEC}.{T2_NS} residence={residence_ns}ns")
 resp = reassemble("tx_resp_stream.txt")
-exp_resp = full_frame_with_fcs(build_pdelay_resp(CLOCK_ID, PORT_NUM, SRC_MAC, 1,
+exp_resp = full_frame_with_fcs(build_pdelay_resp(CLOCK_ID, PORT_NUM, SRC_MAC, 0x00A5,
                                RESID, T2_SEC, T2_NS, REQ_PID))
 print("RESP rtl:", resp.hex())
 print("RESP exp:", exp_resp.hex())
