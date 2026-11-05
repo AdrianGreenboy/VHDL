@@ -41,7 +41,11 @@ entity adc_mmio is
     fifo_rdata_o  : out std_logic_vector(31 downto 0);
     fifo_empty_o  : out std_logic;
     -- debug
-    dbg_i         : in  std_logic_vector(31 downto 0)
+    dbg_i         : in  std_logic_vector(31 downto 0);
+    -- AUDIT 2026-11
+    ready         : out std_logic;
+    ext_ovr_i     : in  std_logic := '0';
+    ext_clk       : out std_logic
   );
 end entity adc_mmio;
 
@@ -52,6 +56,7 @@ architecture rtl of adc_mmio is
   signal f_empty : std_logic;
   signal f_full  : std_logic;
   signal mmio_rd : std_logic;
+  signal f_ovf, f_ovf_clr : std_logic;
 begin
 
   u_fifo : entity work.adc_fifo
@@ -67,10 +72,13 @@ begin
       rd_data => f_rdata,
       empty   => f_empty,
       full    => f_full,
-      level   => f_level
+      level   => f_level,
+      ovf     => f_ovf,
+      ovf_clr => f_ovf_clr
     );
 
-  -- pop por MMIO o por el motor DMA (paso 5)
+  -- pop por MMIO o por el motor DMA (paso 5). AUDIT 2026-11: exclusive grant,
+  -- adc_regs never pops while dma_busy_i='1' (the read is held off via ready).
   f_rd <= mmio_rd or dma_fifo_rd_i;
 
   u_regs : entity work.adc_regs
@@ -98,7 +106,12 @@ begin
       dma_go        => dma_go,
       dma_busy_i    => dma_busy_i,
       dma_done_p_i  => dma_done_p_i,
-      dbg_i         => dbg_i
+      dbg_i         => dbg_i,
+      ready         => ready,
+      fifo_ovf_i    => f_ovf,
+      fifo_ovf_clr  => f_ovf_clr,
+      ext_ovr_i     => ext_ovr_i,
+      ext_clk       => ext_clk
     );
 
   fifo_rdata_o <= f_rdata;

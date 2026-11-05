@@ -7,6 +7,8 @@
 -- presente FIFO_DATA con rdata COMBINACIONAL (contrato dmem de la familia).
 -- Capacidad total: 512 (BRAM) + 2 (etapas) = 514 palabras.
 -- rst sincrono activo alto (convencion del banco de registros).
+-- AUDIT 2026-11: a push while full is dropped AND raises the sticky 'ovf'
+-- output (previously silent); 'ovf_clr' (W1C of IRQ_STAT bit2) clears it.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -25,7 +27,9 @@ entity adc_fifo is
     rd_data : out std_logic_vector(31 downto 0);
     empty   : out std_logic;
     full    : out std_logic;
-    level   : out unsigned(LOG2_DEPTH + 1 downto 0)
+    level   : out unsigned(LOG2_DEPTH + 1 downto 0);
+    ovf     : out std_logic;           -- AUDIT: sticky, a push was dropped
+    ovf_clr : in  std_logic := '0'
   );
 end entity adc_fifo;
 
@@ -51,6 +55,7 @@ architecture rtl of adc_fifo is
   signal adv_h   : std_logic;
   signal adv_r   : std_logic;
   signal wr_ok   : std_logic;
+  signal ovf_r   : std_logic := '0';
 begin
 
   full_i <= '1' when cnt_ram = to_unsigned(C_DEPTH, cnt_ram'length) else '0';
@@ -68,7 +73,13 @@ begin
         cnt_ram <= (others => '0');
         rv      <= '0';
         hv      <= '0';
+        ovf_r   <= '0';
       else
+        if (wr_en = '1') and (full_i = '1') then
+          ovf_r <= '1';                 -- sample lost: sticky
+        elsif ovf_clr = '1' then
+          ovf_r <= '0';
+        end if;
         -- puerto de escritura sincrona (molde SDP)
         if wr_ok = '1' then
           buf(to_integer(wr_ptr)) <= wr_data;
@@ -96,6 +107,7 @@ begin
   rd_data <= head;
   empty   <= not hv;
   full    <= full_i;
+  ovf     <= ovf_r;
 
   proc_level : process (all)
     variable v : unsigned(level'length - 1 downto 0);

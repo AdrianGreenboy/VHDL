@@ -70,6 +70,7 @@ end entity mem_subsys_adc;
 architecture rtl of mem_subsys_adc is
   signal is_local, is_dmareg, is_adc : std_logic;
   signal adc_rdata : word_t;
+  signal adc_ready : std_logic;
   signal loc_rdata  : word_t;
   signal cpu_wstrb  : std_logic_vector(3 downto 0);
   signal dmareg_rdata : word_t;
@@ -94,7 +95,8 @@ begin
   is_adc    <= '1' when dmem_addr(31 downto 28) = "0110" else '0';   -- 0x6000_0000
 
   -- deteccion combinacional del "start" (sw a CTRL con bit0=1)
-  dma_go <= '1' when (is_dmareg = '1' and dmem_wstrb /= "0000"
+  -- AUDIT 2026-11: qualified by dmem_req (wstrb alone is not a valid strobe)
+  dma_go <= '1' when (dmem_req = '1' and is_dmareg = '1' and dmem_wstrb /= "0000"
                       and dmem_addr(7 downto 0) = x"0C" and dmem_wdata(0) = '1')
             else '0';
 
@@ -145,7 +147,7 @@ begin
       addr  => dmem_addr(7 downto 0),
       wdata => dmem_wdata,
       rdata => adc_rdata,
-      ready => open,
+      ready => adc_ready,
       irq   => open,
       pdm_ext_i => '0',
       pdm_fb_o  => open);
@@ -160,7 +162,7 @@ begin
         busy_sticky <= '0'; dma_started <= '0';
       else
         dma_start <= '0';
-        if is_dmareg = '1' and dmem_wstrb /= "0000" then
+        if dmem_req = '1' and is_dmareg = '1' and dmem_wstrb /= "0000" then
           case dmem_addr(7 downto 0) is
             when x"00" => dma_src <= dmem_wdata;
             when x"04" => dma_dst <= dmem_wdata;
@@ -196,6 +198,7 @@ begin
                 adc_rdata    when is_adc    = '1' else
                 (others => '0');
   -- el ADC es esclavo de 1 ciclo (rdata combinacional): sin wait-states.
-  dmem_ready <= '1';
+  -- AUDIT 2026-11: the ADC may hold off a FIFO_DATA read (its DMA owns the FIFO)
+  dmem_ready <= adc_ready when is_adc = '1' else '1';
 
 end architecture rtl;
