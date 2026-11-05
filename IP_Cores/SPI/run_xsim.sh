@@ -7,7 +7,7 @@
 #     source <Vivado>/settings64.sh
 #     ./run_xsim.sh              # run everything
 #     ./run_xsim.sh spi_axi      # one target
-#  Targets: spi | spi_mmio | spi_axi | spi_soc | elab_top | all
+#  Targets: spi | fifo | spi_mmio | spi_axi | spi_soc | elab_top | all
 # =============================================================================
 set -e
 RV32I="${RV32I:-../RV32i}"
@@ -15,7 +15,7 @@ RV32I="${RV32I:-../RV32i}"
 CPU_SRCS="$RV32I/riscv_pkg.vhd $RV32I/alu.vhd $RV32I/regfile.vhd $RV32I/muldiv.vhd \
           $RV32I/immgen.vhd $RV32I/control.vhd $RV32I/csr.vhd $RV32I/dp_ram.vhd \
           $RV32I/cpu_pipeline.vhd"
-SPI_SRCS="spi_engine.vhd byte_fifo.vhd spi_dma.vhd spi_axi_top.vhd"
+SPI_SRCS="spi_engine.vhd spi_byte_fifo.vhd spi_dma.vhd spi_axi_top.vhd"   # audit 2026-11: private FIFO
 
 run_tb () {
   local tb="$1"; shift
@@ -29,7 +29,9 @@ case "${1:-all}" in
   spi)
     run_tb tb_spi_engine spi_engine.vhd tb_spi_engine.vhd ;;
   spi_mmio)
-    run_tb tb_spi_mmio spi_engine.vhd byte_fifo.vhd spi_mmio.vhd tb_spi_mmio.vhd ;;
+    run_tb tb_spi_mmio spi_engine.vhd spi_byte_fifo.vhd spi_mmio.vhd tb_spi_mmio.vhd ;;
+  fifo)
+    run_tb tb_spi_byte_fifo spi_byte_fifo.vhd tb_spi_byte_fifo.vhd ;;
   spi_axi)
     run_tb tb_spi_axi $RV32I/riscv_pkg.vhd $RV32I/axi_ddr_sim.vhd $SPI_SRCS tb_spi_axi.vhd ;;
   spi_soc)
@@ -42,6 +44,6 @@ case "${1:-all}" in
     xelab -debug typical soc_top_spi -s elab_check
     echo "soc_top_spi ELABORATES OK" ;;
   all)
-    "$0" spi; "$0" spi_mmio; "$0" spi_axi; "$0" spi_soc ;;
-  *) echo "usage: $0 [all|spi|spi_mmio|spi_axi|spi_soc|elab_top]"; exit 1 ;;
+    "$0" spi; "$0" fifo; "$0" spi_mmio; "$0" spi_axi; "$0" spi_soc ;;
+  *) echo "usage: $0 [all|spi|fifo|spi_mmio|spi_axi|spi_soc|elab_top]"; exit 1 ;;
 esac

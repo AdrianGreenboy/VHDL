@@ -18,6 +18,17 @@
 --      0xDEADBEEF -> 0xDEADBE0C (los otros 3 bytes intactos)
 --  T3: tx_en=0 (dummy 0x5A): la DDR destino recibe puros 0x5A
 --  T4: rx_en=0 (puro TX): termina sin colgarse, RX drenado sin overflow
+--
+--  Audit 2026-11 regression tests:
+--  T5: TX underrun mid-DMA (AR channel stalled 3 us at SCLK = 50 MHz): CS_n
+--      must stay asserted for the whole transfer (exactly one CS rising
+--      edge, at the end), STATUS.tx_urun set, data still intact.
+--  T6: DMA start with CTRL.en = 0 is refused: STATUS.dma_err, busy does not
+--      stick, no deadlock; STATUS is W1C per bit.
+--  T7: engine disabled mid-DMA (the transfer can never finish) -> abort
+--      escape via DMA_CTRL[3]: done + dma_abort, then FIFO flush via
+--      DMA_CTRL[4] and a clean follow-up transfer.
+--  T8: PIO TXDATA write while the DMA owns the FIFOs sets tx_ovf.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -76,6 +87,11 @@ architecture sim of tb_spi_axi is
   signal r_resp  : std_logic_vector(1 downto 0);
   signal r_last, r_valid, r_ready : std_logic;
 
+  -- audit 2026-11: AR-channel stall gate and CS glitch monitor
+  signal ar_gate  : std_logic := '1';
+  signal ar_valid_g, ar_ready_g : std_logic;
+  signal cs_rises : natural := 0;
+
   -- puerto de inspeccion de la DDR
   signal dbg_addr : natural := 0;
   signal dbg_data : std_logic_vector(31 downto 0);
@@ -108,7 +124,7 @@ begin
       m_axi_wvalid => w_valid, m_axi_wready => w_ready,
       m_axi_bresp => b_resp, m_axi_bvalid => b_valid, m_axi_bready => b_ready,
       m_axi_araddr => ar_addr, m_axi_arlen => ar_len, m_axi_arsize => ar_size,
-      m_axi_arburst => ar_burst, m_axi_arvalid => ar_valid, m_axi_arready => ar_ready,
+      m_axi_arburst => ar_burst, m_axi_arvalid => ar_valid, m_axi_arready => ar_ready_g,
       m_axi_rdata => r_data, m_axi_rresp => r_resp, m_axi_rlast => r_last,
       m_axi_rvalid => r_valid, m_axi_rready => r_ready,
       sclk_o => sclk, mosi_o => mosi, miso_i => miso, cs_n_o => cs_n
@@ -125,14 +141,27 @@ begin
       s_axi_wvalid => w_valid, s_axi_wready => w_ready,
       s_axi_bresp => b_resp, s_axi_bvalid => b_valid, s_axi_bready => b_ready,
       s_axi_araddr => ar_addr, s_axi_arlen => ar_len,
-      s_axi_arvalid => ar_valid, s_axi_arready => ar_ready,
+      s_axi_arvalid => ar_valid_g, s_axi_arready => ar_ready,
       s_axi_rdata => r_data, s_axi_rresp => r_resp, s_axi_rlast => r_last,
       s_axi_rvalid => r_valid, s_axi_rready => r_ready,
       dbg_addr => dbg_addr, dbg_data => dbg_data
     );
 
+  ar_valid_g <= ar_valid and ar_gate;
+  ar_ready_g <= ar_ready and ar_gate;
+
+  cs_mon : process(clk)
+    variable q : std_logic := '1';
+  begin
+    if rising_edge(clk) then
+      if q = '0' and cs_n = '1' then cs_rises <= cs_rises + 1; end if;
+      q := cs_n;
+    end if;
+  end process;
+
   stim : process
     variable d : std_logic_vector(31 downto 0);
+    variable n0 : natural;
 
     procedure wr32(a : std_logic_vector(7 downto 0);
                    v : std_logic_vector(31 downto 0)) is
@@ -201,7 +230,7 @@ begin
     chk_ddr(768, pat_word(0), "T0");
     chk_ddr(769, pat_word(1), "T0");
     report "T0 loopback interno (pads rotos) OK";
-    wr32(A_STATUS, x"00000000");
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
 
     -- de aqui en adelante: loopback EXTERNO real, loop_int apagado
     ext_loop <= '1';
@@ -222,7 +251,7 @@ begin
     report "T1 eco full-duplex de 64 bytes OK";
     rd32(A_STATUS, d);
     chk(d(5) = '0', "T1 sin rx_ovf durante el DMA");
-    wr32(A_STATUS, x"00000000");         -- limpia done -> IRQ baja
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C clear all (audit 2026-11): done -> IRQ baja
     for i in 1 to 2 loop wait until rising_edge(clk); end loop;
     chk(irq = '0', "T1 IRQ limpia tras escribir STATUS");
 
@@ -238,7 +267,7 @@ begin
     chk_ddr(386, pat_word(2), "T2");
     chk_ddr(387, x"DEADBE0C", "T2");     -- solo el byte 0 escrito
     report "T2 cola parcial de 13 bytes OK";
-    wr32(A_STATUS, x"00000000");
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
 
     ---------------------------------------------------------------------------
     -- T3: tx_en=0, dummy=0x5A: el destino recibe puros dummies
@@ -250,7 +279,7 @@ begin
     chk_ddr(512, x"5A5A5A5A", "T3");
     chk_ddr(513, x"5A5A5A5A", "T3");
     report "T3 inyeccion de dummies OK";
-    wr32(A_STATUS, x"00000000");
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
 
     ---------------------------------------------------------------------------
     -- T4: rx_en=0 (puro TX): termina y descarta RX sin overflow
@@ -264,6 +293,100 @@ begin
     rd32(A_STATUS, d);
     chk(d(5) = '0', "T4 sin rx_ovf");
     report "T4 puro TX con descarte OK";
+    wr32(A_STATUS, x"FFFFFFFF");
+
+    ---------------------------------------------------------------------------
+    -- T5 (audit): TX underrun mid-DMA keeps CS asserted
+    ---------------------------------------------------------------------------
+    wr32(A_CTRL,    x"00000001");        -- en, external loopback, irq off
+    wr32(A_CLKDIV,  x"00000001");        -- SCLK = 50 MHz: FIFO drains fast
+    wr32(A_DMATXA,  x"00000000");
+    wr32(A_DMARXA,  x"00000A00");        -- word 640
+    wr32(A_DMALEN,  x"00000030");        -- 48 bytes
+    n0 := cs_rises;
+    wr32(A_DMACTRL, x"00000007");
+    wait for 1 us;
+    ar_gate <= '0';                      -- starve the TX side for 3 us
+    wait for 3 us;
+    ar_gate <= '1';
+    wait_dma;
+    rd32(A_STATUS, d);
+    chk(d(9) = '1', "T5 tx_urun sticky set by the stall");
+    chk(cs_rises - n0 = 1, "T5 CS_n rose exactly once (at the end)");
+    for k in 0 to 11 loop
+      chk_ddr(640 + k, pat_word(k), "T5");
+    end loop;
+    report "T5 underrun with CS held, data intact OK";
+    wr32(A_STATUS, x"00000200");         -- W1C bit 9 only
+    rd32(A_STATUS, d);
+    chk(d(9) = '0' and d(8) = '1', "T5 STATUS W1C per bit (urun cleared, done kept)");
+    wr32(A_STATUS, x"FFFFFFFF");
+
+    ---------------------------------------------------------------------------
+    -- T6 (audit): start refused while disabled
+    ---------------------------------------------------------------------------
+    wr32(A_CTRL,    x"00000000");        -- en = 0
+    wr32(A_DMALEN,  x"00000008");
+    wr32(A_DMACTRL, x"00000007");
+    for i in 1 to 20 loop wait until rising_edge(clk); end loop;
+    rd32(A_STATUS, d);
+    chk(d(10) = '1', "T6 dma_err sticky on refused start");
+    chk(d(7) = '0', "T6 busy does not stick");
+    wr32(A_STATUS, x"00000000");         -- writing 0 clears nothing
+    rd32(A_STATUS, d);
+    chk(d(10) = '1', "T6 write of 0 keeps dma_err (W1C)");
+    wr32(A_STATUS, x"00000400");
+    rd32(A_STATUS, d);
+    chk(d(10) = '0', "T6 dma_err cleared by W1C");
+
+    ---------------------------------------------------------------------------
+    -- T7 (audit): abort escape + FIFO flush
+    ---------------------------------------------------------------------------
+    wr32(A_CTRL,    x"00000001");
+    wr32(A_CLKDIV,  x"00000004");
+    wr32(A_DMATXA,  x"00000000");
+    wr32(A_DMARXA,  x"00000B00");
+    wr32(A_DMALEN,  x"00000040");        -- 64 bytes
+    wr32(A_DMACTRL, x"00000007");
+    wait for 1 us;
+    wr32(A_CTRL,    x"00000000");        -- engine off: transfer can't finish
+    wait for 5 us;
+    rd32(A_STATUS, d);
+    chk(d(7) = '1' and d(8) = '0', "T7 DMA stuck without abort");
+    wr32(A_DMACTRL, x"00000008");        -- abort
+    wait_dma;
+    rd32(A_STATUS, d);
+    chk(d(11) = '1', "T7 dma_abort sticky");
+    wr32(A_DMACTRL, x"00000010");        -- flush both FIFOs
+    for i in 1 to 4 loop wait until rising_edge(clk); end loop;
+    rd32(A_RXLVL, d);
+    chk(to_integer(unsigned(d)) = 0, "T7 RX FIFO flushed");
+    rd32(x"14", d);
+    chk(to_integer(unsigned(d)) = 0, "T7 TX FIFO flushed");
+    wr32(A_STATUS, x"FFFFFFFF");
+    wr32(A_CTRL,    x"00000001");
+    wr32(A_DMARXA,  x"00000C40");        -- word 784
+    wr32(A_DMALEN,  x"00000010");
+    wr32(A_DMACTRL, x"00000007");
+    wait_dma;
+    for k in 0 to 3 loop
+      chk_ddr(784 + k, pat_word(k), "T7 follow-up");
+    end loop;
+    rd32(A_STATUS, d);
+    chk(d(11) = '0' and d(10) = '0', "T7 follow-up transfer clean");
+    wr32(A_STATUS, x"FFFFFFFF");
+
+    ---------------------------------------------------------------------------
+    -- T8 (audit): PIO TXDATA during DMA -> tx_ovf
+    ---------------------------------------------------------------------------
+    wr32(A_DMALEN,  x"00000020");
+    wr32(A_DMACTRL, x"00000007");
+    wait for 200 ns;
+    wr32(x"0C", x"000000EE");            -- PIO push while DMA owns the FIFO
+    wait_dma;
+    rd32(A_STATUS, d);
+    chk(d(6) = '1', "T8 tx_ovf on PIO write during DMA");
+    wr32(A_STATUS, x"FFFFFFFF");
 
     report "TEST PASSED" severity note;
     std.env.finish;

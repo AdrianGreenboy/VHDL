@@ -167,7 +167,7 @@ begin
         report "T3 byte " & integer'image(k) & " leido " & to_hstring(d(7 downto 0))
         severity failure;
     end loop;
-    wr32(A_STATUS, x"00000000");         -- limpia stickies
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     rd32(A_STATUS, d);
     chk(d(6) = '0', "T3 tx_ovf limpio");
 
@@ -193,9 +193,33 @@ begin
     end loop;
     rd32(A_STATUS, d);
     chk(d(3) = '1', "T4 rx_empty tras drenar (el 0x77 se perdio)");
-    wr32(A_STATUS, x"00000000");
+    wr32(A_STATUS, x"FFFFFFFF");  -- W1C: clear all (audit 2026-11)
     rd32(A_STATUS, d);
     chk(d(5) = '0', "T4 rx_ovf limpio");
+
+    ---------------------------------------------------------------------------
+    -- T5 (audit 2026-11): STATUS stickies are write-1-to-clear per bit
+    ---------------------------------------------------------------------------
+    wr32(A_CTRL, x"00000000");
+    for k in 0 to 16 loop                -- 17 pushes -> tx_ovf
+      wr32(A_TXDATA, x"00000011");
+    end loop;
+    wr32(A_CTRL, x"00000001");
+    wait_idle;
+    wr32(A_TXDATA, x"00000022");         -- 17th received byte -> rx_ovf
+    wait_idle;
+    rd32(A_STATUS, d);
+    chk(d(5) = '1' and d(6) = '1', "T5 both stickies set");
+    wr32(A_STATUS, x"00000000");
+    rd32(A_STATUS, d);
+    chk(d(5) = '1' and d(6) = '1', "T5 write of 0 clears nothing");
+    wr32(A_STATUS, x"00000040");
+    rd32(A_STATUS, d);
+    chk(d(6) = '0' and d(5) = '1', "T5 bit 6 clears tx_ovf only");
+    wr32(A_STATUS, x"00000020");
+    rd32(A_STATUS, d);
+    chk(d(5) = '0', "T5 bit 5 clears rx_ovf");
+    for k in 0 to 15 loop rd32(A_RXDATA, d); end loop;
 
     report "TEST PASSED" severity note;
     std.env.finish;

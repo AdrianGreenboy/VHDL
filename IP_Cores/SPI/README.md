@@ -1,5 +1,7 @@
 # SPI — A DMA-capable SPI master IP core, driven by a soft RISC-V, on a Versal
 
+> **Audit 2026-11:** register semantics changed (W1C stickies, new bits). See the section *Audit 2026-11 changes* at the end and `AUDIT_FIXES.md`.
+
 A complete **SPI master controller** written in plain VHDL-2008 and taken from an
 empty file to **validated silicon at 50 Mbit/s** on an AMD Versal VE2302 (Trenz
 TE0950). It is both an **AXI slave** (a memory-mapped register file programmed by
@@ -487,3 +489,25 @@ Result: WNS +2.128 ns. **SILICON PASS (functional):** PIO {2,0x5A,0xC3} and a
 concurrent 32-byte DMA echo verified on the board with the core's own
 bring-up. SCLK 12.5 MHz.
 
+## Audit 2026-11 changes (supersedes conflicting statements above)
+
+Details, file:line references and verification: `AUDIT_FIXES.md`.
+
+* **FIFO**: private `spi_byte_fifo.vhd` (unique entity name, synchronous
+  active-high reset, SRAM-mappable registered read, FWFT timing unchanged,
+  synchronous flush). `byte_fifo.vhd` is left untouched for other projects
+  that still pull it from `~/spi_ip`, but the SPI core no longer uses it.
+* **STATUS (0x04) is write-1-to-clear per bit** (write `0xFFFFFFFF` to clear
+  all). New stickies: [9] tx_urun, [10] dma_err, [11] dma_abort, [12] axi_err.
+* **CS_n is held asserted for the whole DMA transfer**: a TX FIFO underrun
+  now only stalls SCLK (at its idle level) and sets tx_urun; CS never rises
+  mid-transaction.
+* **DMA_CTRL[3] = abort** (latched, honoured at the next burst boundary),
+  **DMA_CTRL[4] = fifo_flush** (deferred while the DMA runs).
+* A DMA start with CTRL.en = 0 (or while a transfer runs) is refused and sets
+  dma_err (it used to deadlock). A PIO TXDATA write during DMA sets tx_ovf.
+* DMA offsets use all 32 bits; RRESP/BRESP and RLAST are checked (axi_err).
+* **MISO is sampled without a synchronizer by design (mesochronous to
+  SCLK)**; see the header of `spi_engine.vhd` for the timing budget that the
+  pad/board constraints must meet.
+* GHDL regression: `./run_ghdl.sh all`.
