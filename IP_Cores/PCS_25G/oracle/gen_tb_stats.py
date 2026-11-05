@@ -5,7 +5,8 @@ Genera el testbench VHDL de Layer 2a (data plane aislado, mono-reloj) desde la
 traza canonica de pcs_stats_oracle.py.
 
 El testbench:
-  * instancia pcs_dataplane (generics LOCK_THRESHOLD=64, HIBER_THRESHOLD=16)
+  * instancia pcs_dataplane (generics LOCK_THRESHOLD=64, HIBER_THRESHOLD=16,
+    HIBER_WINDOW mayor que la traza)
   * reproduce la traza: 'run' -> pulsos blk_evt; 'cmd' -> pulsos de comando;
     'snap' -> captura shadow en el testbench; 'rd_*' -> acumula firma
   * implementa el snapshot y la lectura de shadow en el propio TB (la logica
@@ -111,7 +112,8 @@ w("begin")
 w("  clk <= not clk after 1.28 ns;  -- ~390.625 MHz")
 w("")
 w("  dut: entity work.pcs_dataplane")
-w("    generic map (LOCK_THRESHOLD => 64, HIBER_THRESHOLD => 16)")
+w("    -- BER window longer than the whole trace: expiry is tested in tb_pcs_blocksync")
+w("    generic map (LOCK_THRESHOLD => 64, HIBER_THRESHOLD => 16, HIBER_WINDOW => 10000000)")
 w("    port map (")
 w("      clk_dp=>clk, rst_dp=>rst, blk_evt=>blk_evt,")
 w("      cmd_cnt_clear=>c_clear, cmd_soft_reset=>c_sreset,")

@@ -20,10 +20,14 @@
 --   * Los contadores DE REGISTRO (los que lee el firmware via snapshot) vienen
 --     del silicon datapath, que es la verdad de tierra: tx_word_cnt,
 --     rx_block_cnt, ber_count (bits de error del checker).
---   * El dataplane aporta la maquina de estado (block_lock por umbral 64,
---     hi_ber, lock_time, eventos sticky) alimentada por blk_evt derivado de
---     los incrementos de los contadores del silicon datapath, con prioridad
---     PRBS_BAD > RX_OK > TX (un evento por ciclo).
+--   * Block lock / hi_ber (audit 2026-11, fix A3): the REAL clause-49 block
+--     sync lives in the RX datapath (pcs_rx_datapath -> pcs_blocksync, it
+--     drives the gearbox bit slip). The dataplane runs with EXT_SYNC = true:
+--     it takes lock / hi_ber from there and receives one strobe per valid
+--     and per INVALID sync header, so EVT_RXBAD / RX_ERR are now reachable.
+--     TX, RX-header and PRBS events arrive on independent strobes (before:
+--     a priority mux PRBS_BAD > RX_OK > TX dropped coincident events and
+--     never produced RX_BAD).
 --   * ST_PRBS_LOCK viene del chk_locked real del checker.
 --
 -- MIT License.
@@ -58,6 +62,12 @@ end architecture rtl;
 
 
 -- ==== helper: sincronizador de pulso (toggle) ====
+-- Audit 2026-11 (fix M6): the toggle is reset ONLY by the asynchronous
+-- power-on reset of the source domain (por_src); the synchroniser chain has
+-- no reset and the output is gated by the destination reset. Before, the
+-- toggle was reset by rst_src and the chain by rst_dst: a reset of only one
+-- domain created a fake edge, i.e. a spurious SOFT_RESET / CNT_CLEAR /
+-- RESYNC / PRBS_RESET / INJ command in the data plane.
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -68,7 +78,8 @@ entity pcs_psync is
     pulse_in: in  std_logic;   -- pulso 1 ciclo en clk_src
     clk_dst : in  std_logic;
     rst_dst : in  std_logic;
-    pulse_out: out std_logic   -- pulso 1 ciclo en clk_dst
+    pulse_out: out std_logic;  -- pulso 1 ciclo en clk_dst
+    por_src : in  std_logic := '0'
   );
 end entity pcs_psync;
 
@@ -78,23 +89,21 @@ architecture rtl of pcs_psync is
   attribute ASYNC_REG : string;
   attribute ASYNC_REG of s1, s2 : signal is "TRUE";
 begin
-  process(clk_src)
+  process(clk_src, por_src)
   begin
-    if rising_edge(clk_src) then
-      if rst_src = '1' then tg <= '0';
-      elsif pulse_in = '1' then tg <= not tg;
-      end if;
+    if por_src = '1' then
+      tg <= '0';
+    elsif rising_edge(clk_src) then
+      if rst_src = '0' and pulse_in = '1' then tg <= not tg; end if;
     end if;
   end process;
   process(clk_dst)
   begin
     if rising_edge(clk_dst) then
-      if rst_dst = '1' then s1<='0'; s2<='0'; s3<='0';
-      else s1<=tg; s2<=s1; s3<=s2;
-      end if;
+      s1<=tg; s2<=s1; s3<=s2;
     end if;
   end process;
-  pulse_out <= s2 xor s3;
+  pulse_out <= (s2 xor s3) and not rst_dst;
 end architecture rtl;
 
 
@@ -135,12 +144,18 @@ entity pcs_stats_top is
     dma_addr      : out std_logic_vector(31 downto 0);
     dma_doorbell  : out std_logic_vector(31 downto 0);
     dma_busy      : in  std_logic;
-    dma_done_pulse: in  std_logic
+    dma_done_pulse: in  std_logic;
+
+    -- chip power-on reset, active low, asynchronous (ASIC). '1' (default)
+    -- = FPGA behaviour with initial values. See pcs_cdc header for the
+    -- release order it guarantees.
+    por_n         : in  std_logic := '1'
   );
 end entity pcs_stats_top;
 
 architecture rtl of pcs_stats_top is
   signal rst_axi : std_logic;
+  signal rst_dp_i, por_axi, por_dp : std_logic;
 
   -- regbank <-> resto
   signal ctrl_reg      : std_logic_vector(6 downto 0);
@@ -157,11 +172,11 @@ architecture rtl of pcs_stats_top is
   signal sil_rst : std_logic;
   signal sil_ber, sil_txc, sil_rxc : std_logic_vector(31 downto 0);
   signal sil_lock : std_logic;
+  signal sil_rx_lock, sil_rx_hiber, sil_goodsh, sil_badsh : std_logic;
 
   -- derivacion de eventos para el dataplane
-  signal prev_txc, prev_rxc, prev_ber : unsigned(31 downto 0) := (others => '0');
-  signal tx_inc, rx_inc, ber_inc : std_logic := '0';
-  signal blk_evt : std_logic_vector(2 downto 0);
+  signal prev_txc, prev_ber : unsigned(31 downto 0) := (others => '0');
+  signal tx_inc, ber_inc : std_logic := '0';
 
   -- dataplane
   signal dpl_cnt_tx, dpl_cnt_rx, dpl_cnt_re, dpl_cnt_be, dpl_lock_t : std_logic_vector(31 downto 0);
@@ -176,12 +191,13 @@ architecture rtl of pcs_stats_top is
   signal axi_sh_tx, axi_sh_rx, axi_sh_re, axi_sh_be, axi_sh_lt : std_logic_vector(31 downto 0);
   signal axi_snap_done : std_logic;
 
-  constant EVT_IDLE : std_logic_vector(2 downto 0) := "000";
-  constant EVT_TX   : std_logic_vector(2 downto 0) := "001";
-  constant EVT_RXOK : std_logic_vector(2 downto 0) := "010";
-  constant EVT_PRBSB: std_logic_vector(2 downto 0) := "100";
 begin
-  rst_axi <= not s_axi_aresetn;
+  -- power-on reset per domain; OR-ed into the functional resets so each
+  -- domain leaves reset >= 4 of its own clock edges after power-on
+  u_por_axi: entity work.pcs_porsync port map (clk=>s_axi_aclk, por_n=>por_n, por=>por_axi);
+  u_por_dp:  entity work.pcs_porsync port map (clk=>clk_dp,     por_n=>por_n, por=>por_dp);
+  rst_axi  <= (not s_axi_aresetn) or por_axi;
+  rst_dp_i <= rst_dp or por_dp;
 
   -- ==== banco de registros (dominio AXI) ====
   u_bank: entity work.pcs_regbank
@@ -215,20 +231,20 @@ begin
   u_ls_gen:  entity work.pcs_lsync port map (clk_dst=>clk_dp, d=>prbs_ctrl_reg(0), q=>dp_gen_en);
   u_ls_chk:  entity work.pcs_lsync port map (clk_dst=>clk_dp, d=>prbs_ctrl_reg(1), q=>dp_chk_en);
   -- pulsos
-  u_ps_srst: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>cmd_soft_reset,
-                                             clk_dst=>clk_dp, rst_dst=>rst_dp, pulse_out=>dp_soft_reset);
-  u_ps_rsyn: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>cmd_resync,
-                                             clk_dst=>clk_dp, rst_dst=>rst_dp, pulse_out=>dp_resync);
-  u_ps_cclr: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>cmd_cnt_clear,
-                                             clk_dst=>clk_dp, rst_dst=>rst_dp, pulse_out=>dp_cnt_clear);
-  u_ps_prst: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>cmd_prbs_reset,
-                                             clk_dst=>clk_dp, rst_dst=>rst_dp, pulse_out=>dp_prbs_reset);
-  u_ps_inj:  entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>prbs_inj,
-                                             clk_dst=>clk_dp, rst_dst=>rst_dp, pulse_out=>dp_inj);
+  u_ps_srst: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, por_src=>por_axi, pulse_in=>cmd_soft_reset,
+                                             clk_dst=>clk_dp, rst_dst=>rst_dp_i, pulse_out=>dp_soft_reset);
+  u_ps_rsyn: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, por_src=>por_axi, pulse_in=>cmd_resync,
+                                             clk_dst=>clk_dp, rst_dst=>rst_dp_i, pulse_out=>dp_resync);
+  u_ps_cclr: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, por_src=>por_axi, pulse_in=>cmd_cnt_clear,
+                                             clk_dst=>clk_dp, rst_dst=>rst_dp_i, pulse_out=>dp_cnt_clear);
+  u_ps_prst: entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, por_src=>por_axi, pulse_in=>cmd_prbs_reset,
+                                             clk_dst=>clk_dp, rst_dst=>rst_dp_i, pulse_out=>dp_prbs_reset);
+  u_ps_inj:  entity work.pcs_psync port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, por_src=>por_axi, pulse_in=>prbs_inj,
+                                             clk_dst=>clk_dp, rst_dst=>rst_dp_i, pulse_out=>dp_inj);
 
   -- ==== silicon datapath (dominio DP) ====
   -- soft_reset reinicia toda la cadena (scrambler/gearbox/prbs) limpiamente
-  sil_rst <= rst_dp or dp_soft_reset;
+  sil_rst <= rst_dp_i or dp_soft_reset;
 
   u_sil: entity work.pcs_silicon_datapath
     port map (
@@ -236,39 +252,37 @@ begin
       prbs_gen_en=>dp_gen_en, loopback_en=>dp_loopback_en, prbs_chk_en=>dp_chk_en,
       inject_err=>dp_inj, clr_ber=>dp_prbs_reset,
       ber_count=>sil_ber, chk_locked=>sil_lock,
-      tx_word_cnt=>sil_txc, rx_block_cnt=>sil_rxc
+      tx_word_cnt=>sil_txc, rx_block_cnt=>sil_rxc,
+      resync=>dp_resync, rx_lock=>sil_rx_lock, rx_hi_ber=>sil_rx_hiber,
+      rx_ev_goodsh=>sil_goodsh, rx_ev_badsh=>sil_badsh, rx_ev_slip=>open
     );
 
-  -- ==== derivacion de blk_evt para el dataplane ====
-  -- incrementos de los contadores del silicon datapath -> eventos (1/ciclo,
-  -- prioridad PRBS_BAD > RX_OK > TX)
+  -- ==== event strobes for the dataplane ====
+  -- TX words and PRBS errors from the counter increments (one strobe each,
+  -- independent); RX header events come straight from the block sync.
   process(clk_dp)
   begin
     if rising_edge(clk_dp) then
-      if rst_dp = '1' then
-        prev_txc <= (others=>'0'); prev_rxc <= (others=>'0'); prev_ber <= (others=>'0');
-        tx_inc <= '0'; rx_inc <= '0'; ber_inc <= '0';
+      if rst_dp_i = '1' then
+        prev_txc <= (others=>'0'); prev_ber <= (others=>'0');
+        tx_inc <= '0'; ber_inc <= '0';
       else
         if unsigned(sil_txc) /= prev_txc then tx_inc <= '1'; else tx_inc <= '0'; end if;
-        if unsigned(sil_rxc) /= prev_rxc then rx_inc <= '1'; else rx_inc <= '0'; end if;
         if unsigned(sil_ber) /= prev_ber then ber_inc <= '1'; else ber_inc <= '0'; end if;
         prev_txc <= unsigned(sil_txc);
-        prev_rxc <= unsigned(sil_rxc);
         prev_ber <= unsigned(sil_ber);
       end if;
     end if;
   end process;
 
-  blk_evt <= EVT_PRBSB when ber_inc = '1' else
-             EVT_RXOK  when rx_inc  = '1' else
-             EVT_TX    when tx_inc  = '1' else
-             EVT_IDLE;
-
   -- ==== dataplane (dominio DP): block-lock, hi_ber, lock_time, eventos ====
   u_dpl: entity work.pcs_dataplane
+    generic map (EXT_SYNC => true)
     port map (
-      clk_dp=>clk_dp, rst_dp=>rst_dp,
-      blk_evt=>blk_evt,
+      clk_dp=>clk_dp, rst_dp=>rst_dp_i,
+      blk_evt=>"000",
+      tx_stb=>tx_inc, hdr_ok_stb=>sil_goodsh, hdr_bad_stb=>sil_badsh,
+      prbs_stb=>ber_inc, ext_lock=>sil_rx_lock, ext_hiber=>sil_rx_hiber,
       cmd_cnt_clear=>dp_cnt_clear, cmd_soft_reset=>dp_soft_reset,
       cmd_resync=>dp_resync, cmd_prbs_reset=>dp_prbs_reset,
       cnt_tx_blk=>dpl_cnt_tx, cnt_rx_blk=>dpl_cnt_rx, cnt_rx_err=>dpl_cnt_re,
@@ -285,8 +299,9 @@ begin
   -- dataplane para rx_err y lock_time. ST_PRBS_LOCK del checker real.
   u_cdc: entity work.pcs_cdc
     port map (
-      clk_dp=>clk_dp, rst_dp=>rst_dp,
+      clk_dp=>clk_dp, rst_dp=>rst_dp_i,
       clk_axi=>s_axi_aclk, rst_axi=>rst_axi,
+      por_dp=>por_dp, por_axi=>por_axi,
       dp_block_lock=>dpl_block_lock, dp_scr_sync=>dpl_scr_sync,
       dp_prbs_lock=>sil_lock, dp_hi_ber=>dpl_hi_ber,
       dp_tx_active=>dpl_tx_active, dp_rx_active=>dpl_rx_active,

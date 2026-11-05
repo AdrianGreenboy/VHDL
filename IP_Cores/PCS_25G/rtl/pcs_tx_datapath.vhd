@@ -8,10 +8,18 @@
 --
 -- Flujo:
 --   payload64 + is_data
---     -> encoder: sync = 01 (data) / 10 (control)
+--     -> encoder: sync header in IEEE 802.3 Fig. 49-7 order (see below)
 --     -> scrambler: scramblea payload (sync NO entra al scrambler)
 --     -> ensamblado: block66 = [sync(2) | payload_scrambleado(64)]
 --     -> gearbox TX -> out_word (64 bits al PMA)
+--
+-- Sync header convention (audit 2026-11, fix A2). Block bit 0 is the FIRST
+-- bit on the wire (the gearbox serialises LSB first). Clause 49 transmits
+-- the data header as "01" and the control header as "10" in transmission
+-- order, i.e.
+--   data    : block(0) = '0', block(1) = '1'  -> sync vector(1 downto 0) = "10"
+--   control : block(0) = '1', block(1) = '0'  -> sync vector(1 downto 0) = "01"
+-- (the previous code had them inverted: correct only in self-loopback).
 --
 -- El sync se retrasa 1 ciclo para alinearse con la salida del scrambler
 -- (el scrambler tiene 1 ciclo de latencia; el sync debe casar con SU payload).
@@ -79,8 +87,8 @@ begin
       if rst = '1' then
         sync_d1 <= (others => '0');
       elsif scr_en = '1' then
-        -- sync: 01 data, 10 control
-        if in_is_data = '1' then sync_d1 <= "01"; else sync_d1 <= "10"; end if;
+        -- IEEE order: data = '0' then '1' on the wire, control = '1' then '0'
+        if in_is_data = '1' then sync_d1 <= "10"; else sync_d1 <= "01"; end if;
       end if;
     end if;
   end process;

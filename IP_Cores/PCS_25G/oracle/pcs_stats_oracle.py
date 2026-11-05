@@ -70,6 +70,18 @@ class DataPlane:
     """
     Modela el data plane del PCS en el dominio de 390.625 MHz.
     Los contadores 'live' viven aqui. El shadow es el snapshot congelado.
+
+    Audit 2026-11: block lock and hi_ber follow IEEE 802.3 clause 49
+    (Fig. 49-15 lock state machine, Fig. 49-13 BER monitor), written here
+    from the standard independently of the RTL:
+      * unlocked: an invalid header restarts the count (SLIP); 64 valid
+        headers in a row -> block_lock
+      * locked: windows of 64 headers; 16 invalid in one window -> unlock
+      * hi_ber: 16 invalid headers inside one BER window while locked; the
+        L2A trace is shorter than one window (the window expiry is checked
+        by tb_pcs_blocksync), so the model has no timer
+      * lock lost -> hi_ber cleared (BER_MT_INIT)
+    Events are edge-based (lock gained / lost, hi_ber rising).
     """
     def __init__(self):
         # contadores en vuelo
@@ -86,21 +98,66 @@ class DataPlane:
         self.sh_ber = 0
         self.sh_lockt = 0
 
-        # estado del block-sync
-        self.consec_good = 0     # headers validos consecutivos
+        # estado del block-sync (clause 49)
+        self.sh_cnt = 0
+        self.inv_cnt = 0
+        self.ber_cnt = 0
         self.block_lock = 0
         self.scr_sync = 0
         self.prbs_lock = 0
         self.hi_ber = 0
         self.tx_active = 0
         self.rx_active = 0
-        self.hiber_window_err = 0
 
         self.cycle = 0           # ticks del dominio DP
         self._prev_lock = 0
+        self._prev_hiber = 0
 
         # stickies acumulados (dominio AXI, ya cruzados)
         self.sticky = 0
+
+    def _header(self, valid):
+        """One sync header through Fig. 49-15 and Fig. 49-13."""
+        was = self.block_lock
+        if not self.block_lock:
+            if not valid:
+                self.sh_cnt = 0; self.inv_cnt = 0          # SLIP
+            elif self.sh_cnt == LOCK_THRESHOLD - 1:
+                self.block_lock = 1
+                self.sh_cnt = 0; self.inv_cnt = 0
+            else:
+                self.sh_cnt += 1
+        else:
+            inv_n = self.inv_cnt + (0 if valid else 1)
+            if not valid and self.ber_cnt != HIBER_THRESHOLD:
+                self.ber_cnt += 1
+            if inv_n == 16:
+                self.block_lock = 0                          # SLIP
+                self.sh_cnt = 0; self.inv_cnt = 0
+            elif self.sh_cnt == 63:
+                self.sh_cnt = 0; self.inv_cnt = 0
+            else:
+                self.sh_cnt += 1; self.inv_cnt = inv_n
+        if not self.block_lock:
+            self.hi_ber = 0; self.ber_cnt = 0
+        elif not was:
+            self.ber_cnt = 0                                 # START_TIMER
+        elif self.ber_cnt == HIBER_THRESHOLD:
+            self.hi_ber = 1
+        self.scr_sync = self.block_lock
+
+    def _edges(self):
+        if self._prev_lock == 0 and self.block_lock == 1:
+            self.sticky |= EV_LOCK_GAINED
+            self.lock_time = self.cycle
+        if self._prev_lock == 1 and self.block_lock == 0:
+            self.sticky |= EV_LOCK_LOST
+        if self._prev_hiber == 0 and self.hi_ber == 1:
+            self.sticky |= EV_HI_BER
+        self._prev_lock = self.block_lock
+        self._prev_hiber = self.hi_ber
+        if self.block_lock == 1:
+            self.prbs_lock = 1
 
     # -- procesar un tick con un evento opcional de bloque --
     def tick(self, block=None):
@@ -117,65 +174,41 @@ class DataPlane:
         if block == 'tx':
             self.tx_blk = (self.tx_blk + 1) & MASK32
             self.tx_active = 1
-
         elif block == 'rx_ok':
             self.rx_blk = (self.rx_blk + 1) & MASK32
             self.rx_active = 1
-            self.consec_good += 1
-            if self.consec_good >= LOCK_THRESHOLD and self.block_lock == 0:
-                self.block_lock = 1
-                self.scr_sync = 1  # sync del descrambler acompana al lock
-                self.lock_time = self.cycle
-
+            self._header(True)
         elif block == 'rx_bad':
             self.rx_blk = (self.rx_blk + 1) & MASK32
             self.rx_active = 1
             self.rx_err = (self.rx_err + 1) & MASK32
-            self.consec_good = 0
-            self.hiber_window_err += 1
-            if self.hiber_window_err >= HIBER_THRESHOLD:
-                self.hi_ber = 1
-            # perder lock si estaba enganchado
-            if self.block_lock == 1:
-                self.block_lock = 0
-                self.scr_sync = 0
-
+            self._header(False)
+            self.sticky |= EV_RX_ERR
         elif block == 'prbs_bad':
             self.ber = (self.ber + 1) & MASK32
-
-        # deteccion de PRBS lock: tras suficientes rx_ok con checker activo.
-        # Aqui lo ligamos a block_lock por simplicidad del modelo L2.
-        if self.block_lock == 1:
-            self.prbs_lock = 1
-
-        # generar stickies por transiciones
-        if self._prev_lock == 0 and self.block_lock == 1:
-            self.sticky |= EV_LOCK_GAINED
-        if self._prev_lock == 1 and self.block_lock == 0:
-            self.sticky |= EV_LOCK_LOST
-        self._prev_lock = self.block_lock
-
-        if block == 'rx_bad':
-            self.sticky |= EV_RX_ERR
-            if self.hi_ber:
-                self.sticky |= EV_HI_BER
-        if block == 'prbs_bad':
             self.sticky |= EV_PRBS_ERR
+        self._edges()
 
     # -- comandos WO/SC del banco --
     def cmd_cnt_clear(self):
         self.tx_blk = 0; self.rx_blk = 0; self.rx_err = 0; self.ber = 0
 
+    def _sync_reset(self):
+        self.block_lock = 0; self.scr_sync = 0; self.hi_ber = 0
+        self.sh_cnt = 0; self.inv_cnt = 0; self.ber_cnt = 0
+
     def cmd_soft_reset(self):
-        self.block_lock = 0; self.scr_sync = 0; self.prbs_lock = 0
-        self.consec_good = 0; self.hi_ber = 0; self.hiber_window_err = 0
-        self._prev_lock = 0
+        self._sync_reset()
+        self.prbs_lock = 0
+        self._edges()
 
     def cmd_resync(self):
-        self.block_lock = 0; self.consec_good = 0; self._prev_lock = 0
+        self._sync_reset()
+        self._edges()
 
     def cmd_prbs_reset(self):
-        self.ber = 0; self.prbs_lock = 0
+        # the RTL re-arms prbs_lock one cycle later while block_lock = 1
+        self.ber = 0; self.prbs_lock = self.block_lock
 
     def cmd_dma_done(self):
         self.sticky |= EV_DMA_DONE
@@ -228,20 +261,36 @@ def canonical_trace():
     ops.append(('snap',))
     ops.append(('run', 'tx', 10))       # cambia live, no shadow
     ops.append(('rd_cnt',))
-    # inyectar 3 bloques malos -> rx_err, pierde lock
+    # 3 bad headers: rx_err, but clause 49 keeps the lock (< 16 per window)
     ops.append(('run', 'rx_bad', 3))
+    ops.append(('run', 'idle', 4))
+    ops.append(('rd_status',))          # block_lock = 1
+    ops.append(('rd_irq',))             # EV_RX_ERR
+    # 16 bad headers in one 64-header window: lock lost
+    ops.append(('run', 'rx_bad', 16))
+    ops.append(('run', 'idle', 4))
     ops.append(('rd_status',))          # block_lock = 0
-    ops.append(('rd_irq',))             # EV_LOCK_LOST + EV_RX_ERR
+    ops.append(('rd_irq',))             # EV_LOCK_LOST
     # recuperar lock
     ops.append(('run', 'rx_ok', 70))
     ops.append(('rd_status',))
     # inyectar errores PRBS
     ops.append(('run', 'prbs_bad', 5))
     ops.append(('rd_irq',))             # EV_PRBS_ERR
-    # forzar hi_ber: 16 bloques malos (supera HIBER_THRESHOLD)
+    # hi_ber with lock kept: 4 bad + 60 good per 64-header window, four
+    # windows -> 16 bad headers in the BER window, never 16 in one lock window
+    for _ in range(4):
+        ops.append(('run', 'rx_bad', 4))
+        ops.append(('run', 'rx_ok', 60))
+    ops.append(('run', 'idle', 4))
+    ops.append(('rd_status',))          # block_lock = 1, hi_ber = 1
+    ops.append(('rd_irq',))             # EV_HI_BER
+    # 16 consecutive bad headers: lock lost, hi_ber cleared with it
     ops.append(('run', 'rx_bad', 16))
-    ops.append(('rd_status',))          # hi_ber = 1
+    ops.append(('run', 'idle', 4))
+    ops.append(('rd_status',))
     ops.append(('rd_irq',))
+    ops.append(('run', 'rx_ok', 70))
     # limpiar algunos stickies
     ops.append(('clr_irq', EV_RX_ERR | EV_PRBS_ERR))
     ops.append(('rd_irq',))
@@ -263,8 +312,10 @@ def canonical_trace():
     # 1 rx_ok mas (total 64): DEBE lockear justo en el umbral
     ops.append(('run', 'rx_ok', 1))
     ops.append(('rd_status',))          # block_lock = 1
+    ops.append(('run', 'idle', 4))
     # --- soft_reset CON lock activo: debe bajarlo ---
     ops.append(('cmd', 'soft_reset'))
+    ops.append(('run', 'idle', 4))
     ops.append(('rd_status',))          # block_lock = 0 (verifica que soft_reset baja lock activo)
 
     # dma_done sticky

@@ -149,16 +149,20 @@ architecture rtl of pcs_regbank is
   signal irq_clear_stb   : std_logic := '0';
 
   -- FSM AXI: handshakes simples desacoplados write/read
-  signal awready_i : std_logic := '0';
-  signal wready_i  : std_logic := '0';
+  signal awready_i : std_logic;
+  signal wready_i  : std_logic;
   signal bvalid_i  : std_logic := '0';
-  signal arready_i : std_logic := '0';
+  signal arready_i : std_logic;
   signal rvalid_i  : std_logic := '0';
   signal rdata_i   : std_logic_vector(31 downto 0) := (others => '0');
 
   signal aw_addr_lat : std_logic_vector(7 downto 0) := (others => '0');
-  signal aw_seen     : std_logic := '0';
-  signal w_seen      : std_logic := '0';
+  signal aw_seen     : std_logic := '0';   -- AW holding register full
+  signal w_seen      : std_logic := '0';   -- W holding register full
+  signal w_data_lat  : std_logic_vector(31 downto 0) := (others => '0');
+  signal w_strb_lat  : std_logic_vector(3 downto 0) := (others => '0');
+  signal bresp_i     : std_logic_vector(1 downto 0) := "00";
+  signal rresp_i     : std_logic_vector(1 downto 0) := "00";
 
   -- STATUS ensamblado combinacionalmente
   signal status_word : std_logic_vector(31 downto 0);
@@ -179,18 +183,27 @@ begin
                   others => '0');
 
   ------------------------------------------------------------------------------
-  -- Canal de escritura AXI-Lite
-  -- Handshake: latch AW y W, escribe cuando ambos vistos, luego B.
-  -- IMPORTANTE: la FSM depende SOLO de s_axi_aresetn (nunca de SOFT_RESET).
+  -- AXI4-Lite write channel (audit 2026-11, fix A1).
+  -- AW and W are accepted independently, each into its own holding register
+  -- (address, and data + strobes). The write executes from the HELD values
+  -- once both are held and the B channel is free; awready/wready stay low
+  -- while the corresponding holding register is full. Before the fix the
+  -- data was not latched: a W accepted while B was stalled executed later
+  -- with whatever s_axi_wdata showed at that time.
+  -- WSTRB is honoured per byte lane (fix M5); unmapped offsets answer
+  -- SLVERR (fix B7). RO registers accept and ignore writes (OKAY).
+  -- IMPORTANT: this FSM depends ONLY on s_axi_aresetn (never on SOFT_RESET).
   ------------------------------------------------------------------------------
   process(s_axi_aclk)
-    variable do_write : boolean;
     variable waddr    : std_logic_vector(7 downto 0);
+    variable wd       : std_logic_vector(31 downto 0);
+    variable bm       : std_logic_vector(31 downto 0);   -- byte-lane mask
     variable cmd_m    : std_logic_vector(31 downto 0);
     variable prbs_m   : std_logic_vector(31 downto 0);
+    variable mapped   : boolean;
   begin
     if rising_edge(s_axi_aclk) then
-      -- pulsos por defecto a 0 (1 ciclo)
+      -- default pulses (1 cycle)
       p_soft_reset <= '0';
       p_resync     <= '0';
       p_cnt_clear  <= '0';
@@ -200,7 +213,7 @@ begin
       irq_clear_stb <= '0';
 
       if s_axi_aresetn = '0' then
-        awready_i <= '0'; wready_i <= '0'; bvalid_i <= '0';
+        bvalid_i <= '0'; bresp_i <= "00";
         aw_seen <= '0'; w_seen <= '0';
         reg_scratch      <= (others => '0');
         reg_ctrl         <= (others => '0');
@@ -210,70 +223,71 @@ begin
         reg_dma_doorbell <= (others => '0');
         reg_ctrl_ack     <= '0';
       else
-        -- aceptar AW
+        -- AW handshake: awready = not aw_seen
         if s_axi_awvalid = '1' and aw_seen = '0' then
           aw_addr_lat <= s_axi_awaddr;
           aw_seen     <= '1';
-          awready_i   <= '1';
-        else
-          awready_i   <= '0';
         end if;
-        -- aceptar W
+        -- W handshake: wready = not w_seen; data AND strobes are latched
         if s_axi_wvalid = '1' and w_seen = '0' then
-          w_seen   <= '1';
-          wready_i <= '1';
-        else
-          wready_i <= '0';
+          w_data_lat <= s_axi_wdata;
+          w_strb_lat <= s_axi_wstrb;
+          w_seen     <= '1';
         end if;
 
-        -- ejecutar escritura cuando AW y W estan latcheados y B libre
-        do_write := (aw_seen = '1' or (s_axi_awvalid = '1')) and
-                    (w_seen  = '1' or (s_axi_wvalid  = '1')) and
-                    (bvalid_i = '0');
-        if do_write then
-          if aw_seen = '1' then waddr := aw_addr_lat; else waddr := s_axi_awaddr; end if;
+        -- execute from the held values once both are held and B is free
+        if aw_seen = '1' and w_seen = '1' and bvalid_i = '0' then
+          waddr := aw_addr_lat;
+          wd    := w_data_lat;
+          for b in 0 to 3 loop
+            bm(8*b+7 downto 8*b) := (others => w_strb_lat(b));
+          end loop;
+          mapped := true;
 
           case waddr is
+            when OFF_ID | OFF_STATUS | OFF_CNT_TX_BLK | OFF_CNT_RX_BLK |
+                 OFF_CNT_RX_ERR | OFF_CNT_BER | OFF_LOCK_TIME =>
+              null;                                            -- RO: ignored
             when OFF_SCRATCH =>
-              reg_scratch <= s_axi_wdata;                      -- RW pleno
+              reg_scratch <= (reg_scratch and not bm) or (wd and bm);
             when OFF_CTRL =>
-              reg_ctrl     <= s_axi_wdata and CTRL_MASK;       -- mascara al escribir
-              reg_ctrl_ack <= '1';                             -- ack inmediato (L1)
+              reg_ctrl     <= ((reg_ctrl and not bm) or (wd and bm)) and CTRL_MASK;
+              reg_ctrl_ack <= '1';                             -- immediate ack (L1)
             when OFF_CMD =>
-              -- WO/SC: no se almacena; genera pulsos
-              cmd_m := s_axi_wdata and CMD_MASK;
+              -- WO/SC: not stored; generates pulses (byte lane 0 only)
+              cmd_m := wd and CMD_MASK and bm;
               if cmd_m(0) = '1' then p_soft_reset <= '1'; end if;
               if cmd_m(1) = '1' then p_resync     <= '1'; end if;
               if cmd_m(2) = '1' then p_cnt_clear  <= '1'; end if;
               if cmd_m(3) = '1' then p_prbs_reset <= '1'; end if;
             when OFF_IRQ_STATUS =>
-              -- RW1C: el clear se aplica en el proceso unico de stickies.
-              irq_clear_pulse <= s_axi_wdata and IRQ_MASK;
+              -- RW1C: the clear is applied in the single sticky process
+              irq_clear_pulse <= wd and IRQ_MASK and bm;
               irq_clear_stb   <= '1';
             when OFF_IRQ_ENABLE =>
-              reg_irq_enable <= s_axi_wdata and IRQ_MASK;      -- mascara al escribir
+              reg_irq_enable <= ((reg_irq_enable and not bm) or (wd and bm)) and IRQ_MASK;
             when OFF_PRBS_CTRL =>
-              prbs_m := s_axi_wdata and PRBS_MASK;
-              reg_prbs_ctrl <= prbs_m;                         -- mascara al escribir
+              prbs_m := ((reg_prbs_ctrl and not bm) or (wd and bm)) and PRBS_MASK;
+              reg_prbs_ctrl <= prbs_m;
               if prbs_m(2) = '1' then
-                p_prbs_inj <= '1';                             -- INJ es pulso
+                p_prbs_inj <= '1';                             -- INJ is a pulse
               end if;
-              -- INJ no persiste en el registro almacenado
+              -- INJ does not persist in the stored register
               reg_prbs_ctrl(2) <= '0';
             when OFF_STATS_SNAP =>
-              if s_axi_wdata(0) = '1' then p_stats_snap <= '1'; end if;
+              if wd(0) = '1' and w_strb_lat(0) = '1' then p_stats_snap <= '1'; end if;
             when OFF_DMA_ADDR =>
-              reg_dma_addr <= s_axi_wdata;
+              reg_dma_addr <= (reg_dma_addr and not bm) or (wd and bm);
             when OFF_DMA_DOORBELL =>
-              reg_dma_doorbell <= s_axi_wdata;
+              reg_dma_doorbell <= (reg_dma_doorbell and not bm) or (wd and bm);
             when others =>
-              null;  -- RO / reservado: sin efecto
+              mapped := false;                                 -- unmapped
           end case;
 
-          -- completar handshake
           aw_seen  <= '0';
           w_seen   <= '0';
           bvalid_i <= '1';
+          if mapped then bresp_i <= "00"; else bresp_i <= "10"; end if;  -- SLVERR
         end if;
 
         -- B channel
@@ -283,6 +297,9 @@ begin
       end if;
     end if;
   end process;
+
+  awready_i <= not aw_seen when s_axi_aresetn = '1' else '0';
+  wready_i  <= not w_seen  when s_axi_aresetn = '1' else '0';
 
   ------------------------------------------------------------------------------
   -- Stickies de IRQ: UNICO driver de reg_irq_status.
@@ -336,43 +353,42 @@ begin
   end process;
 
   ------------------------------------------------------------------------------
-  -- Canal de lectura AXI-Lite. read() devuelve el campo CRUDO almacenado.
+  -- AXI4-Lite read channel. arready = not rvalid (one read in flight); the
+  -- data is captured at the AR handshake and held until rready. Unmapped
+  -- offsets read 0 with SLVERR (fix B7). read() returns the RAW stored field.
   ------------------------------------------------------------------------------
+  arready_i <= not rvalid_i when s_axi_aresetn = '1' else '0';
+
   process(s_axi_aclk)
   begin
     if rising_edge(s_axi_aclk) then
       if s_axi_aresetn = '0' then
-        arready_i <= '0'; rvalid_i <= '0'; rdata_i <= (others => '0');
+        rvalid_i <= '0'; rdata_i <= (others => '0'); rresp_i <= "00";
       else
-        -- aceptar direccion solo si no hay lectura en curso
-        if s_axi_arvalid = '1' and arready_i = '0' and rvalid_i = '0' then
-          arready_i <= '1';
+        if s_axi_arvalid = '1' and rvalid_i = '0' then
+          rresp_i <= "00";
           case s_axi_araddr is
             when OFF_ID          => rdata_i <= ID_MAGIC;
             when OFF_SCRATCH     => rdata_i <= reg_scratch;
-            when OFF_CTRL        => rdata_i <= reg_ctrl;          -- crudo
-            when OFF_CMD         => rdata_i <= (others => '0');   -- WO lee 0
+            when OFF_CTRL        => rdata_i <= reg_ctrl;          -- raw
+            when OFF_CMD         => rdata_i <= (others => '0');   -- WO reads 0
             when OFF_STATUS      => rdata_i <= status_word;
-            when OFF_IRQ_STATUS  => rdata_i <= reg_irq_status;    -- crudo
-            when OFF_IRQ_ENABLE  => rdata_i <= reg_irq_enable;    -- crudo
-            when OFF_PRBS_CTRL   => rdata_i <= reg_prbs_ctrl;     -- crudo
-            when OFF_STATS_SNAP  => rdata_i <= (others => '0');   -- WO/SC lee 0
-            when OFF_CNT_TX_BLK  => rdata_i <= sh_tx_blk;         -- sombra
+            when OFF_IRQ_STATUS  => rdata_i <= reg_irq_status;    -- raw
+            when OFF_IRQ_ENABLE  => rdata_i <= reg_irq_enable;    -- raw
+            when OFF_PRBS_CTRL   => rdata_i <= reg_prbs_ctrl;     -- raw
+            when OFF_STATS_SNAP  => rdata_i <= (others => '0');   -- WO/SC reads 0
+            when OFF_CNT_TX_BLK  => rdata_i <= sh_tx_blk;         -- shadow
             when OFF_CNT_RX_BLK  => rdata_i <= sh_rx_blk;
             when OFF_CNT_RX_ERR  => rdata_i <= sh_rx_err;
             when OFF_CNT_BER     => rdata_i <= sh_ber;
             when OFF_LOCK_TIME   => rdata_i <= sh_lock_t;
             when OFF_DMA_ADDR    => rdata_i <= reg_dma_addr;
             when OFF_DMA_DOORBELL=> rdata_i <= reg_dma_doorbell;
-            when others          => rdata_i <= (others => '0');   -- reservado
+            when others          => rdata_i <= (others => '0');   -- unmapped
+                                    rresp_i <= "10";              -- SLVERR
           end case;
           rvalid_i <= '1';
-        else
-          -- arready es un pulso de 1 ciclo
-          arready_i <= '0';
-        end if;
-        -- mantener rvalid hasta que el maestro lo consuma
-        if rvalid_i = '1' and s_axi_rready = '1' then
+        elsif rvalid_i = '1' and s_axi_rready = '1' then
           rvalid_i <= '0';
         end if;
       end if;
@@ -385,10 +401,10 @@ begin
   s_axi_awready <= awready_i;
   s_axi_wready  <= wready_i;
   s_axi_bvalid  <= bvalid_i;
-  s_axi_bresp   <= "00";
+  s_axi_bresp   <= bresp_i;
   s_axi_arready <= arready_i;
   s_axi_rvalid  <= rvalid_i;
-  s_axi_rresp   <= "00";
+  s_axi_rresp   <= rresp_i;
   s_axi_rdata   <= rdata_i;
 
   irq_out <= '1' when (reg_irq_status and reg_irq_enable and IRQ_MASK) /= x"00000000"

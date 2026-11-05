@@ -37,6 +37,9 @@ entity pcs_gearbox_tx is
     in_block  : in  std_logic_vector(65 downto 0);
     in_ready  : out std_logic;
     -- salida de palabras de 64 bits
+    -- sticky: an input arrived while the buffer had no room and was DROPPED
+    -- (in_ready not honoured by the source); audit 2026-11, fix B6
+    overflow  : out std_logic;
     out_valid : out std_logic;
     out_word  : out std_logic_vector(63 downto 0)
   );
@@ -48,6 +51,7 @@ architecture rtl of pcs_gearbox_tx is
   signal fill   : integer range 0 to BUFW := 0;   -- bits validos en buf(fill-1 downto 0)
   signal outw_r : std_logic_vector(63 downto 0) := (others => '0');
   signal outv_r : std_logic := '0';
+  signal ovf_r  : std_logic := '0';
 begin
 
   -- puede aceptar un bloque si tras empujarlo no desborda: fill + 66 <= BUFW
@@ -63,8 +67,12 @@ begin
         fill   <= 0;
         outw_r <= (others => '0');
         outv_r <= '0';
+        ovf_r  <= '0';
       else
         v_fill := fill;
+        if in_valid = '1' and v_fill > (BUFW - 66) then
+          ovf_r <= '1';                -- input dropped: never silently
+        end if;
         v_buf  := buf;
 
         -- 1. empujar bloque de 66 bits (LSB primero) en la posicion 'fill'
@@ -94,6 +102,17 @@ begin
   end process;
 
   out_valid <= outv_r;
+  overflow  <= ovf_r;
+
+  -- pragma translate_off
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      assert not (rst = '0' and in_valid = '1' and fill > (BUFW - 66))
+        report "pcs_gearbox_tx: input dropped, buffer full (in_ready ignored)" severity error;
+    end if;
+  end process;
+  -- pragma translate_on
   out_word  <= outw_r;
 
 end architecture rtl;

@@ -56,8 +56,12 @@ def u64_le(x):
     x &= MASK64
     return bytes([(x >> (8*i)) & 0xFF for i in range(8)])
 
-SYNC_DATA = 0b01
-SYNC_CTRL = 0b10
+# Block bit 0 is the first bit on the wire. IEEE 802.3 Fig. 49-7 sends the
+# data header as 0 then 1 and the control header as 1 then 0, i.e. as an
+# integer with bit 0 first: data = 0b10, control = 0b01 (audit 2026-11; the
+# previous values 0b01 / 0b10 were inverted on the wire).
+SYNC_DATA = 0b10
+SYNC_CTRL = 0b01
 
 
 class PcsTxDatapath:
