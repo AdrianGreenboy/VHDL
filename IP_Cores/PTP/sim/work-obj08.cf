@@ -1,140 +1,103 @@
 v 4
-file . "tb_ptp_baja.vhd" "9901652db9a78adb583ed8099721fe67cd5f35e0" "20261105013213.514":
-  entity tb_ptp_baja at 13( 804) + 0 on 103;
-  architecture sim of tb_ptp_baja at 22( 948) + 0 on 104;
-file . "tb_ptp_mac_ext.vhd" "8fa446247aa681cb7eeaab87f57616ecb14cf955" "20261105013213.505":
-  entity tb_ptp_mac_ext at 24( 1583) + 0 on 101;
-  architecture sim of tb_ptp_mac_ext at 34( 1756) + 0 on 102;
-file . "tb_ptp_pdelay_tmo.vhd" "7a4ac4be20e27425fb5d06a29bc6f9dbb0708c4b" "20261105013213.483":
-  entity tb_ptp_pdelay_tmo at 19( 1298) + 0 on 99;
-  architecture sim of tb_ptp_pdelay_tmo at 29( 1474) + 0 on 100;
-file . "tb_ptp_axil_conc.vhd" "e6b6935240f6f692c9972e17f9cdccde581ef6a7" "20261105013213.481":
-  entity tb_ptp_axil_conc at 23( 1387) + 0 on 97;
-  architecture sim of tb_ptp_axil_conc at 32( 1538) + 0 on 98;
-file . "tb_tx_override.vhd" "92611116e2c7e1677c4440507c82ed419a121cbf" "20261105013213.451":
-  entity tb_tx_override at 6( 373) + 0 on 95;
-  architecture sim of tb_tx_override at 15( 523) + 0 on 96;
-file . "tb_pd_repeat.vhd" "ebd6a03f9338dd02ea3cdcb96e056d8126655aa4" "20261105013213.450":
-  entity tb_pd_repeat at 2( 65) + 0 on 93;
-  architecture sim of tb_pd_repeat at 9( 217) + 0 on 94;
-file . "tb_pd_phase3.vhd" "d22ca9c541059cc522aeab132d08cfab2f950b7c" "20261105013213.449":
-  entity tb_pd_phase3 at 6( 364) + 0 on 91;
-  architecture sim of tb_pd_phase3 at 15( 518) + 0 on 92;
-file . "tb_pd_phase2.vhd" "c6bd0b894023b0e1080498bf539bdcd1057a64bf" "20261105013213.449":
-  entity tb_pd_phase2 at 6( 364) + 0 on 89;
-  architecture sim of tb_pd_phase2 at 15( 518) + 0 on 90;
-file . "tb_pd_phase1.vhd" "b1f74b2e6e8cdb7a57dd19d1efd54b217d6faaab" "20261105013213.448":
-  entity tb_pd_phase1 at 6( 364) + 0 on 87;
-  architecture sim of tb_pd_phase1 at 15( 518) + 0 on 88;
-file . "tb_pd_phase0.vhd" "84054495612cda93f553239443f38794b3bfd362" "20261105013213.427":
-  entity tb_pd_phase0 at 6( 364) + 0 on 85;
-  architecture sim of tb_pd_phase0 at 15( 518) + 0 on 86;
-file . "tb_ptp_axil.vhd" "a21c4a2085cf97342b199bfc726e0954e04ecc4c" "20261105013213.427":
-  entity tb_ptp_axil at 5( 281) + 0 on 83;
-  architecture sim of tb_ptp_axil at 13( 408) + 0 on 84;
-file . "tb_ptp_soc.vhd" "72e3fc8504836cd09d73dd831ef87f56b9981d63" "20261105013213.426":
-  entity tb_ptp_soc at 5( 309) + 0 on 81;
-  architecture sim of tb_ptp_soc at 14( 455) + 0 on 82;
-file . "tb_ptp_top.vhd" "a82e882081b66e9767ad0881db7c642f9ae46264" "20261105013213.425":
-  entity tb_ptp_top at 5( 288) + 0 on 79;
-  architecture sim of tb_ptp_top at 13( 414) + 0 on 80;
-file . "tb_ptp_regs.vhd" "2af2be35c4e863cb446e745a40d279a7ac8456f0" "20261105013213.424":
-  entity tb_ptp_regs at 8( 378) + 0 on 77;
-  architecture sim of tb_ptp_regs at 16( 505) + 0 on 78;
-file . "tb_ptp_mac_seq.vhd" "ceee65b58f28f98f627117f414246da0994e3e4c" "20261105013213.395":
-  entity tb_ptp_mac_seq at 5( 313) + 0 on 75;
-  architecture sim of tb_ptp_mac_seq at 14( 469) + 0 on 76;
-file . "tb_ptp_mac_slave.vhd" "7a9894abc4a8745191daf3173037712801a388fc" "20261105013213.394":
-  entity tb_ptp_mac_slave at 6( 365) + 0 on 73;
-  architecture sim of tb_ptp_mac_slave at 15( 523) + 0 on 74;
-file . "tb_ptp_mac_pdelay.vhd" "6fb29e4313be011088f5894a919bb5fbb94ab2a2" "20261105013213.394":
-  entity tb_ptp_mac_pdelay at 6( 369) + 0 on 71;
-  architecture sim of tb_ptp_mac_pdelay at 15( 528) + 0 on 72;
-file . "tb_ptp_mac_sync.vhd" "717b9f1bf6b88737040601b35c8b94dea7bd98f0" "20261105013213.393":
-  entity tb_ptp_mac_sync at 6( 394) + 0 on 69;
-  architecture sim of tb_ptp_mac_sync at 15( 551) + 0 on 70;
-file . "tb_ptp_tx_pdelay.vhd" "e5a6247826107b56637d7eb617cef9b32f631803" "20261105013213.392":
-  entity tb_ptp_tx_pdelay at 5( 297) + 0 on 67;
-  architecture sim of tb_ptp_tx_pdelay at 16( 497) + 0 on 68;
-file . "tb_ptp_rx.vhd" "8a609a38231ca2f3cc75df69f7fb5ae91db1c05d" "20261105013213.371":
-  entity tb_ptp_rx at 8( 456) + 0 on 65;
-  architecture sim of tb_ptp_rx at 17( 607) + 0 on 66;
-file . "tb_ptp_tx.vhd" "f24533e22523c909a5f58bf35b4ca8e36d0b7c33" "20261105013213.370":
-  entity tb_ptp_tx at 6( 376) + 0 on 63;
-  architecture sim of tb_ptp_tx at 17( 569) + 0 on 64;
-file . "tb_ptp_pdelay_fsm.vhd" "8ebdf3ab9eca05c4a5e85f3e455bf2ed3836af0b" "20261105013213.369":
-  entity tb_ptp_pdelay_fsm at 7( 361) + 0 on 61;
-  architecture sim of tb_ptp_pdelay_fsm at 16( 520) + 0 on 62;
-file . "tb_ptp_pdelay.vhd" "18cb46ea162a4141f97394f362724685386a9c49" "20261105013213.368":
-  entity tb_ptp_pdelay at 5( 269) + 0 on 59;
-  architecture sim of tb_ptp_pdelay at 14( 418) + 0 on 60;
-file . "tb_ptp_tstamp.vhd" "6dcd9ce065ebcca0eddcb0361de3009b5a0e4404" "20261105013213.339":
-  entity tb_ptp_tstamp at 5( 241) + 0 on 57;
-  architecture sim of tb_ptp_tstamp at 14( 390) + 0 on 58;
-file . "tb_ptp_clock.vhd" "22432fb9722907ea7fe7ca72d7fb5413ebcd3931" "20261105013213.338":
-  entity tb_ptp_clock at 5( 267) + 0 on 55;
-  architecture sim of tb_ptp_clock at 14( 415) + 0 on 56;
-file . "../rtl/ptp_axil.vhd" "5af1d8285d32011b3460358546a589b7bffbef1c" "20261105013213.338":
-  entity ptp_axil at 26( 1566) + 0 on 53;
-  architecture rtl of ptp_axil at 74( 3130) + 0 on 54;
-file . "../rtl/ptp_top.vhd" "619a6015af2f54d5062cff4e3faeb17aa03fed86" "20261105013213.337":
-  entity ptp_top at 7( 428) + 0 on 51;
-  architecture rtl of ptp_top at 37( 1291) + 0 on 52;
-file . "../rtl/ptp_regs.vhd" "7d3f0d18f4b384ba822413624255ea9f0b3a02a8" "20261105013213.336":
-  entity ptp_regs at 43( 2898) + 0 on 49;
-  architecture rtl of ptp_regs at 102( 5514) + 0 on 50;
-file . "../rtl/ptp_mac.vhd" "e999f653a4a1f4c3bb26325b5e377f5410b9a720" "20261105013213.319":
-  entity ptp_mac at 32( 1997) + 0 on 47;
-  architecture rtl of ptp_mac at 109( 5784) + 0 on 48;
-file . "../rtl/eth_mac.vhd" "ce57990c7e5d93760935843b68ca43fe1ba1d45d" "20261105013213.317":
-  entity eth_mac at 24( 1551) + 0 on 45;
-  architecture rtl of eth_mac at 78( 3877) + 0 on 46;
-file . "../rtl/eth_rx_mii.vhd" "dd2674d6600c5f6bc654445390090cbe78af2616" "20261105013213.316":
-  entity eth_rx_mii at 24( 1406) + 0 on 43;
-  architecture rtl of eth_rx_mii at 62( 3088) + 0 on 44;
-file . "../rtl/eth_tx_mii.vhd" "caa887e0ba97d020d5a2827e94aa2a9bea67108c" "20261105013213.287":
-  entity eth_tx_mii at 21( 1178) + 0 on 41;
-  architecture rtl of eth_tx_mii at 57( 2802) + 0 on 42;
-file . "../rtl/ptp_rx.vhd" "48d49605c89df6b11432765431e7c447e67b98c0" "20261105013213.286":
-  entity ptp_rx at 20( 1130) + 0 on 39;
-  architecture rtl of ptp_rx at 55( 2492) + 0 on 40;
-file . "../rtl/ptp_tx.vhd" "c7b4043b7fa0ef217e3a9ded7350b4f1bf89eb98" "20261105013213.285":
-  entity ptp_tx at 16( 963) + 0 on 37;
-  architecture rtl of ptp_tx at 55( 2517) + 0 on 38;
-file . "../rtl/ptp_pdelay_fsm.vhd" "507af1ccc10d9f2de1e7a9717ab6f0a60fad84d4" "20261105013213.284":
-  entity ptp_pdelay_fsm at 40( 2475) + 0 on 35;
-  architecture rtl of ptp_pdelay_fsm at 101( 5394) + 0 on 36;
-file . "../rtl/ptp_pdelay.vhd" "4a16ca956ac404b8161022ac46353f4fbffcda82" "20261105013213.251":
-  entity ptp_pdelay at 21( 1176) + 0 on 33;
-  architecture rtl of ptp_pdelay at 41( 1883) + 0 on 34;
-file . "../rtl/ptp_tstamp.vhd" "a08994920b7fbea60160d6d8f4596029885d6ff8" "20261105013213.251":
-  entity ptp_tstamp at 19( 1230) + 0 on 31;
-  architecture rtl of ptp_tstamp at 44( 2182) + 0 on 32;
-file . "../rtl/ptp_clock.vhd" "cc48b3895eec957569b4d776524ffbb52a78f4b8" "20261105013213.250":
-  entity ptp_clock at 19( 1181) + 0 on 29;
-  architecture rtl of ptp_clock at 50( 2412) + 0 on 30;
-file . "../rtl/eth_mii_cdc.vhd" "5109cf0e6cf0fd108d74625f4dfa2a95c15c4458" "20261105013213.249":
-  entity eth_mii_cdc at 46( 3026) + 0 on 27;
-  architecture rtl of eth_mii_cdc at 81( 4324) + 0 on 28;
-file . "../rtl/eth_async_fifo.vhd" "60267b92898fa0d3e670a064ac0116ef3ec7a833" "20261105013213.248":
-  entity eth_async_fifo at 28( 1781) + 0 on 25;
-  architecture rtl of eth_async_fifo at 54( 2475) + 0 on 26;
-file . "../rtl/eth_cdc_sync.vhd" "7a8784f00fae8ac32db12ebe92361ee875c30b5f" "20261105013213.224":
-  entity eth_sync_bit at 26( 1779) + 0 on 19;
-  architecture rtl of eth_sync_bit at 41( 2161) + 0 on 20;
-  entity eth_pulse_sync at 63( 2690) + 0 on 21;
-  architecture rtl of eth_pulse_sync at 77( 3155) + 0 on 22;
-  entity eth_rst_sync at 112( 3995) + 0 on 23;
-  architecture rtl of eth_rst_sync at 123( 4330) + 0 on 24;
-file . "../rtl/ptp_fifo.vhd" "632c07fbfd396ee68ac1d1c3c64b4214e2ad665d" "20261105013213.223":
-  entity ptp_fifo at 18( 1211) + 0 on 17;
-  architecture rtl of ptp_fifo at 43( 1919) + 0 on 18;
-file . "../rtl/eth_pkg.vhd" "32410dbb310f22f770a8735b2f2dc556ed38a291" "20261105013213.222":
+file . "tb_ptp_axil_master.vhd" "dc32dff3d914b9ad453e9dbd5b08402dbda86f68" "20260712073232.073":
+  entity tb_ptp_axil_master at 12( 699) + 0 on 77;
+  architecture sim of tb_ptp_axil_master at 20( 833) + 0 on 78;
+file . "tb_ptp_axil.vhd" "a21c4a2085cf97342b199bfc726e0954e04ecc4c" "20260712073232.072":
+  entity tb_ptp_axil at 5( 281) + 0 on 75;
+  architecture sim of tb_ptp_axil at 13( 408) + 0 on 76;
+file . "tb_ptp_soc.vhd" "72e3fc8504836cd09d73dd831ef87f56b9981d63" "20260712073232.071":
+  entity tb_ptp_soc at 5( 309) + 0 on 73;
+  architecture sim of tb_ptp_soc at 14( 455) + 0 on 74;
+file . "tb_ptp_top.vhd" "a82e882081b66e9767ad0881db7c642f9ae46264" "20260712073232.071":
+  entity tb_ptp_top at 5( 288) + 0 on 71;
+  architecture sim of tb_ptp_top at 13( 414) + 0 on 72;
+file . "tb_ptp_regs.vhd" "2af2be35c4e863cb446e745a40d279a7ac8456f0" "20260712073232.070":
+  entity tb_ptp_regs at 8( 378) + 0 on 69;
+  architecture sim of tb_ptp_regs at 16( 505) + 0 on 70;
+file . "tb_ptp_mac_seq.vhd" "ceee65b58f28f98f627117f414246da0994e3e4c" "20260712073232.070":
+  entity tb_ptp_mac_seq at 5( 313) + 0 on 67;
+  architecture sim of tb_ptp_mac_seq at 14( 469) + 0 on 68;
+file . "tb_ptp_mac_slave.vhd" "7a9894abc4a8745191daf3173037712801a388fc" "20260712073232.069":
+  entity tb_ptp_mac_slave at 6( 365) + 0 on 65;
+  architecture sim of tb_ptp_mac_slave at 15( 523) + 0 on 66;
+file . "tb_ptp_mac_pdelay.vhd" "6fb29e4313be011088f5894a919bb5fbb94ab2a2" "20260712073232.069":
+  entity tb_ptp_mac_pdelay at 6( 369) + 0 on 63;
+  architecture sim of tb_ptp_mac_pdelay at 15( 528) + 0 on 64;
+file . "tb_ptp_mac_sync.vhd" "717b9f1bf6b88737040601b35c8b94dea7bd98f0" "20260712073232.069":
+  entity tb_ptp_mac_sync at 6( 394) + 0 on 61;
+  architecture sim of tb_ptp_mac_sync at 15( 551) + 0 on 62;
+file . "tb_ptp_tx_pdelay.vhd" "523286bf8e879fe23e2dd673abd074ad6bd4d444" "20260712073232.068":
+  entity tb_ptp_tx_pdelay at 5( 297) + 0 on 59;
+  architecture sim of tb_ptp_tx_pdelay at 16( 497) + 0 on 60;
+file . "tb_ptp_rx.vhd" "8a609a38231ca2f3cc75df69f7fb5ae91db1c05d" "20260712073232.068":
+  entity tb_ptp_rx at 8( 456) + 0 on 57;
+  architecture sim of tb_ptp_rx at 17( 607) + 0 on 58;
+file . "tb_ptp_tx.vhd" "54554e463ec47554a81f7827fb801cb4853269d6" "20260712073232.067":
+  entity tb_ptp_tx at 6( 376) + 0 on 55;
+  architecture sim of tb_ptp_tx at 17( 569) + 0 on 56;
+file . "tb_ptp_pdelay_fsm.vhd" "8ebdf3ab9eca05c4a5e85f3e455bf2ed3836af0b" "20260712073232.067":
+  entity tb_ptp_pdelay_fsm at 7( 361) + 0 on 53;
+  architecture sim of tb_ptp_pdelay_fsm at 16( 520) + 0 on 54;
+file . "tb_ptp_pdelay.vhd" "18cb46ea162a4141f97394f362724685386a9c49" "20260712073232.067":
+  entity tb_ptp_pdelay at 5( 269) + 0 on 51;
+  architecture sim of tb_ptp_pdelay at 14( 418) + 0 on 52;
+file . "tb_ptp_tstamp.vhd" "6dcd9ce065ebcca0eddcb0361de3009b5a0e4404" "20260712073232.066":
+  entity tb_ptp_tstamp at 5( 241) + 0 on 49;
+  architecture sim of tb_ptp_tstamp at 14( 390) + 0 on 50;
+file . "tb_ptp_clock.vhd" "22432fb9722907ea7fe7ca72d7fb5413ebcd3931" "20260712073232.066":
+  entity tb_ptp_clock at 5( 267) + 0 on 47;
+  architecture sim of tb_ptp_clock at 14( 415) + 0 on 48;
+file . "../rtl/ptp_axil_master.vhd" "9937b0503f74e508751cbea5def187a1c38f35db" "20260712073232.065":
+  entity ptp_axil_master at 17( 1090) + 0 on 45;
+  architecture rtl of ptp_axil_master at 54( 2520) + 0 on 46;
+file . "../rtl/ptp_axil.vhd" "fc9829a8b6eec511417b55dcf2a0a521c93e296f" "20260712073232.065":
+  entity ptp_axil at 12( 669) + 0 on 43;
+  architecture rtl of ptp_axil at 58( 2121) + 0 on 44;
+file . "../rtl/ptp_top.vhd" "ec36944ba630ebe29c67d81ddbdb17454fa44a9d" "20260712073232.065":
+  entity ptp_top at 7( 428) + 0 on 41;
+  architecture rtl of ptp_top at 35( 1162) + 0 on 42;
+file . "../rtl/ptp_regs.vhd" "4df23771d74449a03cb82cd90943f6516b558f06" "20260712073232.064":
+  entity ptp_regs at 31( 2077) + 0 on 39;
+  architecture rtl of ptp_regs at 78( 4141) + 0 on 40;
+file . "../rtl/ptp_mac.vhd" "68371127f78b8a2b03f36bfd4d8f7d76a3709718" "20260712073232.064":
+  entity ptp_mac at 16( 960) + 0 on 37;
+  architecture rtl of ptp_mac at 77( 3927) + 0 on 38;
+file . "../rtl/eth_mac.vhd" "15be0c5c6963ea99df54f0ce6dc42956da0934eb" "20260712073232.062":
+  entity eth_mac at 13( 696) + 0 on 35;
+  architecture rtl of eth_mac at 58( 2544) + 0 on 36;
+file . "../rtl/eth_rx_mii.vhd" "92f203e2403ba79c167bb9a98869811cf2235a08" "20260712073232.062":
+  entity eth_rx_mii at 15( 827) + 0 on 33;
+  architecture rtl of eth_rx_mii at 52( 2427) + 0 on 34;
+file . "../rtl/eth_tx_mii.vhd" "baf704396c8f9f6a1959d65772f4a519ee692e21" "20260712073232.061":
+  entity eth_tx_mii at 16( 881) + 0 on 31;
+  architecture rtl of eth_tx_mii at 52( 2505) + 0 on 32;
+file . "../rtl/ptp_rx.vhd" "16e3ddede5e0cc781d156b92f45bf0c40bde2176" "20260712073232.061":
+  entity ptp_rx at 20( 1130) + 0 on 29;
+  architecture rtl of ptp_rx at 54( 2405) + 0 on 30;
+file . "../rtl/ptp_tx.vhd" "9786066657630a298ed76523dc5cc47350c6507e" "20260712073232.060":
+  entity ptp_tx at 5( 300) + 0 on 27;
+  architecture rtl of ptp_tx at 40( 1511) + 0 on 28;
+file . "../rtl/ptp_pdelay_fsm.vhd" "792e9e1d6ee65b368e76a154833e4a297604565b" "20260712073232.059":
+  entity ptp_pdelay_fsm at 22( 1284) + 0 on 25;
+  architecture rtl of ptp_pdelay_fsm at 69( 3256) + 0 on 26;
+file . "../rtl/ptp_pdelay.vhd" "4a16ca956ac404b8161022ac46353f4fbffcda82" "20260712073232.059":
+  entity ptp_pdelay at 21( 1176) + 0 on 23;
+  architecture rtl of ptp_pdelay at 41( 1883) + 0 on 24;
+file . "../rtl/ptp_tstamp.vhd" "77bcecc24e139011bc4b1f5486afa4a2357cc91b" "20260712073232.059":
+  entity ptp_tstamp at 19( 1230) + 0 on 21;
+  architecture rtl of ptp_tstamp at 44( 2182) + 0 on 22;
+file . "../rtl/ptp_clock.vhd" "655ea0cc9bcb40b919f291a7bed9ab21d97ed7fd" "20260712073232.058":
+  entity ptp_clock at 19( 1181) + 0 on 19;
+  architecture rtl of ptp_clock at 50( 2412) + 0 on 20;
+file . "../rtl/spw_fifo.vhd" "01bec46af938c36ea313687d3e1c4777aa03939c" "20260712073232.058":
+  entity spw_fifo at 8( 530) + 0 on 17;
+  architecture rtl of spw_fifo at 33( 1228) + 0 on 18;
+file . "../rtl/eth_pkg.vhd" "32410dbb310f22f770a8735b2f2dc556ed38a291" "20260712073232.057":
   package eth_pkg at 5( 265) + 0 on 15 body;
   package body eth_pkg at 19( 637) + 0 on 16;
-file . "../rtl/ptp_msg_pkg.vhd" "c915aa587a8ee0ced8ffe0881b3356dbcebfc20c" "20261105013213.222":
+file . "../rtl/ptp_msg_pkg.vhd" "c915aa587a8ee0ced8ffe0881b3356dbcebfc20c" "20260712073232.057":
   package ptp_msg_pkg at 31( 1427) + 0 on 13 body;
   package body ptp_msg_pkg at 129( 6572) + 0 on 14;
-file . "../rtl/ptp_pkg.vhd" "22b32bb51981484a4a77177c79e5eae1d0235028" "20261105013213.221":
+file . "../rtl/ptp_pkg.vhd" "22b32bb51981484a4a77177c79e5eae1d0235028" "20260712073232.056":
   package ptp_pkg at 18( 1009) + 0 on 11 body;
   package body ptp_pkg at 61( 2784) + 0 on 12;
