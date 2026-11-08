@@ -1,0 +1,12 @@
+# generado por run_regression.sh / build scripts
+sim/*
+!sim/build.sh
+sw/tests/
+__pycache__/
+fpga/rv128_proto_te0950/
+fpga/ooc/*/
+fpga/board/
+.Xil/
+*.jou
+*.log
+!sim/build.sh
