@@ -8,6 +8,10 @@
 -- toman valores viejos; se emite i3 VIEJO. La 1a de las R inyecta el comb,
 -- las R-1 restantes inyectan cero.
 -- Cambio de int_sel: limpieza sincrona total. Reset async activo bajo. VHDL-2008.
+-- AUDIT 2026-11: the normalisation ROUNDS HALF-UP, (i3 + 2**(sh-1)) >> sh
+-- (was a truncation with -0.5 LSB DC bias). Same contract as model/rf_model.py.
+-- The +2**(sh-1) is added at full 32-bit width; i3 is bounded by the sinc3
+-- gain (R^2 * 2^15 = 2^21 for R=32), far from the 32-bit wrap.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -96,8 +100,8 @@ begin
         end if;
 
         if valid_i = '1' or run_r > 0 then
-          i_o     <= sat16(shift_right(i3_i_r, sh_v));
-          q_o     <= sat16(shift_right(i3_q_r, sh_v));
+          i_o     <= sat16(shift_right(i3_i_r + shift_left(to_signed(1, 32), sh_v - 1), sh_v));
+          q_o     <= sat16(shift_right(i3_q_r + shift_left(to_signed(1, 32), sh_v - 1), sh_v));
           valid_o <= '1';
           i3_i_r <= i3_i_r + i2_i_r;
           i2_i_r <= i2_i_r + i1_i_r;

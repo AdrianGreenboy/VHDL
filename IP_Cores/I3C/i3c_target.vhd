@@ -43,12 +43,36 @@
 --      que el controller pueda apoderarse (Sr) o dejar caer SCL (continua).
 --    - Tras el bit 63 del payload ENTDAA libera SDA en la bajada siguiente
 --      para ceder el bus a la DA que envia el controller.
+--
+--  Audit 2026-11 changes (English):
+--    * T = 1 early release (generic T1_EARLY_REL, default true): the target
+--      drives the T bit high push-pull at the SCL falling edge and releases
+--      SDA T1_DRIVE_CLK clocks later, STILL DURING SCL LOW; the high-keeper
+--      holds the '1'. Previously SDA was released only after the SCL rising
+--      edge had crossed the 2FF synchronizer (~3 target clocks), which left
+--      zero margin against the controller's Sr seize at the end of q2 and
+--      made a push-pull fight possible with an asynchronous controller
+--      clock. The bus level seen by the controller is identical.
+--      Deviation note: the MIPI text describes the hand-off at the SCL
+--      rising edge; releasing earlier relies on the mandatory high-keeper.
+--    * The impure function getb() was replaced by plain combinational logic
+--      (rd_byte0 / rd_bytenx), identical function.
+--    * Output latency after an SCL edge is <= 3 target clocks (2FF + edge
+--      register + output register). For a controller on an independent
+--      clock use div_pp >= 2 (see i3c_controller.vhd / tb_i3c_async).
+--    * Scope: SDR only. HDR (ENTHDRx) is NOT supported; this target does
+--      not implement HDR-exit-pattern detection, so it must not be placed
+--      on a bus where HDR modes are used.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity i3c_target is
+  generic (
+    T1_EARLY_REL : boolean  := true;     -- release T=1 during SCL low (audit)
+    T1_DRIVE_CLK : positive := 1         -- clocks T=1 is driven before release
+  );
   port (
     clk       : in  std_logic;
     rst       : in  std_logic;                       -- sincrono, activo alto
@@ -163,6 +187,37 @@ architecture rtl of i3c_target is
   signal evda_p, evrst_p : std_logic := '0';
   signal rxd_r : std_logic_vector(7 downto 0) := (others => '0');
 
+  -- read-source byte selection as plain logic (was impure function getb)
+  signal rd_byte0, rd_bytenx : std_logic_vector(7 downto 0);
+  signal idx_nx              : unsigned(2 downto 0);
+  -- T = 1 early-release counter (audit 2026-11)
+  signal t1_cnt : natural range 0 to T1_DRIVE_CLK := 0;
+
+  function src_byte(sel : unsigned(2 downto 0); i : unsigned(2 downto 0);
+                    fifo, b, d, md : std_logic_vector(7 downto 0);
+                    p : std_logic_vector(47 downto 0);
+                    sts, wl, rl : std_logic_vector(15 downto 0))
+    return std_logic_vector is
+    variable ii : integer;
+  begin
+    ii := to_integer(i);
+    case sel is
+      when "000"  => return fifo;
+      when "001"  =>
+        if ii > 5 then ii := 5; end if;
+        return p(47 - 8*ii downto 40 - 8*ii);
+      when "010"  => return b;
+      when "011"  => return d;
+      when "100"  =>
+        if ii = 0 then return sts(15 downto 8); else return sts(7 downto 0); end if;
+      when "101"  =>
+        if ii = 0 then return wl(15 downto 8); else return wl(7 downto 0); end if;
+      when "110"  =>
+        if ii = 0 then return rl(15 downto 8); else return rl(7 downto 0); end if;
+      when others => return md;
+    end case;
+  end function;
+
   function pxor(v : std_logic_vector) return std_logic is
     variable x : std_logic := '0';
   begin
@@ -195,6 +250,12 @@ begin
   sda_o     <= sdao_r;
   sda_t     <= sdat_r;
 
+  idx_nx    <= idx + 1;
+  rd_byte0  <= src_byte(tsel, "000", tx_data, bcr, dcr, mdb, pid,
+                        status_in, mwl_r, mrl_r);
+  rd_bytenx <= src_byte(tsel, idx_nx, tx_data, bcr, dcr, mdb, pid,
+                        status_in, mwl_r, mrl_r);
+
   process(clk)
     variable scl_re, scl_fe : boolean;
     variable sta_ev, sto_ev : boolean;
@@ -204,35 +265,6 @@ begin
     variable nx   : gt_t;
     variable pay  : std_logic_vector(63 downto 0);
     variable morev : std_logic;
-
-    -- byte n del origen de lectura seleccionado (rango normalizado 7..0)
-    impure function getb(sel : unsigned(2 downto 0);
-                         i   : unsigned(2 downto 0))
-      return std_logic_vector is
-      variable ii : integer;
-      variable r  : std_logic_vector(7 downto 0);
-    begin
-      ii := to_integer(i);
-      case sel is
-        when "000"  => r := tx_data;
-        when "001"  =>
-          if ii > 5 then ii := 5; end if;
-          r := pid(47 - 8*ii downto 40 - 8*ii);
-        when "010"  => r := bcr;
-        when "011"  => r := dcr;
-        when "100"  =>
-          if ii = 0 then r := status_in(15 downto 8);
-          else r := status_in(7 downto 0); end if;
-        when "101"  =>
-          if ii = 0 then r := mwl_r(15 downto 8);
-          else r := mwl_r(7 downto 0); end if;
-        when "110"  =>
-          if ii = 0 then r := mrl_r(15 downto 8);
-          else r := mrl_r(7 downto 0); end if;
-        when others => r := mdb;
-      end case;
-      return r;
-    end function;
 
   begin
     if rising_edge(clk) then
@@ -453,13 +485,13 @@ begin
               if scl_fe then
                 case nxt_r is
                   when G_RD =>
-                    curb  <= getb(tsel, "000");
+                    curb  <= rd_byte0;
                     idx   <= (others => '0');
                     if tsel = "000" then
                       txren_p <= '1';
                     end if;
                     sdat_r <= '0';
-                    sdao_r <= getb(tsel, "000")(7);  -- primer bit ya
+                    sdao_r <= rd_byte0(7);           -- primer bit ya
                     txbit  <= to_unsigned(1, 4);
                     st <= G_RD;
                   when G_DAAP =>
@@ -641,6 +673,16 @@ begin
                   sdat_r <= '0';
                   sdao_r <= morev;                   -- bit T
                   txbit  <= to_unsigned(9, 4);
+                  t1_cnt <= 0;
+                end if;
+              elsif T1_EARLY_REL and txbit = 9 and tdrv = '1' and
+                    sdat_r = '0' and not scl_re then
+                -- T = 1: release during SCL low after T1_DRIVE_CLK clocks;
+                -- the high-keeper holds the level (audit 2026-11)
+                if t1_cnt = T1_DRIVE_CLK - 1 then
+                  sdat_r <= '1';
+                else
+                  t1_cnt <= t1_cnt + 1;
                 end if;
               elsif scl_re then
                 if txbit = 9 then
@@ -659,12 +701,12 @@ begin
               -- T=1 entregado; Sr/P los captura la logica global
               if scl_fe then
                 idx  <= idx + 1;
-                curb <= getb(tsel, idx + 1);
+                curb <= rd_bytenx;
                 if tsel = "000" then
                   txren_p <= '1';
                 end if;
                 sdat_r <= '0';
-                sdao_r <= getb(tsel, idx + 1)(7);
+                sdao_r <= rd_bytenx(7);
                 txbit  <= to_unsigned(1, 4);
                 st <= G_RD;
               end if;

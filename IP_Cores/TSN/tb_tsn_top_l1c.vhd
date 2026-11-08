@@ -11,6 +11,12 @@
 -- Fase 1: inyeccion concurrente por los 4 puertos (unicast/broadcast/unknown/
 -- filtrada); cada salida decodifica sus tramas, verifica contenido, destino
 -- esperado, orden por par (entrada,salida) y cobertura total.
+--
+-- Audit 2026-11: rx_src="00" is now a real MII (PHY clocks + CDC). This TB
+-- drives/samples the pins in step with its own /4 enable, so it now also
+-- provides a PHASE-LOCKED 25 MHz PHY clock (rising 20 ns after each drive /
+-- sample instant: clean setup/hold both ways). The asynchronous-clock case
+-- is covered by tb_tsn_ext.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -109,6 +115,8 @@ architecture sim of tb_tsn_top_l1c is
   signal checks_ok : std_logic_vector(3 downto 0) := (others => '0');
   type int4 is array (0 to 3) of integer;
   signal rxfr : int4 := (others => 0);
+  signal phy_clk : std_logic := '0';
+  signal phy4 : std_logic_vector(3 downto 0);
 
   function lfsr_next(s : unsigned(15 downto 0)) return unsigned is
   begin return s(14 downto 0) & (s(15) xor s(13) xor s(12) xor s(10)); end;
@@ -120,15 +128,19 @@ begin
   begin
     if rising_edge(clk) then
       if d = 3 then mii_ce <= '1'; d := 0; else mii_ce <= '0'; d := d+1; end if;
+      -- PHY clock: high from 2 cycles after each drive/sample edge, 20 ns
+      if d = 3 or d = 0 then phy_clk <= '1'; else phy_clk <= '0'; end if;
     end if;
   end process;
+  phy4 <= (others => phy_clk);
 
   dut : entity work.tsn_top
     port map (clk => clk, rst => rst, mii_ce => mii_ce,
       sel => sel, we => we, addr => addr, wdata => wdata, rdata => rdata,
       irq => irq, rx_src => rx_src,
       mii_txd => mii_txd, mii_tx_en => mii_tx_en,
-      mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv);
+      mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv,
+      mii_rx_clk => phy4, mii_tx_clk => phy4, rx_sfd => open, tx_sfd => open);
 
   -- programacion de la tabla por MMIO (3 pasos por entrada)
   p_tbl : process

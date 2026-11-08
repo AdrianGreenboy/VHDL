@@ -58,7 +58,9 @@ The RV32 core talks to the IP through nine word-aligned registers at base
 4. Pulse `GO` via `CMD`.
 5. Poll `STAT.DONE` (bit 16), then read `RESULT` for the captured status
    word(s), and drain received data words from `RXD` (pop-on-read).
-6. Write any value to `STAT` to clear the sticky bits before the next message.
+6. Clear the sticky bits before the next message: `STAT` is **write-1-to-clear
+   per bit** (audit 2026-11); write `0xFFFFFFFF` to clear all, or write back
+   the value read to clear exactly what was observed.
 
 The reference firmware `fw_m1553.s` (assembled with the project's `asm.py`)
 walks all five formats plus a timeout case and then DMA-doorbells an 8-word
@@ -103,8 +105,22 @@ Manchester data no level run exceeds 100 cycles, but a sync half lasts 150, so a
 run of `RUN_MIN..RUN_MAX` (125..375) ending in an edge marks the sync centre and
 its pre-edge level gives the word type. It then verifies the second sync half,
 samples 17 cells at quarter-points (`s0`/`s1` must differ or it flags a
-Manchester error), and checks odd parity. Isolated data words are rejected
-structurally (their sync fuses with idle), exactly as the standard requires.
+Manchester error), and checks odd parity.
+
+**Idle-level independence (audit 2026-11).** The sync is detected as two
+opposite 1.5-bit half runs whatever level `RXD` idles at. A run longer than
+`RUN_MAX` (first half merged with idle) gives a *tentative* centre; if the
+idle level was the opposite of the first half, cell 0 shows no mid-bit
+transition and the receiver re-anchors on the edge at the start of cell 0
+(the true centre). Failures while tentative are silent (noise after idle
+raises no error). Consequence: an isolated data word after idle is now
+decoded (the cores ignore data words outside a message).
+
+**Fail-safe transmitter timer.** Independent of the word FSM, a counter cuts
+`tx_en` when one transmission lasts `FS_TIMEOUT` cycles (default 80000 =
+800 us at 100 MHz; the longest legal continuous transmission of one terminal
+is 33 words = 660 us) and latches `fs_fault` (STAT b1), cleared only by an
+explicit `EN` 0 -> 1.
 
 ---
 
@@ -122,7 +138,17 @@ Implemented formats (all exercised in Layer 1c and Layer 4/5):
   (`00001`), Synchronize with data (`10001`). Unsupported mode codes raise
   Message Error.
 - **Broadcast** (RT31) — both RTs receive, none responds, Broadcast-Received
-  (BCR) bit is set in each.
+  (BCR) bit is set in each. Illegal broadcasts (broadcast + transmit,
+  broadcast Transmit Status, broadcast unsupported tr=1 mode codes) are
+  ignored: no `ev_cmd`, no change of the message in progress.
+- **Dual-redundant bus A/B (audit 2026-11).** `MSG.BUS` (b27) selects the bus
+  per BC message; each RT listens on both buses and answers on the bus the
+  command arrived on. A valid command for an RT on the *other* bus while a
+  message is in progress supersedes it: the RT cuts its current response
+  immediately and handles the new command on the new bus.
+- **Status-word flags.** Busy (b3), Subsystem Flag (b2) and Terminal Flag
+  (b0) come from `RTFLAGS`. With Busy set the RT answers transmit commands
+  with the status word only and does not store received data.
 
 Timing: RT response at mid-parity → mid-sync = `RESP_DELAY + 175` cycles
 (`RESP_DELAY = 425` → ~6 µs, inside the 4–12 µs window); BC status timeout
@@ -131,12 +157,17 @@ magic value.
 
 Error handling: parity, invalid sync, Manchester error, wrong word count and
 out-of-window response are all detected. An RT ignores an invalid message and
-sets Message Error; the BC times out. ME and BCR follow the standard's
+sets Message Error; the BC times out. Audit 2026-11 additions: any activity
+on the bus during the RT response gap (e.g. word count high) aborts the
+response (silence + ME); a word error on an awaited status word is `SERR`
+(not a timeout); the BC/RT timeouts can be deferred by a word in reception
+only by one word time; an empty TX FIFO aborts the message (RT: silence +
+ME; BC: `TX_UFLOW`, no OK). ME and BCR follow the standard's
 lifecycle: Transmit Status Word preserves them, a fresh valid command clears
 them.
 
 **Out of v1 scope (roadmap, §11):** dedicated Bus Monitor, message tables with
-their own DMA, dual A/B bus.
+their own DMA.
 
 ---
 
@@ -149,18 +180,24 @@ Offsets are word offsets, decoded from `addr(7:2)`.
 | 0x00 | `CTRL`   | RW  | b0 `EN` (sync reset of cores/FIFOs while 0), b1 `LOOP_INT` |
 | 0x04 | `RTADDR` | RW  | b4:0 RT0 addr, b12:8 RT1 addr |
 | 0x08 | `CMD`    | W1P | b0 `TX_FLUSH`, b1 `RX_FLUSH`, b2 `GO` |
-| 0x0C | `MSG`    | RW  | b0 `RTRT`, b1 `F_TR`, b6:2 `F_RT`, b11:7 `F_SA`, b16:12 `F_WC`, b21:17 `F2_RT`, b26:22 `F2_SA` |
-| 0x10 | `STAT`   | R   | live + sticky (below); **W clears stickies, same-cycle sets win** |
+| 0x0C | `MSG`    | RW  | b0 `RTRT`, b1 `F_TR`, b6:2 `F_RT`, b11:7 `F_SA`, b16:12 `F_WC`, b21:17 `F2_RT`, b26:22 `F2_SA`, b27 `BUS` (0 = A, 1 = B) |
+| 0x10 | `STAT`   | R   | live + sticky (below); **W: write-1-to-clear per sticky bit, same-cycle sets win** |
 | 0x14 | `TXD`    | W   | b15:0 data word → TX FIFO; **R** b6:0 level, b8 full |
 | 0x18 | `RXD`    | R   | pop-on-read: b15:0 data, b17:16 source (00 BC, 01 RT0, 10 RT1), b22:18 subaddr, b23 bcast, b31 `VALID` |
 | 0x1C | `IRQEN`  | RW  | bitmask over `STAT` |
 | 0x20 | `RESULT` | R   | b15:0 `stat1`, b31:16 `stat2` |
+| 0x24 | `RTFLAGS`| RW  | b0 RT0 `BUSY`, b1 RT0 `SSF`, b2 RT0 `TF`, b8 RT1 `BUSY`, b9 RT1 `SSF`, b10 RT1 `TF` (status-word bits) |
+| 0x28 | `RTBUS`  | R   | b0 RT0 bus of last command, b1 RT1 bus of last command, b4 `FS_BC`, b5 `FS_RT0`, b6 `FS_RT1` |
 
-**`STAT` layout.** Live: b0 `BC_BUSY`, b4 `TXF_EMPTY`, b5 `TXF_FULL`,
+**`STAT` layout.** Live: b0 `BC_BUSY`, b1 `FS_FAULT`, b2 `BC_BUS`, b4 `TXF_EMPTY`, b5 `TXF_FULL`,
 b6 `RXF_EMPTY`, b7 `RXF_FULL`, b14:8 `rxf_level`. Sticky (set-wins on the same
 cycle as a clearing write): b16 `DONE`, b17 `OK`, b18 `TOUT`, b19 `SERR`,
 b20 `MSG_ME`, b21 `RT0_CMD`, b22 `RT1_CMD`, b23 `RT0_ERR`, b24 `RT1_ERR`,
-b25 `RXF_OVF`, b26 `RT0_BCR`, b27 `RT1_BCR`.
+b25 `RXF_OVF`, b26 `RT0_BCR`, b27 `RT1_BCR`, b28 `TX_UFLOW`. RX-FIFO writes from
+BC, RT0 and RT1 in the same cycle (broadcast; RT->RT where the BC monitors the
+data the receiving RT stores) are serialized by a 4-entry queue, so an RT->RT
+message now yields **two** RX entries per data word (receiving RT + BC copy).
+Pads: `bus_{rx,tx,txen}_a` and `_b` (SoC top: `m1553_*` and `m1553_*_b`).
 
 **dmem contract.** `rdata` is **combinational** in the same cycle as `sel`; the
 core captures it on the request clock edge. A registered `rdata` passes Layer 2
@@ -202,13 +239,14 @@ RTL (`rtl/`):
 | `m1553_word_rx.vhd` | Manchester word receive engine (run-length sync hunter, quarter-point sampling, error flags) |
 | `m1553_rt_core.vhd` | Remote Terminal: command decode, response timing, ME/BCR lifecycle |
 | `m1553_bc_core.vhd` | Bus Controller: all message formats, response window, gap enforcement |
-| `m1553_mmio.vhd` | Register bank, TX/RX FIFOs, level IRQ, LOOP_INT, dmem contract, broadcast RX skid |
+| `m1553_mmio.vhd` | Register bank, TX/RX FIFOs, level IRQ, LOOP_INT, dmem contract, RX write queue, dual bus A/B |
+| `m1553_fifo.vhd` | Own FWFT FIFO (registered-read RAM + 1-deep prefetch, synchronous reset) |
 | `mem_subsys_m1553.vhd` | Memory subsystem clone with the `0xC000_0000` region decode |
 | `soc_top_m1553.vhd` | SoC top: RV32 core + mem_subsys + IP + AXI-Lite + DMA |
 | `soc_top_m1553_wrap.v` | Verilog wrapper for the block-design module reference |
 
-Shared source: `spw_fifo.vhd` (canonical parameterizable FWFT FIFO, reused at
-W=16 and W=24 — referenced from its origin, never duplicated).
+No shared sources: since the 2026-11 audit the IP uses its own `m1553_fifo`
+(it no longer borrows `spw_fifo` from the SpaceWire core).
 
 Testbenches (`tb/`) and reference model (`sim/`):
 
@@ -216,7 +254,8 @@ Testbenches (`tb/`) and reference model (`sim/`):
 |---|---|
 | `tb_m1553_1a.vhd` | 1a — TX engine vs independent event-driven receiver model |
 | `tb_m1553_1b.vhd` | 1b — RX engine vs procedural bit-bang transmitter with corruptions |
-| `tb_m1553_1c.vhd` | 1c — BC + 2 RTs RTL-vs-RTL, phase 0, cable watchdog |
+| `tb_m1553_1c.vhd` | 1c — BC + 2 RTs RTL-vs-RTL, phase 0, cable watchdog (single bus A) |
+| `tb_m1553_1d.vhd` | 1d — dual bus A/B, superseding command, response-gap guard, illegal broadcast, underflow, status flags, SERR, timeout vs garbage |
 | `tb_m1553_l2.vhd` | 2 — MMIO register bank vs dmem bus BFM |
 | `tb_m1553_l4.vhd` + `soc_stubs_l4.vhd` | 4 — full SoC vs ISS signature |
 | `iss_m1553.py` | ISS functional oracle (Layer 4 reference) |
@@ -244,11 +283,12 @@ never fails has no teeth.
 
 | Layer | What it checks | Signature |
 |---|---|---|
-| **1a** | TX engine vs independent receiver model (absolute-time sampling), + cable watchdog. 5 RTL mutations. | `400485ns` |
-| **1b** | RX engine vs bit-bang transmitter with parity/sync/Manchester/truncation/rate corruptions. 5 RX mutations. | `462205ns` |
+| **1a** | TX engine vs independent receiver model (absolute-time sampling), + cable watchdog, + fail-safe timer / abort instance. 6 RTL mutations. | `400485ns` |
+| **1b** | RX engine vs bit-bang transmitter with parity/sync/Manchester/truncation/rate corruptions, idle low and idle high. 6 RX mutations. | `678205ns` |
 | **1c** | BC + RT0 + RT1 RTL-vs-RTL: phase-0 anti-common-mode, independent cable watchdog, all five formats, ME/BCR lifecycle, timeout. 5 core mutations. | `1679825ns` |
-| **2**  | MMIO vs dmem BFM: combinational `rdata`, pop-on-read, sticky set-wins, level IRQ. 6 MMIO mutations. | `615665ns` |
-| **4**  | Full SoC (real `mem_subsys` + `m1553_mmio`) driven by a behavioral master running the exact firmware program, DMA-doorbelling an 8-word signature checked against the Python ISS. 2 mutations. | `552845ns` |
+| **1d** | Dual bus + message validation (D1..D10) with independent bit-bang injectors on A and B. 10 mutations. | `1288526ns` |
+| **2**  | MMIO vs dmem BFM: combinational `rdata`, pop-on-read, W1C stickies, level IRQ, RX write queue, RTFLAGS/RTBUS/MSG.BUS. 8 MMIO mutations. | `780885ns` |
+| **4**  | Full SoC (real `mem_subsys` + `m1553_mmio`) driven by a behavioral master running the exact firmware program, DMA-doorbelling an 8-word signature checked against the Python ISS. 2 mutations. | `552885ns` |
 | **firmware** | Assembled `fw_m1553.mem` run through a small RV32IM interpreter against the MMIO model — signature must equal the ISS. | matches ISS |
 
 Reproduce any layer:
@@ -256,11 +296,11 @@ Reproduce any layer:
 ```bash
 cd ~/m1553_ip
 ./run_1a.sh                                   # expect 400485ns
-./run_1b.sh                                   # expect 462205ns
+./run_1b.sh                                   # expect 678205ns
 ./run_1c.sh                                   # expect 1679825ns
-FIFO=~/spw_ip/spw_fifo.vhd ./run_l2.sh        # expect 615665ns
-RISCV_PKG=~/rv32i/riscv_pkg.vhd \
-  FIFO=~/spw_ip/spw_fifo.vhd ./run_l4.sh      # RTL vs ISS, 552845ns
+./run_1d.sh                                   # expect 1288526ns
+./run_l2.sh                                   # expect 780885ns
+RISCV_PKG=~/rv32i/riscv_pkg.vhd ./run_l4.sh   # RTL vs ISS, 552885ns
 ```
 
 ### Why two RTs, and the Layer 1c common-mode blind spot
@@ -443,8 +483,9 @@ PetaLinux / SD:
   transformer; split the pads into driver (`m1553_tx`, `m1553_txen`) and receiver
   (`m1553_rx`) against a real coupled bus; validate at the standard's electrical
   levels.
-- **Dual A/B bus.** Add the second (redundant) bus channel and channel-selection
-  logic; extend the cable watchdog to both.
+- **Dual A/B bus — done in RTL (audit 2026-11)**; pending: bus-B pin
+  assignment on the transceiver board (`m1553_pins.xdc`) and interop with a
+  real dual-redundant BC/RT.
 - **Bus Monitor.** A dedicated passive monitor terminal capturing all traffic to
   a ring buffer, independent of the BC/RT paths.
 - **Message tables + DMA.** BC message scheduling from a descriptor table in

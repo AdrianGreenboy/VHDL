@@ -1,5 +1,10 @@
 -- =============================================================================
 -- HERCOSSNUX Core 18 - MIPI CSI-2 RX
+-- DEPRECATED (AUDIT 2026-11): no longer instantiated anywhere. Its "4-lane
+-- deskew" was a 1-register passthrough. The real lane layer is now
+-- csi2_lane_rx.vhd (sync-byte alignment, deskew, merge, EoT) behind external
+-- PPI ports, followed by mipi_async_fifo.vhd. Kept only for history; it is not
+-- in create_project.tcl nor in run_all_sims.sh.
 -- L5: D-PHY RX model at byte-clock level (PPI).
 -- PHY-less pattern (like ETH LOOP_INT / PCIe PIPE): the electrical LP/HS
 -- differential layer is NOT modeled (TE0950 has no hard D-PHY). Instead this

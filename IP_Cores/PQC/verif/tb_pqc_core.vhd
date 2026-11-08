@@ -59,7 +59,7 @@ architecture sim of tb_pqc_core is
 
   signal kem_op    : std_logic_vector(1 downto 0) := "00";
   signal kem_start : std_logic := '0';
-  signal kem_done, kem_busy, kem_rej : std_logic;
+  signal kem_done, kem_busy : std_logic;
   signal kem_haddr : std_logic_vector(12 downto 0) := (others => '0');
   signal kem_hdin  : std_logic_vector(7 downto 0) := (others => '0');
   signal kem_hwe   : std_logic := '0';
@@ -84,7 +84,7 @@ begin
   dut : entity work.pqc_core
     port map (clk => clk, rst_n => rst_n, alg => alg,
               kem_op => kem_op, kem_start => kem_start, kem_done => kem_done,
-              kem_busy => kem_busy, kem_rej => kem_rej,
+              kem_busy => kem_busy,
               kem_haddr => kem_haddr, kem_hdin => kem_hdin, kem_hwe => kem_hwe,
               kem_hsel => kem_hsel, kem_hdout => kem_hdout,
               dsa_op => dsa_op, dsa_start => dsa_start,
@@ -106,6 +106,8 @@ begin
     type t_buf is array (0 to 4095) of integer;
     variable d_b, z_b, m_b, ek_b, dk_b, ct_b, ss_b : t_buf;
     variable xi_b, mu_b, pk_b, sk_b, sg_b : t_buf;
+
+    variable ncyc : integer := 0;
 
     procedure wait_clk (k : integer) is
     begin
@@ -155,9 +157,13 @@ begin
       kem_start <= '1';
       wait_clk(1);
       kem_start <= '0';
+      ncyc := 1;
       while kem_done = '0' loop
         wait_clk(1);
+        ncyc := ncyc + 1;
       end loop;
+      report "PQC CYCLES krun op=" & to_string(o) & " cycles=" &
+             integer'image(ncyc) severity note;
       wait_clk(4);
       kem_hsel <= '1';
       wait_clk(2);
@@ -191,9 +197,13 @@ begin
       dsa_start <= '1';
       wait_clk(1);
       dsa_start <= '0';
+      ncyc := 1;
       while dsa_done = '0' loop
         wait_clk(1);
+        ncyc := ncyc + 1;
       end loop;
+      report "PQC CYCLES drun op=" & to_string(o) & " cycles=" &
+             integer'image(ncyc) severity note;
       wait_clk(4);
       dsa_hsel <= '1';
       wait_clk(2);
@@ -247,7 +257,7 @@ begin
       assert v = dk_b(i) report "TB FAIL kem dk " & integer'image(i)
         severity failure;
       fnv(sigk, v);
-      kwrite(5000 + i, v);          -- park dk over the collision
+      kwrite(5760 + i, v);          -- park dk in the host scratch area
     end loop;
 
     for i in 0 to 31 loop
@@ -272,7 +282,7 @@ begin
       kwrite(i, v);
     end loop;
     for i in 0 to C_DK - 1 loop
-      kread(5000 + i, v);
+      kread(5760 + i, v);
       kwrite(2048 + i, v);
     end loop;
     krun("10");
@@ -282,7 +292,8 @@ begin
         severity failure;
       fnv(sigk, v);
     end loop;
-    assert kem_rej = '0' report "TB FAIL kem rejected" severity failure;
+    -- Acceptance (c = c') is verified through the KAT value of Kout; the
+    -- core no longer exports the implicit-rejection flag (audit 2026-11).
 
     assert to_hex(sigk) = "95e07091fa5b3cc4"
       report "TB FAIL kem signature moved: got " & to_hex(sigk) &

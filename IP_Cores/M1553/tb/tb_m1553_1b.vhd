@@ -8,6 +8,15 @@
 --   (debe ignorarse: su sync se funde con el idle), tasa 20% rapida (debe
 --   ignorarse) y glitch corto de bus.
 -- Cada caso comprueba los DELTAS exactos de valid/err_sync/err_manch/err_par.
+--
+-- Audit 2026-11: the receiver no longer assumes that RXD idles low. Cases
+-- 13..16 drive the line with idle HIGH (command and data words, glitch)
+-- and fail on the pre-audit receiver (a command whose first sync half
+-- merges with a high idle was lost). Case 8 now expects the isolated data
+-- word to be decoded (its sync is two opposite 1.5-bit half runs whatever
+-- the idle level); case 5 (broken second sync half from idle low) is
+-- indistinguishable from a data word with bit0 = 0 until later cells, so it
+-- must produce exactly one error of sync OR Manchester class and no valid.
 -- Mensajes de FALLO sin tildes.
 
 library ieee;
@@ -73,7 +82,8 @@ begin
                       kill_bit    : integer := -1;
                       bad_sync2   : boolean := false;
                       trunc_after : integer := -1;
-                      halfbit     : time    := T_HALF) is
+                      halfbit     : time    := T_HALF;
+                      idle        : std_logic := '0') is
       variable v : std_logic_vector(16 downto 0);
       variable p : std_logic := '1';
       variable b : std_logic;
@@ -94,7 +104,7 @@ begin
         -- segunda mitad rota: 0.5 bits a not wt y vuelta a wt, luego reposo
         line <= not wt; wait for halfbit;
         line <= wt;     wait for 2*halfbit;
-        line <= '0';
+        line <= idle;
         return;
       end if;
       line <= not wt;
@@ -116,7 +126,7 @@ begin
           line <= not b; wait for halfbit;
         end if;
       end loop;
-      line <= '0';                      -- reposo
+      line <= idle;                     -- reposo
     end procedure;
 
     -- snapshot y comprobacion de deltas exactos
@@ -197,8 +207,10 @@ begin
     -- caso 5: sync invalido (segunda mitad rota)
     snap;
     tx_word('1', x"FFFF", bad_sync2 => true);
-    wait for 5 us;
-    chk("5", 0, 1, 0, 0);
+    wait for 25 us;
+    assert n_valid = s_v and n_ep = s_ep and (n_es - s_es) + (n_em - s_em) = 1
+      report "FALLO caso 5: se esperaba exactamente un error sync/Manchester"
+      severity failure;
 
     -- caso 6: error Manchester en la celda 7 (dato elegido con b6=0 y b8=1
     -- para que la celda muerta no funda una rafaga >= RUN_MIN con sus
@@ -214,13 +226,13 @@ begin
     wait for 25 us;
     chk("7", 0, 0, 1, 0);
 
-    -- caso 8: data word AISLADA desde reposo: su primera mitad se funde con
-    -- el idle (rafaga > RUN_MAX) y NO debe dar valid; con dato 0x0000 el
-    -- falso candidato posterior cae en err_sync (determinista)
+    -- caso 8: data word AISLADA desde reposo (idle bajo): su primera mitad se
+    -- funde con el idle; el sync sigue siendo 1.5 + 1.5 opuestos -> valid
     snap;
     tx_word('0', x"0000");
     wait for 25 us;
-    chk("8", 0, 1, 0, 0);
+    chk("8", 1, 0, 0, 0);
+    chk_word("8", '0', x"0000");
 
     -- caso 9: palabra 20% rapida (semibit de 400 ns): rafagas < RUN_MIN,
     -- debe ignorarse por completo (dato con b0=1 para que la segunda mitad
@@ -253,6 +265,46 @@ begin
     wait for 5 us;
     chk("12", 2, 0, 0, 0);
     chk_word("12", '1', x"55AA");
+
+    -- casos 13..16: reposo en ALTO (independencia del nivel de reposo)
+    line <= '1';
+    wait for 20 us;
+    snap;
+    wait for 5 us;
+    chk("13a (paso a reposo alto)", 0, 0, 0, 0);
+    -- 13: command desde reposo alto (su primera mitad se funde con el idle)
+    snap;
+    tx_word('1', x"2A5C", idle => '1');
+    wait for 10 us;
+    chk("13", 1, 0, 0, 0);
+    chk_word("13", '1', x"2A5C");
+    -- 14: data word desde reposo alto (primera mitad baja: re-anclaje)
+    snap;
+    tx_word('0', x"C3A1", idle => '1');
+    wait for 10 us;
+    chk("14", 1, 0, 0, 0);
+    chk_word("14", '0', x"C3A1");
+    -- 15: command + 2 data contiguas desde reposo alto
+    snap;
+    tx_word('1', x"0841", idle => '1');
+    tx_word('0', x"FFFF", idle => '1');
+    tx_word('0', x"0000", idle => '1');
+    wait for 10 us;
+    chk("15", 3, 0, 0, 0);
+    chk_word("15", '0', x"0000");
+    -- 16: glitch corto a bajo con reposo alto: silencio total
+    snap;
+    line <= '0';
+    wait for 1 us;
+    line <= '1';
+    wait for 10 us;
+    chk("16", 0, 0, 0, 0);
+    -- 17: command desde reposo alto con paridad rota: el error se reporta
+    snap;
+    tx_word('1', x"7777", corrupt_par => true, idle => '1');
+    wait for 10 us;
+    chk("17", 0, 0, 0, 1);
+    line <= '0';
 
     wait for 20 us;
     assert busy = '0'

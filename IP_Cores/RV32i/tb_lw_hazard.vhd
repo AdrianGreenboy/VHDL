@@ -12,7 +12,7 @@ use std.textio.all;
 use work.riscv_pkg.all;
 
 entity tb_lw_hazard is
-  generic ( GAP : natural := 0 );
+  generic ( GAP : natural := 0; SYNC_MEM : boolean := false );
 end entity tb_lw_hazard;
 
 architecture sim of tb_lw_hazard is
@@ -56,6 +56,7 @@ begin
   clk <= not clk after PERIOD/2 when not sim_done else '0';
 
   dut : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (
       clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
@@ -64,11 +65,15 @@ begin
       dmem_req => dmem_req, dmem_ready => dmem_ready
     );
 
-  process(imem_addr)
+  process(imem_addr, clk)
     variable idx : natural;
   begin
     idx := to_integer(unsigned(imem_addr(9 downto 2)));
-    imem_instr <= instr_at(idx, GAP);
+    if not SYNC_MEM then
+      imem_instr <= instr_at(idx, GAP);
+    elsif rising_edge(clk) then
+      imem_instr <= instr_at(idx, GAP);     -- synchronous ROM model
+    end if;
   end process;
 
   process(clk)

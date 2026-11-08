@@ -106,6 +106,7 @@ begin
     variable ch1, ch2 : character;
     variable v, kexp, iexp : integer;
     variable n   : integer := 0;
+    variable ncyc : integer := 0;
     variable sig : unsigned(63 downto 0) := x"cbf29ce484222325";
     type t_buf is array (0 to 4095) of integer;
     variable skb, sigb : t_buf;
@@ -241,9 +242,15 @@ begin
         start <= '1';
         wait_clk(1);
         start <= '0';
+        ncyc := 1;
         while done = '0' loop
           wait_clk(1);
+          ncyc := ncyc + 1;
         end loop;
+        -- cycle count is reported only; signatures hash data, never time
+        report "PQC CYCLES sign vector=" & integer'image(n) &
+               " iters=" & integer'image(iexp) &
+               " cycles=" & integer'image(ncyc) severity note;
         wait_clk(4);
 
         if G_STAGE = 0 then

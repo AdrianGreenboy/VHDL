@@ -187,8 +187,14 @@ begin
     assert irq = '1'
       report "L2: irq deberia estar alto (RX_OK y IRQEN)" severity failure;
 
-    -- limpiar stickies escribiendo a STAT
+    -- STAT stickies are W1C per bit (audit 2026-11): writing 0 must NOT
+    -- clear them, writing 1 to b16 clears RX_OK only.
     wr32(A_STAT, x"00000000");
+    wait for 4 * TCLK;
+    rd32(A_STAT, rd);
+    assert rd(16) = '1'
+      report "L2: W1C violated - writing 0 to STAT cleared RX_OK" severity failure;
+    wr32(A_STAT, x"00010000");
     wait for 4 * TCLK;
     rd32(A_STAT, rd);
     if G_MUT = 2 then

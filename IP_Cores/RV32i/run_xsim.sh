@@ -39,7 +39,7 @@ case "${1:-all}" in
                   control.vhd csr.vhd dp_ram.vhd cpu.vhd axil_soc.vhd soc_top.vhd tb_accel.vhd ;;
   accel_pipe)
     run_tb tb_accel_pipe riscv_pkg.vhd alu.vhd regfile.vhd muldiv.vhd immgen.vhd \
-                  control.vhd csr.vhd dp_ram.vhd cpu_pipeline.vhd axil_soc.vhd soc_top_pipe.vhd tb_accel_pipe.vhd ;;
+                  control.vhd csr.vhd dp_ram.vhd cpu_pipeline.vhd axil_soc.vhd rv32_bootrom_pkg.vhd boot_loader.vhd soc_top_pipe.vhd tb_accel_pipe.vhd ;;
   master)
     run_tb tb_master riscv_pkg.vhd alu.vhd regfile.vhd muldiv.vhd immgen.vhd \
                   control.vhd csr.vhd dp_ram.vhd cpu_pipeline.vhd axi4_master.vhd \
@@ -57,7 +57,7 @@ case "${1:-all}" in
   soc_master)
     run_tb tb_soc_master riscv_pkg.vhd alu.vhd regfile.vhd muldiv.vhd immgen.vhd \
                   control.vhd csr.vhd dp_ram.vhd cpu_pipeline.vhd dma_burst.vhd \
-                  mem_subsys_dma.vhd axil_soc.vhd soc_top_master.vhd axi_ddr_sim.vhd tb_soc_master.vhd ;;
+                  mem_subsys_dma.vhd axil_soc.vhd rv32_bootrom_pkg.vhd boot_loader.vhd soc_top_master.vhd axi_ddr_sim.vhd tb_soc_master.vhd ;;
   all)
     run_tb tb_alu    riscv_pkg.vhd alu.vhd tb_alu.vhd
     run_tb tb_muldiv riscv_pkg.vhd muldiv.vhd tb_muldiv.vhd

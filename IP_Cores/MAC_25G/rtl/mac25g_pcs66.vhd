@@ -14,6 +14,16 @@
 -- Mismo scrambler, mismo orden de bits y misma convencion de sync header que
 -- pcs_tx_datapath / pcs_rx_datapath del Core 19 (ver README, seccion 3).
 --
+-- Sync header (audit 2026-11, fix A2): block bit 0 is the FIRST bit on the
+-- wire; IEEE 802.3 Fig. 49-7 sends data = 0,1 and control = 1,0, so
+--   data    -> out_block(1 downto 0) = "10"   (bit 0 = '0' first)
+--   control -> out_block(1 downto 0) = "01"
+-- (inverted before the audit; MAC_10G's eth21_gtmap compensated for it and
+-- now maps wire0 <- block(0) directly, so the MAC_10G wire is unchanged).
+-- RX: "10" data, "01" control, "00"/"11" INVALID -> the block is replaced
+-- by an /E/ control block (clause 49 R_TYPE = E), so the MAC aborts a frame
+-- that contains a corrupted header instead of decoding it as control.
+--
 -- MIT License.
 -------------------------------------------------------------------------------
 library ieee;
@@ -44,7 +54,8 @@ begin
   begin
     if rising_edge(clk) then
       if in_valid = '1' then
-        if in_is_data = '1' then sync_d1 <= "01"; else sync_d1 <= "10"; end if;
+        -- IEEE order: data = '0','1' on the wire (block(0) first)
+        if in_is_data = '1' then sync_d1 <= "10"; else sync_d1 <= "01"; end if;
       end if;
     end if;
   end process;
@@ -65,7 +76,8 @@ entity mac25g_pcs66_rx is
     in_block    : in  std_logic_vector(65 downto 0);
     out_valid   : out std_logic;
     out_payload : out std_logic_vector(63 downto 0);
-    out_is_data : out std_logic
+    out_is_data : out std_logic;
+    out_hdr_ok  : out std_logic          -- sync header of this block valid
   );
 end entity mac25g_pcs66_rx;
 
@@ -86,6 +98,9 @@ begin
   end process;
 
   out_valid   <= des_valid;
-  out_payload <= des_dout;
-  out_is_data <= '1' when sync_d1 = "01" else '0';
+  -- invalid header ("00"/"11"): /E/ block (type 0x1E, eight /E/ = 0x1E)
+  out_payload <= des_dout when (sync_d1(0) xor sync_d1(1)) = '1'
+                 else x"3C78F1E3C78F1E1E";
+  out_is_data <= '1' when sync_d1 = "10" else '0';
+  out_hdr_ok  <= sync_d1(0) xor sync_d1(1);
 end architecture rtl;

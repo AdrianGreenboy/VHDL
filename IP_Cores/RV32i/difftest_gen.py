@@ -12,6 +12,7 @@
 #    - expected.txt : el estado final de los 32 registros (hex)
 #
 #  x1 queda reservado como puntero base (=0) para loads/stores; nunca se escribe.
+#  Loads/stores cover lw/lh/lhu/lb/lbu/sw/sh/sb (naturally aligned).
 # =============================================================================
 import sys, random
 
@@ -128,15 +129,29 @@ def gen(seed, n):
             else:
                 emit(enc_u(imm, rd, 0x17), (rd, s32(pc + (imm << 12))))    # auipc
 
-        else:  # ls : lw/sw con base x1 (=0) y offset alineado en [0,60]
-            off = rng.randint(0, 15) * 4
-            if rng.random() < 0.5:      # sw x_src, off(x1)
+        else:  # ls : loads/stores of every width, naturally aligned, base x1 (=0)
+            kind = rng.choice(["w", "w", "h", "b"])
+            size = {"w": 4, "h": 2, "b": 1}[kind]
+            off = rng.randint(0, 63 // size) * size          # aligned, in [0,63]
+            if rng.random() < 0.5:      # sw/sh/sb x_src, off(x1)
                 src = rng.choice(reg_pool)
-                mem[off] = reg[src] & MASK
-                emit(enc_s(off, src, 1, 2, 0x23))
-            else:                        # lw rd, off(x1)
-                res = mem.get(off, 0)
-                emit(enc_i(off, 1, 2, rd, 0x03), (rd, res))
+                v = reg[src] & MASK
+                for k in range(size):
+                    mem[off + k] = (v >> (8 * k)) & 0xFF
+                f3 = {"w": 2, "h": 1, "b": 0}[kind]
+                emit(enc_s(off, src, 1, f3, 0x23))
+            else:                        # lw/lh/lhu/lb/lbu rd, off(x1)
+                v = sum(mem.get(off + k, 0) << (8 * k) for k in range(size))
+                uns = kind != "w" and rng.random() < 0.5
+                if kind == "w":
+                    f3, res = 2, v
+                elif kind == "h":
+                    f3 = 5 if uns else 1
+                    res = v if uns else s32(v - (1 << 16) if v & 0x8000 else v)
+                else:
+                    f3 = 4 if uns else 0
+                    res = v if uns else s32(v - (1 << 8) if v & 0x80 else v)
+                emit(enc_i(off, 1, f3, rd, 0x03), (rd, res))
 
     # terminador: salto a si mismo (beq x0,x0,0)
     emit(0x00000063)

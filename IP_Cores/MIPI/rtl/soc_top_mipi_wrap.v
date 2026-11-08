@@ -23,6 +23,13 @@ module soc_top_mipi_wrap #(
     parameter integer S_ADDR_W = 16,
     parameter integer M_ADDR_W = 40
 )(
+    // AUDIT 2026-11: D-PHY RX PPI (tie to 0 when no PHY is attached) + MIPI IRQ
+    input  wire        ppi_clk,
+    input  wire [31:0] ppi_byte,
+    input  wire [3:0]  ppi_valid,
+    input  wire [3:0]  ppi_active,
+    input  wire [3:0]  ppi_sync,
+    output wire        mipi_irq,
     input  wire aclk,
     input  wire aresetn,
 
@@ -195,7 +202,14 @@ module soc_top_mipi_wrap #(
         .mipi_bvalid  (mipi_axi_bvalid),
         .mipi_bready  (mipi_axi_bready),
 
-        .irq_out (irq_out)
+        .irq_out (irq_out),
+
+        .ppi_clk    (ppi_clk),
+        .ppi_byte   (ppi_byte),
+        .ppi_valid  (ppi_valid),
+        .ppi_active (ppi_active),
+        .ppi_sync   (ppi_sync),
+        .mipi_irq   (mipi_irq)
     );
 
 endmodule

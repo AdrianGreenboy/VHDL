@@ -70,7 +70,7 @@ begin
   dut : entity work.spw_tx
     port map (
       clk         => clk,
-      arstn       => arstn,
+      rst       => not arstn,
       en          => en,
       div         => div,
       txen        => txen,

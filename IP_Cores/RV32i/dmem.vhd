@@ -16,7 +16,8 @@ use work.riscv_pkg.all;
 
 entity dmem is
   generic (
-    DEPTH : natural := 256               -- numero de palabras
+    DEPTH : natural := 256;              -- numero de palabras
+    SYNC_READ : boolean := false         -- true: 1-cycle synchronous read
   );
   port (
     clk   : in  std_logic;
@@ -47,5 +48,15 @@ begin
     end if;
   end process;
 
-  rdata <= mem(widx);
+  g_async : if not SYNC_READ generate
+    rdata <= mem(widx);
+  end generate;
+  g_sync : if SYNC_READ generate
+    process(clk)
+    begin
+      if rising_edge(clk) then
+        rdata <= mem(widx);          -- read-first
+      end if;
+    end process;
+  end generate;
 end architecture rtl;

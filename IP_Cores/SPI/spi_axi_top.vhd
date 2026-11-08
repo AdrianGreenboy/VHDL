@@ -15,16 +15,41 @@
 --    0x04 STATUS   (r)  [0]=busy [1]=tx_empty [2]=tx_full [3]=rx_empty
 --                       [4]=rx_full [5]=rx_ovf* [6]=tx_ovf*
 --                       [7]=dma_busy(pegajoso) [8]=dma_done*
---                  (w)  cualquier escritura limpia los stickies (*)
+--                       audit 2026-11 additions:
+--                       [9]=tx_urun*  engine ran out of TX bytes while the
+--                                     DMA still owed bytes (SCLK stalled,
+--                                     CS kept asserted, no data lost)
+--                       [10]=dma_err* DMA start refused (CTRL.en=0 or a
+--                                     transfer already running)
+--                       [11]=dma_abort* transfer ended by DMA_CTRL.abort
+--                       [12]=axi_err* RRESP/BRESP error or RLAST mismatch
+--                  (w)  WRITE-1-TO-CLEAR per bit (audit 2026-11): a '1'
+--                       clears that sticky only; a set event in the same
+--                       cycle wins over the clear.
 --    0x08 CLKDIV   (rw) medio periodo de SCLK en ciclos (1 -> 50 MHz)
---    0x0C TXDATA   (w)  push PIO al FIFO TX
+--    0x0C TXDATA   (w)  push PIO al FIFO TX (audit 2026-11: while a DMA
+--                       transfer owns the FIFOs the write is dropped and
+--                       raises tx_ovf)
 --    0x10 RXDATA   (r)  pop PIO del FIFO RX
 --    0x14 TXLVL    (r)  nivel FIFO TX      0x18 RXLVL (r) nivel FIFO RX
 --    0x1C DMA_TXA  (rw) offset DDR de lectura (alineado a 4)
 --    0x20 DMA_RXA  (rw) offset DDR de escritura (alineado a 4)
 --    0x24 DMA_LEN  (rw) [23:0] longitud en BYTES
 --    0x28 DMA_CTRL (w)  [0]=start [1]=tx_en [2]=rx_en [15:8]=dummy
+--                       [3]=abort (audit 2026-11): latched, honoured at the
+--                           next burst boundary; an AXI burst in flight is
+--                           always completed
+--                       [4]=fifo_flush (audit 2026-11): empties both FIFOs;
+--                           deferred until the DMA is idle if it is running
 --                  (r)  readback de tx_en/rx_en/dummy
+--
+--  CS during DMA (audit 2026-11): while the DMA owns the transfer the CS_n
+--  pad is held asserted (implicit cs_force), so a TX FIFO underrun no
+--  longer raises CS in the middle of the transaction: the engine simply
+--  stalls SCLK at its idle level until the next byte arrives and the event
+--  is reported through STATUS.tx_urun. CS is released when the DMA ends.
+--  A DMA start with CTRL.en = 0 is refused (it could never complete) and
+--  raises STATUS.dma_err.
 --
 --  dma_busy es pegajoso al estilo de mem_subsys_dma: sube en el mismo ciclo
 --  del start (deteccion combinacional) y baja cuando el DMA de verdad
@@ -108,6 +133,14 @@ architecture rtl of spi_axi_top is
   signal dma_go       : std_logic;
   signal dma_busy     : std_logic;
   signal busy_sticky, dma_started, done_sticky : std_logic := '0';
+  -- audit 2026-11
+  signal rst_i                 : std_logic;
+  signal dma_abort_p           : std_logic := '0';
+  signal flush_pend, fifo_clr  : std_logic := '0';
+  signal dma_aborted, dma_txpend, dma_axierr : std_logic;
+  signal urun_s, dmaerr_s, abort_s, axierr_s : std_logic := '0';
+  signal eng_busy_q            : std_logic := '0';
+  signal dma_ok                : std_logic;
 
   -- motor
   signal eng_txd  : std_logic_vector(7 downto 0);
@@ -139,27 +172,31 @@ begin
   pio_tx_wr <= '1' when (wr_acc = '1' and addr = x"0C") else '0';
   pio_rx_rd <= '1' when (rd_acc = '1' and addr = x"10") else '0';
 
+  rst_i <= not aresetn;             -- synchronous reset for the private FIFOs
+
   -- deteccion combinacional del start (para el busy pegajoso, mismo ciclo)
   dma_go <= '1' when (wr_acc = '1' and addr = x"28" and wdata(0) = '1') else '0';
+  -- a start is only accepted with the engine enabled and no transfer running
+  dma_ok <= '1' when (en = '1' and busy_sticky = '0' and dma_busy = '0') else '0';
 
   -- los FIFOs son del DMA mientras este corre; PIO el resto del tiempo
   txf_wr    <= dma_tx_wr when dma_busy = '1' else pio_tx_wr;
   txf_wdata <= dma_tx_wdata when dma_busy = '1' else wdata(7 downto 0);
   rxf_rd    <= dma_rx_rd when dma_busy = '1' else pio_rx_rd;
 
-  u_txf : entity work.byte_fifo
+  u_txf : entity work.spi_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i, clr => fifo_clr,
       wr_en => txf_wr, wr_data => txf_wdata, full => txf_full,
       rd_en => txf_rd, rd_data => txf_rdata, empty => txf_empty,
       level => txf_lvl
     );
 
-  u_rxf : entity work.byte_fifo
+  u_rxf : entity work.spi_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i, clr => fifo_clr,
       wr_en => rxf_wr, wr_data => eng_rxd, full => rxf_full,
       rd_en => rxf_rd, rd_data => rxf_rdata, empty => rxf_empty,
       level => rxf_lvl
@@ -181,7 +218,8 @@ begin
       sclk_o => sclk_o, mosi_o => mosi_s, miso_i => miso_eff, cs_n_o => eng_csn
     );
 
-  cs_n_o <= '0' when csf_r = '1' else eng_csn;
+  -- CS held asserted for the whole DMA transfer (audit 2026-11)
+  cs_n_o <= '0' when (csf_r = '1' or dma_busy = '1') else eng_csn;
 
   -- loopback interno de auto-test (antes de los pads)
   mosi_o   <= mosi_s;
@@ -193,7 +231,8 @@ begin
       clk => clk, aresetn => aresetn, ddr_base => ddr_base,
       tx_addr => txa_r, rx_addr => rxa_r, nbytes => len_r,
       tx_en => txen_r, rx_en => rxen_r, dummy => dummy_r,
-      start => dma_start, busy => dma_busy,
+      start => dma_start, abort => dma_abort_p, busy => dma_busy,
+      aborted => dma_aborted, tx_pend => dma_txpend, axi_err => dma_axierr,
       txf_wr => dma_tx_wr, txf_wdata => dma_tx_wdata, txf_lvl => txf_lvl,
       rxf_rd => dma_rx_rd, rxf_rdata => rxf_rdata, rxf_lvl => rxf_lvl,
       m_axi_awaddr => m_axi_awaddr, m_axi_awlen => m_axi_awlen,
@@ -229,8 +268,14 @@ begin
         txen_r <= '0'; rxen_r <= '0'; dummy_r <= (others => '0');
         dma_start <= '0';
         busy_sticky <= '0'; dma_started <= '0'; done_sticky <= '0';
+        dma_abort_p <= '0'; flush_pend <= '0'; fifo_clr <= '0';
+        urun_s <= '0'; dmaerr_s <= '0'; abort_s <= '0'; axierr_s <= '0';
+        eng_busy_q <= '0';
       else
-        dma_start <= '0';
+        dma_start   <= '0';
+        dma_abort_p <= '0';
+        fifo_clr    <= '0';
+        eng_busy_q  <= eng_busy;
 
         if wr_acc = '1' then
           case addr is
@@ -243,8 +288,14 @@ begin
               csf_r   <= wdata(5);
               irqen_r <= wdata(6);
               loopi_r <= wdata(7);
-            when x"04" =>                -- limpia stickies
-              tx_ovf <= '0'; rx_ovf <= '0'; done_sticky <= '0';
+            when x"04" =>                -- W1C per bit (audit 2026-11)
+              if wdata(5)  = '1' then rx_ovf      <= '0'; end if;
+              if wdata(6)  = '1' then tx_ovf      <= '0'; end if;
+              if wdata(8)  = '1' then done_sticky <= '0'; end if;
+              if wdata(9)  = '1' then urun_s      <= '0'; end if;
+              if wdata(10) = '1' then dmaerr_s    <= '0'; end if;
+              if wdata(11) = '1' then abort_s     <= '0'; end if;
+              if wdata(12) = '1' then axierr_s    <= '0'; end if;
             when x"08" =>
               clkdiv_r <= unsigned(wdata(DIV_W-1 downto 0));
             when x"1C" => txa_r <= wdata;
@@ -254,16 +305,41 @@ begin
               txen_r  <= wdata(1);
               rxen_r  <= wdata(2);
               dummy_r <= wdata(15 downto 8);
-              if wdata(0) = '1' then dma_start <= '1'; end if;
+              if wdata(0) = '1' then
+                if dma_ok = '1' then
+                  dma_start <= '1';
+                else
+                  dmaerr_s <= '1';       -- refused: could never complete
+                end if;
+              end if;
+              if wdata(3) = '1' then dma_abort_p <= '1'; end if;
+              if wdata(4) = '1' then flush_pend  <= '1'; end if;
             when others => null;
           end case;
         end if;
 
         if txf_wr = '1' and txf_full = '1' then tx_ovf <= '1'; end if;
         if eng_rxv = '1' and rxf_full = '1' then rx_ovf <= '1'; end if;
+        -- PIO TXDATA write while the DMA owns the FIFO: dropped -> report it
+        if pio_tx_wr = '1' and dma_busy = '1' then tx_ovf <= '1'; end if;
+
+        -- TX underrun: the engine closed its byte stream (busy falling)
+        -- while the DMA still owed TX bytes
+        if eng_busy_q = '1' and eng_busy = '0' and dma_busy = '1' and
+           dma_txpend = '1' then
+          urun_s <= '1';
+        end if;
+        if dma_aborted = '1' then abort_s  <= '1'; end if;
+        if dma_axierr  = '1' then axierr_s <= '1'; end if;
+
+        -- deferred FIFO flush: executes only while the DMA is idle
+        if flush_pend = '1' and dma_busy = '0' and dma_start = '0' then
+          fifo_clr   <= '1';
+          flush_pend <= '0';
+        end if;
 
         -- busy pegajoso + done, patron de mem_subsys_dma
-        if dma_go = '1' then
+        if dma_go = '1' and dma_ok = '1' then
           busy_sticky <= '1';
           done_sticky <= '0';
         end if;
@@ -294,6 +370,8 @@ begin
           rdata(3) <= rxf_empty; rdata(4) <= rxf_full;
           rdata(5) <= rx_ovf;    rdata(6) <= tx_ovf;
           rdata(7) <= busy_sticky; rdata(8) <= done_sticky;
+          rdata(9) <= urun_s;      rdata(10) <= dmaerr_s;
+          rdata(11) <= abort_s;    rdata(12) <= axierr_s;
         when x"08" =>
           rdata(DIV_W-1 downto 0) <= std_logic_vector(clkdiv_r);
         when x"10" =>

@@ -28,7 +28,16 @@
 --   0x3C LEN_CFG   [10:0] L min [26:16] L max (payload UDP, 18..1472)
 --   0x40 LEN_STEP  0x44 GEN_COUNT
 --   0x48 TXCLK_MEAS / 0x4C RXCLK_MEAS  (f = valor * 1280 Hz)
+--   0x50 PAUSE_CTRL RW b0 HONOR b1 AUTO b2 RX_HOLD (RX FIFO consumer
+--                      stalled) [31:16] XOFF quanta       (audit 2026-11)
+--   0x54 PAUSE_WM  RW  [15:0] low [31:16] high watermark (RX FIFO words)
+--   0x58 PAUSE_SWQ RW  [15:0] quanta of CMD.SEND_PAUSE (CMD b6)
 --   0x80..0xD8     contadores 0..22 (instantanea)
+--   0xDC..0xF8     contadores 23..30: TX_PAUSE PAUSE_HONOURED TX_KEEP_ERR
+--                  PAUSED_CYCLES RX_PAUSE RX_CTRL RX_FIFO_DROP RX_FIFO_MAX
+--   STATUS b6 PAUSED b7 XOFF. Unmapped offsets: SLVERR; RO: OKAY, ignored.
+--   WSTRB honoured per byte lane. CMD_TIMEOUT kills the command (a domain
+--   whose clock comes back later does not execute it). Optional por_n.
 --
 -- Cruces de reloj (como el Core 20, ahora con DOS dominios rapidos):
 --   * CMD: registro AXI estable + un toggle a cada dominio; cada dominio
@@ -51,6 +60,8 @@ entity eth21_top is
     SLIP_WAIT : natural := 64
   );
   port (
+    -- chip power-on reset (ASIC), asynchronous, active low; '1' = FPGA
+    por_n         : in  std_logic := '1';
     s_axi_aclk    : in  std_logic;
     s_axi_aresetn : in  std_logic;
     s_axi_awaddr  : in  std_logic_vector(7 downto 0);
@@ -104,14 +115,36 @@ architecture rtl of eth21_top is
   constant ID_MAGIC : std_logic_vector(31 downto 0) := x"47544521";
   constant NCNT     : natural := 23;
 
-  signal rst_axi : std_logic;
+  signal rst_axi, por_axi, por_tx, por_rx : std_logic;
+  signal r_pctrl  : std_logic_vector(31 downto 0) := x"FFFF0000";
+  signal r_wm     : std_logic_vector(31 downto 0) := x"01800080";
+  signal r_swq    : std_logic_vector(15 downto 0) := (others => '0');
+  signal cmd_kill, t_kill_s, x_kill_s, t_kill, x_kill : std_logic := '0';
+  signal bresp_i, rresp_i : std_logic_vector(1 downto 0) := "00";
+  signal t_pctrl, x_pctrl, x_wm : std_logic_vector(31 downto 0) := (others => '0');
+  signal t_swq    : std_logic_vector(15 downto 0) := (others => '0');
+  signal t_spause : std_logic := '0';
+  signal t_pstb, t_xoff, t_paused, a_paused, a_xoff : std_logic;
+  signal t_pq, x_pq : std_logic_vector(15 downto 0);
+  signal x_pstb, x_xoff : std_logic;
+  signal t_cnt2, t_shadow2, x_cnt2, x_shadow2 : std_logic_vector(4*32-1 downto 0) := (others => '0');
+
+  function merge(old, d : std_logic_vector(31 downto 0); st : std_logic_vector(3 downto 0))
+    return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0) := old;
+  begin
+    for b in 0 to 3 loop
+      if st(b) = '1' then r(8*b+7 downto 8*b) := d(8*b+7 downto 8*b); end if;
+    end loop;
+    return r;
+  end function;
 
   -- ---- AXI ----
   signal awready_i, wready_i, bvalid_i, arready_i, rvalid_i : std_logic := '0';
   signal rdata_i    : std_logic_vector(31 downto 0) := (others => '0');
   signal r_scratch  : std_logic_vector(31 downto 0) := (others => '0');
   signal r_ctrl     : std_logic_vector(9 downto 0) := (others => '0');
-  signal r_cmd      : std_logic_vector(4 downto 0) := (others => '0');
+  signal r_cmd      : std_logic_vector(5 downto 0) := (others => '0');  -- b5 = SEND_PAUSE
   signal r_gtctrl   : std_logic_vector(5 downto 0) := (others => '0');
   signal r_gap      : std_logic_vector(15 downto 0) := (others => '0');
   signal r_own_lo, r_peer_lo, r_own_ip, r_peer_ip, r_ports, r_count : std_logic_vector(31 downto 0) := (others => '0');
@@ -138,7 +171,7 @@ architecture rtl of eth21_top is
   signal t_cmd_stb, t_snap_stb : std_logic;
   signal t_cmd_r, t_go, t_ack1, t_ack2, t_snap_r, t_snap_ack : std_logic := '0';
   signal t_ctrl   : std_logic_vector(9 downto 0) := (others => '0');
-  signal t_cmd    : std_logic_vector(4 downto 0) := (others => '0');
+  signal t_cmd    : std_logic_vector(5 downto 0) := (others => '0');
   signal t_own, t_peer : std_logic_vector(47 downto 0) := (others => '0');
   signal t_oip, t_pip, t_ports : std_logic_vector(31 downto 0) := (others => '0');
   signal t_lmin, t_lmax, t_lstep : unsigned(10 downto 0) := (others => '0');
@@ -156,7 +189,7 @@ architecture rtl of eth21_top is
   signal r_cmd_stb, r_snap_stb : std_logic;
   signal r_cmd_r, r_go, r_ack1, r_ack2, r_snap_r, r_snap_ack : std_logic := '0';
   signal x_ctrl   : std_logic_vector(9 downto 0) := (others => '0');
-  signal x_cmd    : std_logic_vector(4 downto 0) := (others => '0');
+  signal x_cmd    : std_logic_vector(5 downto 0) := (others => '0');
   signal x_own, x_peer : std_logic_vector(47 downto 0) := (others => '0');
   signal x_oip, x_pip, x_ports : std_logic_vector(31 downto 0) := (others => '0');
   signal x_soft, x_clr, x_restart : std_logic := '0';
@@ -172,11 +205,14 @@ architecture rtl of eth21_top is
   attribute MAX_FANOUT of t_prst, r_prst : signal is 64;
   attribute MAX_FANOUT of t_cmd_r, r_cmd_r, t_snap_r, r_snap_r : signal is 32;
 
-  -- contador global i (0..22) desde las sombras de TX y RX
-  function cnt_sel(i : natural; t : std_logic_vector; x : std_logic_vector)
+  -- contador global i (0..30) desde las sombras de TX y RX
+  function cnt_sel(i : natural; t : std_logic_vector; x : std_logic_vector;
+                   t2 : std_logic_vector; x2 : std_logic_vector)
     return std_logic_vector is
   begin
     case i is
+      when 23 to 26 => return t2(32*(i-23)+31 downto 32*(i-23));
+      when 27 to 30 => return x2(32*(i-27)+31 downto 32*(i-27));
       when 0  => return t(31 downto 0);
       when 1  => return t(63 downto 32);
       when 14 => return t(95 downto 64);
@@ -187,19 +223,26 @@ architecture rtl of eth21_top is
     end case;
   end function;
 begin
-  rst_axi <= not s_axi_aresetn;
+  u_por_a: entity work.mac25g_porsync port map (clk=>s_axi_aclk, por_n=>por_n, por=>por_axi);
+  u_por_t: entity work.mac25g_porsync port map (clk=>tx_clk, por_n=>por_n, por=>por_tx);
+  u_por_r: entity work.mac25g_porsync port map (clk=>rx_clk, por_n=>por_n, por=>por_rx);
+  rst_axi <= (not s_axi_aresetn) or por_axi;
 
   -----------------------------------------------------------------------------
   -- AXI4-Lite
   -----------------------------------------------------------------------------
   process(s_axi_aclk)
-    variable a : std_logic_vector(7 downto 0);
+    variable a  : std_logic_vector(7 downto 0);
+    variable wd : std_logic_vector(31 downto 0);
+    variable st : std_logic_vector(3 downto 0);
+    variable ok : boolean;
   begin
     if rising_edge(s_axi_aclk) then
       p_cmd <= '0'; p_snap <= '0'; p_gtrst <= '0';
       awready_i <= '0'; wready_i <= '0';
-      if s_axi_aresetn = '0' then
-        bvalid_i <= '0';
+      if rst_axi = '1' then
+        bvalid_i <= '0'; bresp_i <= "00"; cmd_kill <= '0';
+        r_pctrl <= x"FFFF0000"; r_wm <= x"01800080"; r_swq <= (others => '0');
         r_scratch <= (others => '0'); r_ctrl <= (others => '0');
         r_cmd <= (others => '0'); r_gtctrl <= (others => '0');
         r_gap <= (others => '0');
@@ -225,6 +268,7 @@ begin
             cmd_busy <= '0'; cmd_err <= '0';
           elsif cmd_tmo = 255 then
             cmd_busy <= '0'; cmd_err <= '1';
+            cmd_kill <= '1';     -- a domain that wakes up later must not run it
           else
             cmd_tmo <= cmd_tmo + 1;
           end if;
@@ -235,32 +279,55 @@ begin
            awready_i = '0' and cmd_busy = '0' then
           awready_i <= '1'; wready_i <= '1';
           a := s_axi_awaddr;
+          wd := s_axi_wdata;
+          st := s_axi_wstrb;
+          ok := a(1 downto 0) = "00";
+          if ok then
           case a(7 downto 2) is
-            when "000001" => r_scratch <= s_axi_wdata;
-            when "000010" => r_ctrl <= s_axi_wdata(9 downto 0);
+            when "000000" | "000100" | "010010" | "010011" => null;   -- RO
+            when "000001" => r_scratch <= merge(r_scratch, wd, st);
+            when "000010" =>
+              wd := merge("0000000000000000000000" & r_ctrl, wd, st);
+              r_ctrl <= wd(9 downto 0);
             when "000011" =>
-              r_cmd <= s_axi_wdata(4 downto 0);
-              if s_axi_wdata(5) = '1' then p_gtrst <= '1'; end if;
-              if s_axi_wdata(4 downto 0) /= "00000" then
-                p_cmd <= '1'; cmd_busy <= '1'; cmd_tmo <= (others => '0');
-                ack_tx <= '0'; ack_rx <= '0';
+              -- CMD: byte lane 0 only (b6 SEND_PAUSE -> r_cmd(5))
+              if st(0) = '1' then
+                r_cmd <= wd(6) & wd(4 downto 0);
+                if wd(5) = '1' then p_gtrst <= '1'; end if;
+                if wd(4 downto 0) /= "00000" or wd(6) = '1' then
+                  p_cmd <= '1'; cmd_busy <= '1'; cmd_tmo <= (others => '0');
+                  ack_tx <= '0'; ack_rx <= '0'; cmd_kill <= '0';
+                end if;
               end if;
-            when "000101" => r_gtctrl <= s_axi_wdata(5 downto 0);
-            when "000110" => r_gap <= s_axi_wdata(15 downto 0);
+            when "000101" =>
+              if st(0) = '1' then r_gtctrl <= wd(5 downto 0); end if;
+            when "000110" =>
+              wd := merge(x"0000" & r_gap, wd, st); r_gap <= wd(15 downto 0);
             when "000111" => p_snap <= '1'; snap_tx <= '0'; snap_rx <= '0';
-            when "001000" => r_own_lo <= s_axi_wdata;
-            when "001001" => r_own_hi <= s_axi_wdata(15 downto 0);
-            when "001010" => r_peer_lo <= s_axi_wdata;
-            when "001011" => r_peer_hi <= s_axi_wdata(15 downto 0);
-            when "001100" => r_own_ip <= s_axi_wdata;
-            when "001101" => r_peer_ip <= s_axi_wdata;
-            when "001110" => r_ports <= s_axi_wdata;
+            when "001000" => r_own_lo <= merge(r_own_lo, wd, st);
+            when "001001" =>
+              wd := merge(x"0000" & r_own_hi, wd, st); r_own_hi <= wd(15 downto 0);
+            when "001010" => r_peer_lo <= merge(r_peer_lo, wd, st);
+            when "001011" =>
+              wd := merge(x"0000" & r_peer_hi, wd, st); r_peer_hi <= wd(15 downto 0);
+            when "001100" => r_own_ip <= merge(r_own_ip, wd, st);
+            when "001101" => r_peer_ip <= merge(r_peer_ip, wd, st);
+            when "001110" => r_ports <= merge(r_ports, wd, st);
             when "001111" =>
-              r_lmin <= s_axi_wdata(10 downto 0); r_lmax <= s_axi_wdata(26 downto 16);
-            when "010000" => r_lstep <= s_axi_wdata(10 downto 0);
-            when "010001" => r_count <= s_axi_wdata;
-            when others => null;
+              wd := merge("00000" & r_lmax & "00000" & r_lmin, wd, st);
+              r_lmin <= wd(10 downto 0); r_lmax <= wd(26 downto 16);
+            when "010000" =>
+              wd := merge(x"00000" & '0' & r_lstep, wd, st); r_lstep <= wd(10 downto 0);
+            when "010001" => r_count <= merge(r_count, wd, st);
+            when "010100" => r_pctrl <= merge(r_pctrl, wd, st);
+            when "010101" => r_wm <= merge(r_wm, wd, st);
+            when "010110" =>
+              wd := merge(x"0000" & r_swq, wd, st); r_swq <= wd(15 downto 0);
+            when others =>
+              if a(7) = '0' then ok := false; end if;               -- unmapped
           end case;
+          end if;
+          if ok then bresp_i <= "00"; else bresp_i <= "10"; end if; -- SLVERR
         elsif bvalid_i = '1' and s_axi_bready = '1' then
           bvalid_i <= '0';
         end if;
@@ -273,15 +340,19 @@ begin
   begin
     if rising_edge(s_axi_aclk) then
       arready_i <= '0';
-      if s_axi_aresetn = '0' then
-        rvalid_i <= '0'; rdata_i <= (others => '0');
+      if rst_axi = '1' then
+        rvalid_i <= '0'; rdata_i <= (others => '0'); rresp_i <= "00";
       elsif arready_i = '1' then
         rvalid_i <= '1';
       elsif s_axi_arvalid = '1' and rvalid_i = '0' then
         arready_i <= '1';
         a := s_axi_araddr;
-        if a(7) = '1' then
-          rdata_i <= cnt_sel(to_integer(unsigned(a(6 downto 2))), t_shadow, x_shadow);
+        rresp_i <= "00";
+        if a(1 downto 0) /= "00" or a = x"FC" then
+          rdata_i <= (others => '0'); rresp_i <= "10";
+        elsif a(7) = '1' then
+          rdata_i <= cnt_sel(to_integer(unsigned(a(6 downto 2))), t_shadow, x_shadow,
+                             t_shadow2, x_shadow2);
         else
           case a(7 downto 2) is
             when "000000" => rdata_i <= ID_MAGIC;
@@ -290,7 +361,7 @@ begin
             when "000100" =>
               rdata_i <= (0 => a_lock, 1 => a_busy or cmd_busy,
                           2 => a_done and not cmd_busy, 3 => a_rx, 4 => a_tx,
-                          5 => a_link,
+                          5 => a_link, 6 => a_paused, 7 => a_xoff,
                           8 => snap_tx and snap_rx, 9 => cmd_busy, 10 => cmd_err,
                           11 => snap_tx, 12 => snap_rx,
                           16 => s_pg, 17 => s_lock, 18 => s_txd, 19 => s_rxd,
@@ -312,7 +383,11 @@ begin
             when "010001" => rdata_i <= r_count;
             when "010010" => rdata_i <= txclk_meas;
             when "010011" => rdata_i <= rxclk_meas;
-            when others   => rdata_i <= (others => '0');
+            when "010100" => rdata_i <= r_pctrl;
+            when "010101" => rdata_i <= r_wm;
+            when "010110" => rdata_i <= x"0000" & r_swq;
+            when "000011" | "000111" => rdata_i <= (others => '0');   -- WO
+            when others   => rdata_i <= (others => '0'); rresp_i <= "10";
           end case;
         end if;
       elsif rvalid_i = '1' and s_axi_rready = '1' then
@@ -323,11 +398,11 @@ begin
 
   s_axi_awready <= awready_i;
   s_axi_wready  <= wready_i;
-  s_axi_bresp   <= "00";
+  s_axi_bresp   <= bresp_i;
   s_axi_bvalid  <= bvalid_i;
   s_axi_arready <= arready_i;
   s_axi_rdata   <= rdata_i;
-  s_axi_rresp   <= "00";
+  s_axi_rresp   <= rresp_i;
   s_axi_rvalid  <= rvalid_i;
 
   -----------------------------------------------------------------------------
@@ -357,9 +432,9 @@ begin
   -- dominio TX
   -----------------------------------------------------------------------------
   -- reset: asercion asincrona, liberacion sincronizada
-  process(tx_clk, tx_ready, s_axi_aresetn)
+  process(tx_clk, tx_ready, s_axi_aresetn, por_tx)
   begin
-    if tx_ready = '0' or s_axi_aresetn = '0' then
+    if tx_ready = '0' or s_axi_aresetn = '0' or por_tx = '1' then
       t_rst_s <= (others => '1');
     elsif rising_edge(tx_clk) then
       t_rst_s <= t_rst_s(1 downto 0) & '0';
@@ -369,15 +444,17 @@ begin
 
   u_ps_ct: entity work.mac25g_psync
     port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>p_cmd,
-              clk_dst=>tx_clk, rst_dst=>t_rst, pulse_out=>t_cmd_stb);
+              clk_dst=>tx_clk, rst_dst=>t_rst, pulse_out=>t_cmd_stb, por_src=>por_axi);
   u_ps_st: entity work.mac25g_psync
     port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>p_snap,
-              clk_dst=>tx_clk, rst_dst=>t_rst, pulse_out=>t_snap_stb);
+              clk_dst=>tx_clk, rst_dst=>t_rst, pulse_out=>t_snap_stb, por_src=>por_axi);
+  u_ls_tk: entity work.mac25g_lsync port map (clk_dst=>tx_clk, d=>cmd_kill, q=>t_kill_s);
 
   process(tx_clk)
   begin
     if rising_edge(tx_clk) then
       t_soft <= '0'; t_clr <= '0'; t_start <= '0'; t_stop <= '0'; t_inj <= '0';
+      t_spause <= '0';
       t_snap_ack <= '0';
       t_cmd_r <= t_cmd_stb;
       t_snap_r <= t_snap_stb;
@@ -387,20 +464,21 @@ begin
         t_go <= t_cmd_r;
         t_ack1 <= t_go; t_ack2 <= t_ack1;
         if t_cmd_r = '1' then
-          t_ctrl <= r_ctrl; t_cmd <= r_cmd;
+          t_ctrl <= r_ctrl; t_cmd <= r_cmd; t_kill <= t_kill_s;
+          t_pctrl <= r_pctrl; t_swq <= r_swq;
           t_own <= r_own_hi & r_own_lo; t_peer <= r_peer_hi & r_peer_lo;
           t_oip <= r_own_ip; t_pip <= r_peer_ip; t_ports <= r_ports;
           t_lmin <= unsigned(r_lmin); t_lmax <= unsigned(r_lmax);
           t_lstep <= unsigned(r_lstep); t_count <= unsigned(r_count);
           t_gap <= unsigned(r_gap);
         end if;
-        if t_go = '1' then
+        if t_go = '1' and t_kill = '0' then     -- killed (timed out): not run
           t_soft <= t_cmd(0); t_clr <= t_cmd(1); t_start <= t_cmd(2);
-          t_stop <= t_cmd(3); t_inj <= t_cmd(4);
+          t_stop <= t_cmd(3); t_inj <= t_cmd(4); t_spause <= t_cmd(5);
         end if;
       end if;
       if t_snap_r = '1' then
-        t_shadow <= t_cnt; t_snap_ack <= '1';
+        t_shadow <= t_cnt; t_shadow2 <= t_cnt2; t_snap_ack <= '1';
       end if;
       t_prst <= t_rst or t_soft;
     end if;
@@ -416,7 +494,17 @@ begin
               gen_count=>t_count, gen_gap=>t_gap,
               gen_start=>t_start, gen_stop=>t_stop, cnt_clear=>t_clr, inj=>t_inj,
               st_busy=>t_busy, st_done=>t_done, st_tx_act=>t_act,
-              txdata=>t_txd, txheader=>t_txh, cnt_flat=>t_cnt);
+              txdata=>t_txd, txheader=>t_txh, cnt_flat=>t_cnt,
+              pause_honor=>t_pctrl(0), pause_auto=>t_pctrl(1),
+              pause_quanta=>t_pctrl(31 downto 16), pause_sw_req=>t_spause,
+              pause_sw_q=>t_swq, rx_pause_stb=>t_pstb, rx_pause_q=>t_pq,
+              rx_xoff=>t_xoff, st_paused=>t_paused, cnt2_flat=>t_cnt2);
+
+  -- RX -> TX: received PAUSE (value + strobe) and the RX FIFO XOFF level
+  u_hs_p: entity work.mac25g_hsync generic map (W => 16)
+    port map (clk_src=>rx_clk, rst_src=>r_rst, por_src=>por_rx, stb_in=>x_pstb, d_in=>x_pq,
+              clk_dst=>tx_clk, rst_dst=>t_rst, stb_out=>t_pstb, d_out=>t_pq);
+  u_ls_xo: entity work.mac25g_lsync port map (clk_dst=>tx_clk, d=>x_xoff, q=>t_xoff);
 
   gt_txdata     <= x"0000000000000000" & t_txd;
   gt_txheader   <= "0000" & t_txh;
@@ -426,9 +514,9 @@ begin
   -----------------------------------------------------------------------------
   -- dominio RX
   -----------------------------------------------------------------------------
-  process(rx_clk, rx_ready, s_axi_aresetn)
+  process(rx_clk, rx_ready, s_axi_aresetn, por_rx)
   begin
-    if rx_ready = '0' or s_axi_aresetn = '0' then
+    if rx_ready = '0' or s_axi_aresetn = '0' or por_rx = '1' then
       r_rst_s <= (others => '1');
     elsif rising_edge(rx_clk) then
       r_rst_s <= r_rst_s(1 downto 0) & '0';
@@ -438,10 +526,11 @@ begin
 
   u_ps_cr: entity work.mac25g_psync
     port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>p_cmd,
-              clk_dst=>rx_clk, rst_dst=>r_rst, pulse_out=>r_cmd_stb);
+              clk_dst=>rx_clk, rst_dst=>r_rst, pulse_out=>r_cmd_stb, por_src=>por_axi);
   u_ps_sr: entity work.mac25g_psync
     port map (clk_src=>s_axi_aclk, rst_src=>rst_axi, pulse_in=>p_snap,
-              clk_dst=>rx_clk, rst_dst=>r_rst, pulse_out=>r_snap_stb);
+              clk_dst=>rx_clk, rst_dst=>r_rst, pulse_out=>r_snap_stb, por_src=>por_axi);
+  u_ls_xk: entity work.mac25g_lsync port map (clk_dst=>rx_clk, d=>cmd_kill, q=>x_kill_s);
 
   process(rx_clk)
   begin
@@ -456,17 +545,18 @@ begin
         r_go <= r_cmd_r;
         r_ack1 <= r_go; r_ack2 <= r_ack1;
         if r_cmd_r = '1' then
-          x_ctrl <= r_ctrl; x_cmd <= r_cmd;
+          x_ctrl <= r_ctrl; x_cmd <= r_cmd; x_kill <= x_kill_s;
+          x_pctrl <= r_pctrl; x_wm <= r_wm;
           x_own <= r_own_hi & r_own_lo; x_peer <= r_peer_hi & r_peer_lo;
           x_oip <= r_own_ip; x_pip <= r_peer_ip; x_ports <= r_ports;
         end if;
-        if r_go = '1' then
+        if r_go = '1' and x_kill = '0' then     -- killed (timed out): not run
           x_soft <= x_cmd(0); x_clr <= x_cmd(1);
           x_restart <= x_cmd(2) or x_cmd(1);      -- GEN_START / CNT_CLEAR
         end if;
       end if;
       if r_snap_r = '1' then
-        x_shadow <= x_cnt; r_snap_ack <= '1';
+        x_shadow <= x_cnt; x_shadow2 <= x_cnt2; r_snap_ack <= '1';
       end if;
       r_prst <= r_rst or x_soft;
     end if;
@@ -484,7 +574,10 @@ begin
               rxdata=>gt_rxdata(63 downto 0), rxheader=>gt_rxheader(1 downto 0),
               rxvalid=>x_valid, rxslip=>gt_rxgearboxslip,
               st_lock=>x_lock, st_link=>x_link, st_rx_act=>x_act,
-              ev_crc=>x_evcrc, ev_chkerr=>x_evchk, cnt_flat=>x_cnt);
+              ev_crc=>x_evcrc, ev_chkerr=>x_evchk, cnt_flat=>x_cnt,
+              rx_tready=>not x_pctrl(2),
+              rx_hi_wm=>unsigned(x_wm(31 downto 16)), rx_lo_wm=>unsigned(x_wm(15 downto 0)),
+              pause_stb=>x_pstb, pause_q=>x_pq, xoff=>x_xoff, cnt2_flat=>x_cnt2);
 
   gt_rxpolarity <= x_ctrl(9);
 
@@ -498,18 +591,20 @@ begin
   u_l4: entity work.mac25g_lsync port map (clk_dst=>s_axi_aclk, d=>t_act,  q=>a_tx);
   u_l5: entity work.mac25g_lsync port map (clk_dst=>s_axi_aclk, d=>x_link, q=>a_link);
   u_l6: entity work.mac25g_lsync port map (clk_dst=>s_axi_aclk, d=>gt_rxcdrlock, q=>a_cdr);
+  u_l7: entity work.mac25g_lsync port map (clk_dst=>s_axi_aclk, d=>t_paused, q=>a_paused);
+  u_l8: entity work.mac25g_lsync port map (clk_dst=>s_axi_aclk, d=>x_xoff, q=>a_xoff);
 
   u_e0: entity work.mac25g_evsync
     port map (clk_src=>tx_clk, rst_src=>t_rst, ev_in=>t_ack2,
-              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_cmd_ack_tx);
+              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_cmd_ack_tx, por_src=>por_tx);
   u_e1: entity work.mac25g_evsync
     port map (clk_src=>rx_clk, rst_src=>r_rst, ev_in=>r_ack2,
-              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_cmd_ack_rx);
+              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_cmd_ack_rx, por_src=>por_rx);
   u_e2: entity work.mac25g_evsync
     port map (clk_src=>tx_clk, rst_src=>t_rst, ev_in=>t_snap_ack,
-              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_snap_ack_tx);
+              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_snap_ack_tx, por_src=>por_tx);
   u_e3: entity work.mac25g_evsync
     port map (clk_src=>rx_clk, rst_src=>r_rst, ev_in=>r_snap_ack,
-              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_snap_ack_rx);
+              clk_dst=>s_axi_aclk, rst_dst=>rst_axi, ev_out=>a_snap_ack_rx, por_src=>por_rx);
 
 end architecture rtl;

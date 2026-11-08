@@ -58,6 +58,7 @@ architecture rtl of kem_decaps_top is
   signal bm_baddr  : std_logic_vector(7 downto 0);
   signal bm_bdata  : std_logic_vector(15 downto 0);
   signal bm_daddr  : std_logic_vector(7 downto 0);
+  signal bm_dre    : std_logic;   -- basemul destination read strobe
   signal bm_drdata : std_logic_vector(15 downto 0);
   signal bm_dwdata : std_logic_vector(15 downto 0);
   signal bm_dwe    : std_logic;
@@ -164,7 +165,7 @@ begin
               ntt_waddr => ntt_waddr, ntt_wdata => ntt_wdata, ntt_we => ntt_we,
               bm_aaddr => bm_aaddr, bm_adata => bm_adata,
               bm_baddr => bm_baddr, bm_bdata => bm_bdata,
-              bm_daddr => bm_daddr, bm_drdata => bm_drdata,
+              bm_daddr => bm_daddr, bm_dre => bm_dre, bm_drdata => bm_drdata,
               bm_dwdata => bm_dwdata, bm_dwe => bm_dwe,
               sm_waddr => sm_waddr, sm_wdata => sm_wdata, sm_we => sm_we,
               fsm_raddr => mem_raddr, fsm_rdata => fsm_rdata,
@@ -201,7 +202,7 @@ begin
     port map (clk => clk, rst_n => rst_n, start => bm_start, accum => bm_accum,
               a_addr => bm_aaddr, a_data => bm_adata,
               b_addr => bm_baddr, b_data => bm_bdata,
-              d_addr => bm_daddr, d_rdata => bm_drdata,
+              d_addr => bm_daddr, d_re => bm_dre, d_rdata => bm_drdata,
               d_wdata => bm_dwdata, d_we => bm_dwe,
               busy => open, done => bm_done);
 
@@ -231,7 +232,7 @@ begin
               b_addr => bmem_rd, b_dout => bmem_rdo);
 
   u_fsm : entity work.kem_decaps
-    generic map (G_K => G_K, G_STOP_AT => G_STOP_AT)
+    generic map (G_K => G_K, G_STOP_AT => G_STOP_AT, G_DEBUG_REJ => true)
     port map (clk => clk, rst_n => rst_n, start => start,
               done => done, busy => busy, rejected => rejected,
               grant => grant, slot_rd => slot_rd, slot_rd2 => slot_rd2,

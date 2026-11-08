@@ -85,6 +85,13 @@ begin
     idle(3); expect(nslip = 2, "slip durante la espera");
     for i in 1 to 64 loop blk(true); end loop;
     idle(1); expect(lock = '1', "sin relock");
+    -- audit 2026-11 (B2): the 16th invalid header lands exactly on the 64th
+    -- header of the window; it must be counted before the window restarts
+    for i in 1 to 48 loop blk(true); end loop;
+    for i in 1 to 15 loop blk(false); end loop;
+    idle(1); expect(lock = '1', "lock perdido con 15 en la ventana");
+    blk(false);
+    idle(1); expect(lock = '0', "16a invalida en la frontera de la ventana no contada");
     if e = 0 then report "LAYER1C BLOCKLOCK PASS";
     else report "LAYER1C BLOCKLOCK FAIL" severity error; end if;
     fin <= true; wait;

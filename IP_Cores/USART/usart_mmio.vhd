@@ -11,11 +11,16 @@
 --    0x00 CTRL    (rw) [0]=en [1]=tx_en [2]=rx_en [3]=par_en [4]=par_odd
 --                      [5]=stop2 [6]=data7 [7]=loop_int (misma posicion que
 --                      el SPI) [8]=flow_en [9]=half_dup
+--                      [10]=de_inv (audit 2026-11): RS-485 DE polarity on
+--                      the rts_n pad in half-duplex mode (0 = DE active
+--                      high, reset default / legacy; 1 = active low)
 --    0x04 STAT    (r)  [0]=tx_busy [1]=tx_empty [2]=tx_full [3]=rx_empty
 --                      [4]=rx_full [5]=rx_ovf* [6]=tx_ovf* [7]=frame_err*
 --                      [8]=par_err* [9]=break* [10]=rx_busy [11]=cts_n
 --                      [12]=rts_n   (* = sticky)
---                 (w)  cualquier escritura limpia los stickies
+--                 (w)  WRITE-1-TO-CLEAR per bit (audit 2026-11): a '1' in
+--                      bit 5..9 clears that sticky only; other bits are
+--                      kept. A set event in the same cycle wins.
 --    0x08 BAUD    (rw) K del NCO: K = baud * 16 * 2^32 / Fclk
 --                      reset = 79164837 (115200 @ 100 MHz)
 --    0x0C TXDATA  (w)  empuja wdata(7:0) al FIFO TX (lleno: tx_ovf, se tira)
@@ -25,6 +30,7 @@
 --    0x1C IRQ_EN  (rw) [0]=rx_wm [1]=tx_wm [2]=rx_idle [3]=err
 --    0x20 IRQ_STAT(r)  causas crudas, mismos bits que IRQ_EN
 --    0x24 WM      (rw) [FIFO_LOG2:0]=umbral RX, [16+FIFO_LOG2:16]=umbral TX
+--                      (audit 2026-11: each value is clamped to DEPTH)
 --    0x28 IDLE_TO (rw) timeout de linea ociosa en tiempos de bit (16 bits)
 --
 --  Causas de IRQ (nivel; irq_o = or(IRQ_EN and IRQ_STAT)):
@@ -42,7 +48,8 @@
 --                           umbral WM.rx. Requiere FIFO_LOG2 >= 4.
 --    flow_en=0, half_dup=1: el pad lleva DE activo-alto para transceiver
 --                           RS-485 externo (= tx_active, cubre el frame
---                           completo). Ojo: polaridad NO invertida.
+--                           completo). Polarity selectable via CTRL[10]
+--                           de_inv (audit 2026-11; default = active high).
 --    flow_en=0, full dup  : rts_n='0' fijo (siempre listo).
 -- =============================================================================
 library ieee;
@@ -100,6 +107,8 @@ architecture rtl of usart_mmio is
   signal en_r, txen_r, rxen_r          : std_logic := '0';
   signal paren_r, parodd_r, stop2_r    : std_logic := '0';
   signal data7_r, loop_r, flow_r, hd_r : std_logic := '0';
+  signal deinv_r                       : std_logic := '0';
+  signal rst_i                         : std_logic;
   signal baud_r   : unsigned(31 downto 0) := to_unsigned(79164837, 32);
   signal irqen_r  : std_logic_vector(3 downto 0) := (others => '0');
   signal wm_rx    : unsigned(FIFO_LOG2 downto 0) := to_unsigned(DEPTH/2, FIFO_LOG2+1);
@@ -148,6 +157,9 @@ begin
   wr_acc <= '1' when (sel = '1' and req = '1' and wstrb /= "0000") else '0';
   rd_acc <= '1' when (sel = '1' and req = '1' and wstrb  = "0000") else '0';
 
+  -- synchronous active-high reset for the private FIFOs (audit 2026-11)
+  rst_i <= not aresetn;
+
   pio_txf_wr <= '1' when (wr_acc = '1' and addr = x"0C") else '0';
   pio_rxf_rd <= '1' when (rd_acc = '1' and addr = x"10") else '0';
 
@@ -155,19 +167,19 @@ begin
   rxf_rd   <= pio_rxf_rd or dma_rxf_rd;
   txf_wsel <= dma_txf_wdata when dma_txf_wr = '1' else wdata(7 downto 0);
 
-  u_txf : entity work.byte_fifo
+  u_txf : entity work.usart_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i,
       wr_en => txf_wr, wr_data => txf_wsel, full => txf_full,
       rd_en => txf_rd, rd_data => txf_rdata, empty => txf_empty,
       level => txf_lvl
     );
 
-  u_rxf : entity work.byte_fifo
+  u_rxf : entity work.usart_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i,
       wr_en => rxf_wr, wr_data => eng_rxd, full => rxf_full,
       rd_en => rxf_rd, rd_data => rxf_rdata, empty => rxf_empty,
       level => rxf_lvl
@@ -212,6 +224,7 @@ begin
         en_r <= '0'; txen_r <= '0'; rxen_r <= '0';
         paren_r <= '0'; parodd_r <= '0'; stop2_r <= '0';
         data7_r <= '0'; loop_r <= '0'; flow_r <= '0'; hd_r <= '0';
+        deinv_r <= '0';
         baud_r   <= to_unsigned(79164837, 32);
         irqen_r  <= (others => '0');
         wm_rx    <= to_unsigned(DEPTH/2, FIFO_LOG2+1);
@@ -235,16 +248,28 @@ begin
               loop_r   <= wdata(7);
               flow_r   <= wdata(8);
               hd_r     <= wdata(9);
-            when x"04" =>                -- limpia los stickies
-              rx_ovf <= '0'; tx_ovf <= '0';
-              ferr_s <= '0'; perr_s <= '0'; brk_s <= '0';
+              deinv_r  <= wdata(10);
+            when x"04" =>                -- W1C per bit (audit 2026-11)
+              if wdata(5) = '1' then rx_ovf <= '0'; end if;
+              if wdata(6) = '1' then tx_ovf <= '0'; end if;
+              if wdata(7) = '1' then ferr_s <= '0'; end if;
+              if wdata(8) = '1' then perr_s <= '0'; end if;
+              if wdata(9) = '1' then brk_s  <= '0'; end if;
             when x"08" =>
               baud_r <= unsigned(wdata);
             when x"1C" =>
               irqen_r <= wdata(3 downto 0);
-            when x"24" =>
-              wm_rx <= unsigned(wdata(FIFO_LOG2 downto 0));
-              wm_tx <= unsigned(wdata(16 + FIFO_LOG2 downto 16));
+            when x"24" =>                -- clamped to DEPTH (audit 2026-11)
+              if unsigned(wdata(FIFO_LOG2 downto 0)) > DEPTH then
+                wm_rx <= to_unsigned(DEPTH, FIFO_LOG2+1);
+              else
+                wm_rx <= unsigned(wdata(FIFO_LOG2 downto 0));
+              end if;
+              if unsigned(wdata(16 + FIFO_LOG2 downto 16)) > DEPTH then
+                wm_tx <= to_unsigned(DEPTH, FIFO_LOG2+1);
+              else
+                wm_tx <= unsigned(wdata(16 + FIFO_LOG2 downto 16));
+              end if;
             when x"28" =>
               idleto_r <= unsigned(wdata(15 downto 0));
             when others => null;
@@ -254,6 +279,11 @@ begin
         -- stickies: overflows con politica drop, eventos del motor
         if txf_wr = '1' and txf_full = '1' then
           tx_ovf <= '1';                 -- push a FIFO lleno: byte descartado
+        end if;
+        -- PIO and DMA pushing in the same cycle: the PIO byte is dropped
+        -- by the write mux -> report it instead of losing it silently
+        if pio_txf_wr = '1' and dma_txf_wr = '1' then
+          tx_ovf <= '1';
         end if;
         if eng_rxv = '1' and rxf_full = '1' then
           rx_ovf <= '1';                 -- byte recibido sin lugar: descartado
@@ -300,7 +330,8 @@ begin
            (irqen_r(2) and c_idle) or (irqen_r(3) and c_err);
 
   -- RTS_n / DE segun modo (ver cabecera)
-  rts_n_int <= e_txact   when (hd_r = '1' and flow_r = '0') else  -- DE RS-485
+  rts_n_int <= (e_txact xor deinv_r)                               -- DE RS-485
+                         when (hd_r = '1' and flow_r = '0') else
                rts_state when flow_r = '1'                  else
                '0';
   rts_n_o <= rts_n_int;
@@ -315,7 +346,7 @@ begin
           rdata(0) <= en_r;     rdata(1) <= txen_r;   rdata(2) <= rxen_r;
           rdata(3) <= paren_r;  rdata(4) <= parodd_r; rdata(5) <= stop2_r;
           rdata(6) <= data7_r;  rdata(7) <= loop_r;   rdata(8) <= flow_r;
-          rdata(9) <= hd_r;
+          rdata(9) <= hd_r;     rdata(10) <= deinv_r;
         when x"04" =>
           rdata(0)  <= e_txbusy;  rdata(1)  <= txf_empty; rdata(2) <= txf_full;
           rdata(3)  <= rxf_empty; rdata(4)  <= rxf_full;

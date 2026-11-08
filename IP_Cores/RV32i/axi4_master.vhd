@@ -8,6 +8,9 @@
 --  vuelo, 'busy' = '1' (el core se congela via dmem_ready = not busy).
 --
 --  Data de 32 bits, direccion configurable (ADDR_W). Un solo acceso a la vez.
+--  audit-2026-11: RRESP/BRESP are no longer ignored. 'err' is valid together
+--  with 'done' (and held until the next transaction completes): '1' when the
+--  slave answered SLVERR or DECERR (resp(1) = '1'). EXOKAY is not used.
 --  Este bridge es la base; la version con bursts se agrega despues para el
 --  motor de copia por bloques.
 -- =============================================================================
@@ -33,6 +36,7 @@ entity axi4_master is
     wstrb   : in  std_logic_vector(3 downto 0);
     rdata   : out std_logic_vector(31 downto 0);
     done    : out std_logic;                         -- pulso 1 ciclo al terminar
+    err     : out std_logic;                         -- with done: RRESP/BRESP was SLVERR/DECERR
     busy    : out std_logic;                         -- '1' mientras hay transaccion
 
     -- maestro AXI4 (32-bit data)
@@ -74,7 +78,10 @@ architecture rtl of axi4_master is
   signal wdata_q : std_logic_vector(31 downto 0) := (others => '0');
   signal wstrb_q : std_logic_vector(3 downto 0) := (others => '0');
   signal rdata_q : std_logic_vector(31 downto 0) := (others => '0');
+  signal err_q   : std_logic := '0';
 begin
+
+  err <= err_q;
 
   -- constantes AXI4 para un beat de 32 bits
   m_axi_awlen   <= (others => '0');          -- 1 beat
@@ -105,6 +112,7 @@ begin
       if aresetn = '0' then
         state <= S_IDLE;
         done  <= '0';
+        err_q <= '0';
       else
         done <= '0';
         case state is
@@ -124,6 +132,7 @@ begin
           when S_B =>
             if m_axi_bvalid = '1' then
               done  <= '1';
+              err_q <= m_axi_bresp(1);          -- SLVERR (10) / DECERR (11)
               state <= S_IDLE;
             end if;
 
@@ -134,6 +143,7 @@ begin
             if m_axi_rvalid = '1' then
               rdata_q <= m_axi_rdata;
               done    <= '1';
+              err_q   <= m_axi_rresp(1);        -- SLVERR (10) / DECERR (11)
               state   <= S_IDLE;
             end if;
         end case;

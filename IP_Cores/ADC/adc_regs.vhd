@@ -12,12 +12,24 @@
 --   0x0C FIFO_LEVEL ro : [9:0] nivel (0..514)
 --   0x10 FIFO_DATA  ro : pop en lectura; [31:24] tag/canal, [23:0] muestra;
 --                        lectura con FIFO vacia devuelve 0 y no hace pop
---   0x14 IRQ_EN     rw : b0 umbral FIFO, b1 dma_done
+--   0x14 IRQ_EN     rw : b0 umbral FIFO, b1 dma_done, b2 fifo_ovfl, b3 ext_ovr
 --   0x18 IRQ_STAT   w1c: b0 umbral FIFO (flanco de nivel>=umbral), b1 dma_done
+--                        b2 FIFO_OVFL: sticky, a sample was dropped (FIFO full)
+--                        b3 EXT_OVR : sticky, external modulator bits lost
+--                           (pdm_clk too fast for aclk, see adc_core)
+--                        (AUDIT 2026-11; W1C of b2 also clears the FIFO flag)
 --   0x1C IRQ_THRESH rw : [9:0] umbral (0 = deshabilitado)
 --   0x20 DMA_ADDR   rw
 --   0x24 DMA_LEN    rw
 --   0x28 DMA_CTRL   w  : b0=1 dispara dma_go (pulso); lectura: b0 dma_busy
+--   0x2C EXT_CFG    rw : b0 ext_clk -- external modulator captured on its own
+--                        clock pdm_clk (adc_core); 0 = legacy bit rate = aclk
+--
+-- AUDIT 2026-11 -- FIFO_DATA destructive read: the pop happens ONCE per bus
+-- transaction (a 'popped' flag blocks further pops until sel drops), and it
+-- is HELD OFF while the ADC DMA owns the FIFO (dma_busy_i='1'): 'ready' is
+-- low for a FIFO_DATA read until the DMA finishes, then the read completes
+-- and pops. The MMIO and DMA can therefore never pop in the same cycle.
 --   0x44 DBG_STATE  ro : dbg_i
 --   resto: lee 0, escritura ignorada
 -- ============================================================================
@@ -56,7 +68,13 @@ entity adc_regs is
     dma_busy_i    : in  std_logic;
     dma_done_p_i  : in  std_logic;  -- pulso
     -- debug
-    dbg_i         : in  std_logic_vector(31 downto 0)
+    dbg_i         : in  std_logic_vector(31 downto 0);
+    -- AUDIT 2026-11
+    ready         : out std_logic;  -- '0': FIFO_DATA read held off (DMA busy)
+    fifo_ovf_i    : in  std_logic := '0';
+    fifo_ovf_clr  : out std_logic;
+    ext_ovr_i     : in  std_logic := '0';
+    ext_clk       : out std_logic
   );
 end entity adc_regs;
 
@@ -75,6 +93,14 @@ architecture rtl of adc_regs is
   signal thr_ev   : std_logic;
 
   signal rdata_mux : std_logic_vector(31 downto 0);
+  -- AUDIT 2026-11
+  signal irqen2_r  : std_logic_vector(1 downto 0) := (others => '0');  -- b3:b2
+  signal irqst2_r  : std_logic_vector(1 downto 0) := (others => '0');
+  signal extcfg_r  : std_logic := '0';
+  signal popped_r  : std_logic := '0';
+  signal is_fdata  : std_logic;
+  signal fifo_rd_i : std_logic;
+  signal ovf_q     : std_logic := '0';
 begin
 
   thr_c  <= '1' when (thr_r /= 0) and (fifo_level >= thr_r) else '0';
@@ -93,7 +119,29 @@ begin
         dlen_r  <= (others => '0');
         dgo_r   <= '0';
         thr_cr  <= '0';
+        irqen2_r <= (others => '0');
+        irqst2_r <= (others => '0');
+        extcfg_r <= '0';
+        popped_r <= '0';
+        ovf_q    <= '0';
       else
+        -- pop once per transaction
+        if sel = '0' then
+          popped_r <= '0';
+        elsif fifo_rd_i = '1' then
+          popped_r <= '1';
+        end if;
+        -- sticky FIFO overflow / external overrun (event wins over W1C)
+        ovf_q <= fifo_ovf_i;
+        if (sel = '1') and (we = '1') and (addr(7 downto 2) = "000110") then
+          irqst2_r <= irqst2_r and (not wdata(3 downto 2));
+        end if;
+        if fifo_ovf_i = '1' and ovf_q = '0' then
+          irqst2_r(0) <= '1';
+        end if;
+        if ext_ovr_i = '1' then
+          irqst2_r(1) <= '1';
+        end if;
         dgo_r  <= '0';
         thr_cr <= thr_c;
 
@@ -103,6 +151,8 @@ begin
             when "000000" => ctrl_r  <= wdata(3 downto 0);            -- 0x00
             when "000010" => finc_r  <= wdata;                        -- 0x08
             when "000101" => irqen_r <= wdata(1 downto 0);            -- 0x14
+                             irqen2_r <= wdata(3 downto 2);
+            when "001011" => extcfg_r <= wdata(0);                    -- 0x2C
             when "000111" => thr_r   <= unsigned(wdata(9 downto 0));  -- 0x1C
             when "001000" => daddr_r <= wdata;                        -- 0x20
             when "001001" => dlen_r  <= wdata;                        -- 0x24
@@ -126,8 +176,15 @@ begin
   end process proc_regs;
 
   -- pop de FIFO: lectura de FIFO_DATA (0x10) con FIFO no vacia
-  fifo_rd <= sel and (not we) and (not fifo_empty)
-             when addr(7 downto 2) = "000100" else '0';
+  -- (AUDIT 2026-11: once per transaction, held off while the DMA is busy)
+  is_fdata  <= '1' when addr(7 downto 2) = "000100" else '0';
+  fifo_rd_i <= sel and (not we) and (not fifo_empty) and (not popped_r) and (not dma_busy_i)
+               when is_fdata = '1' else '0';
+  fifo_rd   <= fifo_rd_i;
+  ready     <= '0' when (sel = '1' and we = '0' and is_fdata = '1' and dma_busy_i = '1') else '1';
+  fifo_ovf_clr <= '1' when (sel = '1' and we = '1' and addr(7 downto 2) = "000110"
+                            and wdata(2) = '1') else '0';
+  ext_clk  <= extcfg_r;
 
   -- mux de lectura COMBINACIONAL (contrato dmem de la familia)
   proc_rmux : process (all)
@@ -151,8 +208,10 @@ begin
         end if;
       when "000101" =>                                              -- 0x14
         rdata_mux(1 downto 0) <= irqen_r;
+        rdata_mux(3 downto 2) <= irqen2_r;
       when "000110" =>                                              -- 0x18
         rdata_mux(1 downto 0) <= irqst_r;
+        rdata_mux(3 downto 2) <= irqst2_r;
       when "000111" =>                                              -- 0x1C
         rdata_mux(9 downto 0) <= std_logic_vector(thr_r);
       when "001000" =>                                              -- 0x20
@@ -161,6 +220,8 @@ begin
         rdata_mux <= dlen_r;
       when "001010" =>                                              -- 0x28
         rdata_mux(0) <= dma_busy_i;
+      when "001011" =>                                              -- 0x2C
+        rdata_mux(0) <= extcfg_r;
       when "010001" =>                                              -- 0x44
         rdata_mux <= dbg_i;
       when others =>
@@ -177,6 +238,7 @@ begin
   dma_addr <= daddr_r;
   dma_len  <= dlen_r;
   dma_go   <= dgo_r;
-  irq      <= (irqst_r(0) and irqen_r(0)) or (irqst_r(1) and irqen_r(1));
+  irq      <= (irqst_r(0) and irqen_r(0)) or (irqst_r(1) and irqen_r(1)) or
+              (irqst2_r(0) and irqen2_r(0)) or (irqst2_r(1) and irqen2_r(1));
 
 end architecture rtl;

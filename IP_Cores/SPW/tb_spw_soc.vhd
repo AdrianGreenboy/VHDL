@@ -15,7 +15,7 @@
 --    DDRcpu[1]  = 0xA5   (primer dato del loopback)
 --    DDRcpu[2]  = 0x5A   (segundo dato)
 --    DDRcpu[4]  = 0x100  (EOP: b8=1, b0=0)
---    DDRcpu[5]  = 0x3C   (time-code recibido)
+--    DDRcpu[5]  = 0x01   (time-code recibido; ECSS 8.12: primer tick valido)
 --    DDRcpu[6]  = 1      (contador de ticks)
 --    DDRcpu[7]  = 0x10   (XOR de la rafaga 1..16)
 --    DDRcpu[8]  = 5      (estado del enlace = Run)
@@ -184,7 +184,7 @@ begin
     chk_cpu(1,  x"000000A5", "fase B dato 1 = 0xA5");
     chk_cpu(2,  x"0000005A", "fase B dato 2 = 0x5A");
     chk_cpu(4,  x"00000100", "fase B EOP = 0x100");
-    chk_cpu(5,  x"0000003C", "fase C time-code = 0x3C");
+    chk_cpu(5,  x"00000001", "fase C time-code = 0x01");
     chk_cpu(6,  x"00000001", "fase C contador de ticks = 1");
     chk_cpu(7,  x"00000010", "fase D XOR de la rafaga = 0x10");
     chk_cpu(8,  x"00000005", "fase E estado del enlace = Run");

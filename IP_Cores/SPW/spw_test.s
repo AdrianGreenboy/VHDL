@@ -37,7 +37,7 @@ waitR:  lw   x6, 16(x1)         # STAT
         and  x7, x6, x21
         srli x7, x7, 22
         sw   x7, 0(x0)          # local[0] = 1
-        sw   x0, 16(x1)         # limpiar stickies
+        sw   x6, 16(x1)         # limpiar stickies vistos (STAT es W1C)
 
         # --- fase B: 0xA5, 0x5A y EOP por loopback ---
         addi x5, x0, 165        # 0xA5
@@ -63,8 +63,9 @@ rd3:    lw   x9, 24(x1)
         andi x9, x9, 511        # bits 8:0
         sw   x9, 16(x0)         # local[4] = 0x100 (EOP)
 
-        # --- fase C: time-code 0x3C ---
-        addi x5, x0, 60         # 0x3C
+        # --- fase C: time-code 0x01 (ECSS 8.12: tick solo si = anterior+1;
+        #     el contador arranca en 0 -> el primer valor valido es 1) ---
+        addi x5, x0, 1          # 0x01
         sw   x5, 12(x1)         # TIME (latch + tick)
         lui  x23, 0x100         # mascara TICK (bit20 = 0x00100000)
 waitT:  lw   x6, 16(x1)         # STAT
@@ -72,11 +73,11 @@ waitT:  lw   x6, 16(x1)         # STAT
         beq  x7, x0, waitT
         lw   x9, 12(x1)         # TIME: b7:0 ultimo valor, b15:8 contador
         andi x10, x9, 255
-        sw   x10, 20(x0)        # local[5] = 0x3C
+        sw   x10, 20(x0)        # local[5] = 0x01
         srli x9, x9, 8
         andi x9, x9, 255
         sw   x9, 24(x0)         # local[6] = 1
-        sw   x0, 16(x1)         # limpiar stickies
+        sw   x6, 16(x1)         # limpiar stickies vistos (STAT es W1C)
 
         # --- fase D: rafaga de 16 bytes (1..16) con XOR ---
         addi x12, x0, 16

@@ -15,6 +15,8 @@
 #   LVL=32 IRQ_EN=36 IRQ_STAT=40 WM=44
 # Bits de CMD: [7:0] dato, [8] START, [9] STOP, [10] READ, [11] ACKOUT,
 #              [12] NOBYTE. Stickies de STAT: MDONE=b16, NACK=b18.
+# audit 2026-11: STAT stickies are WRITE-1-TO-CLEAR; x22 = 0xFFFFFFFF is
+# written to clear them all (writing x0 no longer clears anything).
 # Registros DMA del SoC en 0x40000000: SRC=0 DST=4 LEN=8 CTRL=12 STATUS=16
 
         lui  x1, 0x70000        # x1 = base registros IIC
@@ -29,6 +31,7 @@
         sw   x5, 20(x1)         # SADDR
         addi x5, x0, 135        # <- prog[8]: CTRL (parcheable; 0x87=EN|SEN|STRETCH|LOOP)
         sw   x5, 0(x1)          # CTRL
+        addi x22, x0, -1        # x22 = 0xFFFFFFFF (W1C mask, audit 2026-11)
 
         # --- fase A: escritura loop maestro->esclavo (0x5A, 0xC3) ---
         addi x5, x0, 340        # 0x154 = START | 0x54 (addr 0x2A/W)
@@ -73,7 +76,7 @@ polln:  lw   x6, 4(x1)          # STAT: esperar MDONE SIN limpiar
         and  x7, x6, x21        # capturar NACK (bit18)
         srli x7, x7, 18         # -> 1
         sw   x7, 20(x0)         # local[5] = 1
-        sw   x0, 4(x1)          # limpiar stickies
+        sw   x22, 4(x1)         # limpiar stickies (W1C, all bits)
         li   x5, 4608           # 0x1200 = NOBYTE | STOP (cierre tras NACK)
         sw   x5, 12(x1)
         jal  x31, wdone
@@ -96,5 +99,5 @@ halt:   beq  x0, x0, halt
 wdone:  lw   x6, 4(x1)          # STAT
         and  x7, x6, x20
         beq  x7, x0, wdone
-        sw   x0, 4(x1)          # cualquier escritura a STAT limpia
+        sw   x22, 4(x1)         # W1C: clear all stickies
         jalr x0, 0(x31)

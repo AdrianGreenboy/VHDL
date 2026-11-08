@@ -12,6 +12,8 @@
 --    0x0C CTRL  (w)   bit0=start, bit1=dir (0=DDR->local, 1=local->DDR)
 --    0x10 STATUS(r)   bit0=busy   (busy PEGAJOSO: alto desde el start hasta que
 --                                  el DMA de verdad termina, sin ventana falsa)
+--                     bit1=error  (audit-2026-11: a burst of the last transfer
+--                                  got AXI SLVERR/DECERR; cleared by next start)
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -23,7 +25,9 @@ entity mem_subsys_dma is
   generic (
     DEPTH    : natural := 256;
     INIT_FILE: string  := "";
-    ADDR_W   : natural := 40
+    ADDR_W   : natural := 40;
+    SYNC_READ: boolean := false   -- local RAM with 1-cycle sync read
+                                  -- (core must use DMEM_SYNC = true)
   );
   port (
     clk     : in  std_logic;
@@ -76,7 +80,7 @@ architecture rtl of mem_subsys_dma is
   signal dma_src, dma_dst : std_logic_vector(31 downto 0) := (others => '0');
   signal dma_len : std_logic_vector(8 downto 0) := (others => '0');
   signal dma_dir : std_logic := '0';
-  signal dma_start, dma_busy : std_logic;
+  signal dma_start, dma_busy, dma_err : std_logic;
   signal dma_go, busy_sticky, dma_started : std_logic := '0';
 
   -- puerto DMA <-> RAM local
@@ -100,7 +104,7 @@ begin
   dloc_wstrb <= "1111" when dloc_we = '1' else "0000";
 
   u_local : entity work.dp_ram
-    generic map (DEPTH => DEPTH, INIT_FILE => INIT_FILE)
+    generic map (DEPTH => DEPTH, INIT_FILE => INIT_FILE, SYNC_READ => SYNC_READ)
     port map (
       clk => clk,
       cpu_addr => dmem_addr, cpu_wdata => dmem_wdata, cpu_wstrb => cpu_wstrb,
@@ -110,11 +114,11 @@ begin
     );
 
   u_dma : entity work.dma_burst
-    generic map (ADDR_W => ADDR_W)
+    generic map (ADDR_W => ADDR_W, SYNC_LOC => SYNC_READ)
     port map (
       clk => clk, aresetn => aresetn, ddr_base => ddr_base,
       src => dma_src, dst => dma_dst, len => dma_len, dir => dma_dir,
-      start => dma_start, busy => dma_busy,
+      start => dma_start, busy => dma_busy, err => dma_err,
       loc_addr => dloc_addr, loc_wdata => dloc_wdata, loc_we => dloc_we, loc_rdata => dloc_rdata,
       m_axi_awaddr => m_axi_awaddr, m_axi_awlen => m_axi_awlen, m_axi_awsize => m_axi_awsize,
       m_axi_awburst => m_axi_awburst, m_axi_awvalid => m_axi_awvalid, m_axi_awready => m_axi_awready,
@@ -164,7 +168,7 @@ begin
   end process;
 
   -- lectura de STATUS (reporta el busy pegajoso)
-  dmareg_rdata <= (0 => busy_sticky, others => '0')
+  dmareg_rdata <= (0 => busy_sticky, 1 => dma_err, others => '0')
                   when dmem_addr(7 downto 0) = x"10" else (others => '0');
 
   -- rdata y ready hacia el core (local y registros DMA son de 1 ciclo)

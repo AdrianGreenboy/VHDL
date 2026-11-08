@@ -6,6 +6,8 @@
   ghdl -a --std=08 spw_fifo.vhd
   ghdl -a --std=08 spw_tx.vhd
   ghdl -a --std=08 spw_rx.vhd
+  ghdl -a --std=08 spw_rx_dsr.vhd
+  ghdl -a --std=08 spw_tx_cdc.vhd
   ghdl -a --std=08 spw_link.vhd
   ghdl -a --std=08 spw_codec.vhd
   ghdl -a --std=08 spw_mmio.vhd

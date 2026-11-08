@@ -37,7 +37,10 @@ delete_bd_objs [get_bd_cells u_soc_i2c]
 remove_files [get_files -quiet {*i2c_master.vhd *i2c_slave.vhd *i2c_mmio.vhd \
   *mem_subsys_i2c.vhd *soc_top_i2c.vhd *soc_top_i2c_wrap.v}]
 remove_files -fileset constrs_1 [get_files -quiet *i2c_pins.xdc]
+# audit 2026-11: i3c_byte_fifo is the private FIFO of the I3C core; its
+# entity name is unique, so it can coexist with i2c_byte_fifo in the project
 add_files -norecurse [list \
+  $env(HOME)/i3c_ip/i3c_byte_fifo.vhd \
   $env(HOME)/i3c_ip/i3c_controller.vhd \
   $env(HOME)/i3c_ip/i3c_target.vhd \
   $env(HOME)/i3c_ip/i3c_mmio.vhd \

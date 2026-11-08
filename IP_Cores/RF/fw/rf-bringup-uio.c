@@ -15,6 +15,9 @@
 // Ejecutar (root):  ./rf-bringup-uio
 //
 // Oraculo (del datapath GHDL, TONE_FTW=0): CHK = 0xB74940EB (64 muestras).
+// AUDIT 2026-11: the datapath now rounds half-up -> CHK = 0x32783005
+// (model/rf_model.py op0). 0xB74940EB was the truncating build. The
+// prebuilt aarch64 binaries in fw/ still carry the OLD golden: rebuild.
 // Regimen constante ~0x5D4Dxxxx; primeras: 0003FFFF 059BFFFF 2EA5FFFF ...
 
 #include <stdio.h>
@@ -38,7 +41,7 @@
 
 #define DDR_PHYS   0x70000000UL   // base fisica del buffer (para DDRB del maestro)
 #define N_SAMP     64
-#define GOLDEN     0xB74940EBu
+#define GOLDEN     0x32783005u
 
 static uint32_t prog[] = {
 0x600000B7, 0x0293B2B7, 0x80028293, 0x0050A423, 0x0400A023, 0x0000AA23, 0x00008337, 0xFFF30313,

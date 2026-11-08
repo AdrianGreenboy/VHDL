@@ -45,17 +45,17 @@ FAIL=0
 # that proves the sponge is genuinely shared: if it survived, there would be
 # a second sponge hiding somewhere.
 run_mutation "M1 sponge mux frozen on KEM" pqc_core.vhd \
-'  sp_mode  <= d_mode  when alg = '"'"'1'"'"' else k_mode;|||  sp_mode  <= k_mode;' || FAIL=1
+'  sp_mode  <= d_mode  when alg_eff = '"'"'1'"'"' else k_mode;|||  sp_mode  <= k_mode;' || FAIL=1
 
 # M2: the sponge input data mux frozen on KEM, a subtler version: control
 # follows alg but the absorbed bytes always come from the KEM core.
 run_mutation "M2 sponge din frozen on KEM" pqc_core.vhd \
-'  sp_din   <= d_din   when alg = '"'"'1'"'"' else k_din;|||  sp_din   <= k_din;' || FAIL=1
+'  sp_din   <= d_din   when alg_eff = '"'"'1'"'"' else k_din;|||  sp_din   <= k_din;' || FAIL=1
 
 # M3: alg inverted, so each algorithm drives the sponge while the other is
 # selected. Both chains break.
 run_mutation "M3 alg select inverted" pqc_core.vhd \
-'  sp_we    <= d_we    when alg = '"'"'1'"'"' else k_we;|||  sp_we    <= d_we    when alg = '"'"'0'"'"' else k_we;' || FAIL=1
+'  sp_we    <= d_we    when alg_eff = '"'"'1'"'"' else k_we;|||  sp_we    <= d_we    when alg_eff = '"'"'0'"'"' else k_we;' || FAIL=1
 
 if [ $FAIL -eq 0 ]; then
   echo "ALL MUTATIONS KILLED"

@@ -71,6 +71,7 @@ begin
 
   stim : process
     variable d  : std_logic_vector(31 downto 0);
+    variable d2 : std_logic_vector(31 downto 0);
     variable n    : integer;
     variable last : integer;
     variable ok : boolean;
@@ -173,7 +174,7 @@ begin
     poll_stat(3, '1', 5000);            -- RUN vivo
     bus_read(A_STAT, d);
     assert d(22) = '1' report "FALLO: sticky RUNOK" severity failure;
-    bus_write(A_STAT, x"00000000");     -- limpiar stickies
+    bus_write(A_STAT, x"FFFFFFFF");     -- limpiar stickies
     bus_read(A_STAT, d);
     assert d(24 downto 16) = "000000000"
       report "FALLO: limpieza de stickies" severity failure;
@@ -225,22 +226,53 @@ begin
       report "FALLO: dato tras aislamiento" severity failure;
     report "FASE F OK: pop-on-read aislado en RXD";
 
-    -- FASE G: time-codes
-    bus_write(A_TIME, x"0000005A");
+    -- FASE G: time-codes (ECSS-E-ST-50-12C 8.12, audit 2026-11: TICK only
+    -- when the 6-bit time = previous + 1 mod 64; otherwise update only)
+    bus_write(A_TIME, x"00000041");     -- flags 01, time 1 = 0 + 1 -> tick
     poll_stat(20, '1', 5000);           -- sticky TICK
     bus_read(A_TIME, d);
-    assert d(7 downto 0) = x"5A" report "FALLO: time_last" severity failure;
+    assert d(7 downto 0) = x"41" report "FALLO: time_last" severity failure;
     assert d(15 downto 8) = x"01" report "FALLO: tick_cnt" severity failure;
-    bus_write(A_STAT, x"00000000");
+    bus_write(A_STAT, x"FFFFFFFF");
     bus_read(A_STAT, d);
     assert d(20) = '0' report "FALLO: limpieza de TICK" severity failure;
-    bus_write(A_TIME, x"0000003B");
+    bus_write(A_TIME, x"0000003B");     -- 59 /= 2: value updated, NO tick
+    wait for 20 us;
+    bus_read(A_STAT, d);
+    assert d(20) = '0'
+      report "FALLO: tick con time-code no consecutivo (ECSS 8.12)" severity failure;
+    bus_read(A_TIME, d);
+    assert d(7 downto 0) = x"3B" and d(15 downto 8) = x"01"
+      report "FALLO: time-code no consecutivo debe actualizar sin tick"
+      severity failure;
+    bus_write(A_TIME, x"0000003C");     -- 60 = 59 + 1 -> tick
     poll_stat(20, '1', 5000);
     bus_read(A_TIME, d);
-    assert d(7 downto 0) = x"3B" and d(15 downto 8) = x"02"
+    assert d(7 downto 0) = x"3C" and d(15 downto 8) = x"02"
       report "FALLO: segundo tick" severity failure;
+    bus_write(A_STAT, x"FFFFFFFF");
+    bus_write(A_TIME, x"0000003F");     -- 63 /= 61: no tick
+    wait for 20 us;
+    bus_write(A_TIME, x"00000000");     -- 0 = 63 + 1 mod 64 -> tick (wrap)
+    poll_stat(20, '1', 5000);
+    bus_read(A_TIME, d);
+    assert d(7 downto 0) = x"00" and d(15 downto 8) = x"03"
+      report "FALLO: tick en el paso 63 -> 0" severity failure;
+    -- STAT is W1C per bit: writing 0 clears nothing, a single 1 clears one
     bus_write(A_STAT, x"00000000");
-    report "FASE G OK: time-codes con valor, contador y sticky";
+    bus_read(A_STAT, d);
+    assert d(20) = '1'
+      report "FALLO: STAT W1C, una escritura de 0 limpio stickies" severity failure;
+    bus_write(A_STAT, x"FFEFFFFF");     -- every bit except TICK
+    bus_read(A_STAT, d);
+    assert d(20) = '1'
+      report "FALLO: STAT W1C no es por bit" severity failure;
+    bus_write(A_STAT, x"00100000");
+    bus_read(A_STAT, d);
+    assert d(20) = '0'
+      report "FALLO: STAT W1C no limpio TICK" severity failure;
+    bus_write(A_STAT, x"FFFFFFFF");
+    report "FASE G OK: time-codes ECSS 8.12, contador, sticky y W1C";
 
     -- FASE H: RX_FLUSH
     bus_write(A_TXD, x"00000010");
@@ -266,11 +298,11 @@ begin
     wait for 100 ns;
     assert irq = '0' report "FALLO: irq no baja al vaciar" severity failure;
     bus_write(A_IRQEN, x"00100000");    -- b20 TICK
-    bus_write(A_TIME, x"00000007");
+    bus_write(A_TIME, x"00000001");     -- 0 + 1: valid tick (ECSS 8.12)
     poll_stat(20, '1', 5000);
     wait for 100 ns;
     assert irq = '1' report "FALLO: irq por TICK" severity failure;
-    bus_write(A_STAT, x"00000000");
+    bus_write(A_STAT, x"FFFFFFFF");
     wait for 100 ns;
     assert irq = '0' report "FALLO: irq no baja al limpiar" severity failure;
     bus_write(A_IRQEN, x"00000000");
@@ -282,7 +314,7 @@ begin
     bus_write(A_DIV, x"00000002");
     bus_write(A_CTRL, x"00000013");
     poll_stat(3, '1', 5000);
-    bus_write(A_STAT, x"00000000");
+    bus_write(A_STAT, x"FFFFFFFF");
     bus_write(A_TXD, x"000000D4");
     poll_stat(5, '1', 5000);
     bus_read(A_RXD, d);
@@ -329,6 +361,26 @@ begin
     assert last <= 89
       report "FALLO: valor imposible en avalancha" severity failure;
     report "FASE K OK: TXOVF, backpressure y subsecuencia ordenada";
+
+    -- FASE L (audit 2026-11): a tick_in written while the link is NOT in
+    -- Run must be discarded, not emitted when the link later reaches Run
+    bus_write(A_CTRL, x"00000000");     -- enlace abajo
+    wait for 1 us;
+    bus_write(A_CTRL, x"00000011");     -- EN | LOOP_INT, sin START: no Run
+    wait for 30 us;
+    bus_read(A_STAT, d);
+    assert d(3) = '0' report "FALLO: FASE L enlace en Run sin START" severity failure;
+    bus_read(A_TIME, d2);               -- time_last / tick_cnt antes
+    bus_write(A_TIME, x"00000002");     -- (= anterior + 1: seria un TICK)
+    wait for 5 us;
+    bus_write(A_CTRL, x"00000013");     -- START
+    poll_stat(3, '1', 5000);
+    wait for 30 us;
+    bus_read(A_TIME, d);
+    assert d(15 downto 0) = d2(15 downto 0)
+      report "FALLO: FASE L time-code obsoleto emitido al entrar en Run"
+      severity failure;
+    report "FASE L OK: tick_in fuera de Run descartado";
 
     report "CAPA 2 PASS";
     done <= true;

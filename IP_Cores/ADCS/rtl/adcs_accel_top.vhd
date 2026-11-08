@@ -15,6 +15,15 @@
 -- v1: MODE_MPC_PGD (LOAD_G -> solve -> STORE_U) y MODE_LOAD_H (solo carga H).
 -- MODE_SRUKF_QR reservado (fase 2): en v1 cae a T_FINISH sin operar.
 --
+-- Audit 2026-11:
+--   * DMA errors (RRESP/BRESP /= OKAY, handshake watchdog) end the operation
+--     with STATUS.ERR + STATUS.DONE (previously ignored).
+--   * A NaN reaching the solver clamp sets STATUS.ERR at the end.
+--   * Soft reset no longer resets the AXI master asynchronously in the middle
+--     of a handshake: the DMA gets 'abort' and drains to a safe point; the
+--     sequencer only issues a DMA command when the DMA is idle, and
+--     STATUS.BUSY covers the drain.
+--
 -- MUT (solo verificacion): 0 = normal; 1 = secuenciador salta STORE_U (U nunca
 -- llega a DDR); 2 = done_set antes de STORE_U (DONE prematuro).
 -- ============================================================================
@@ -105,7 +114,9 @@ architecture rtl of adcs_accel_top is
   signal dma_cmd_op    : std_logic_vector(1 downto 0);
   signal dma_cmd_addr  : std_logic_vector(31 downto 0);
   signal dma_cmd_words : std_logic_vector(15 downto 0);
-  signal dma_cmd_done, dma_cmd_busy : std_logic;
+  signal dma_cmd_done, dma_cmd_busy, dma_cmd_err : std_logic;
+  signal dma_err_code : std_logic_vector(1 downto 0);
+  signal eng_nan : std_logic;
   signal dma_dbg_st    : std_logic_vector(3 downto 0);
   signal dma_dbg_beat  : std_logic_vector(15 downto 0);
   signal dh_wr_en : std_logic;
@@ -134,7 +145,7 @@ architecture rtl of adcs_accel_top is
   -- secuenciador
   type tstate_e is (T_IDLE, T_LOADH_ISSUE, T_LOADH_WAIT,
                     T_LOADG_ISSUE, T_LOADG_WAIT, T_MPC_RUN, T_MPC_WAIT,
-                    T_STOREU_ISSUE, T_STOREU_WAIT, T_FINISH);
+                    T_STOREU_ISSUE, T_STOREU_WAIT, T_FINISH, T_ERROR);
   signal ts : tstate_e;
 
   constant OP_LOAD_H  : std_logic_vector(1 downto 0) := "00";
@@ -149,6 +160,9 @@ begin
 
   rstn_eff <= rst_n and (not soft_reset);
   irq_en   <= '0';   -- v1: sin IRQ del IP (el firmware usa doorbell del SoC)
+  -- audit 2026-11: irq was only assigned in the async-reset branch of p_seq,
+  -- which synthesis turns into a latch; it is a constant '0' in v1.
+  irq      <= '0';
 
   -- ---------------- reg file (bus dmem) ----------------
   u_reg : entity work.adcs_regfile
@@ -203,7 +217,7 @@ begin
       start => eng_start, n_dim => n_dim, maxiter => maxiter,
       step_f => step_f, umax_f => umax_f,
       busy => eng_busy, done => eng_done, iter_cnt => iter_cnt,
-      iter_tick => iter_tick,
+      iter_tick => iter_tick, nan_err => eng_nan,
       h_rd_en => h_rd_en, h_rd_row => h_rd_row, h_row_data => h_row_d,
       g_rd_en => g_rd_en, g_rd_addr => g_rd_a, g_rd_data => g_rd_d,
       u_rd_en => u_rd_en, u_rd_addr => u_rd_a, u_rd_data => u_rd_d,
@@ -211,12 +225,15 @@ begin
       u_vec_data => u_vec);
 
   -- ---------------- DMA maestro ----------------
+  -- the AXI master is NOT reset by the soft reset (it would cut a handshake);
+  -- it is asked to abort and drains to a safe point
   u_dma : entity work.axi_dma_engine
     generic map (MUT => 0)
     port map (
-      clk => clk, rst_n => rstn_eff,
+      clk => clk, rst_n => rst_n,
       cmd_valid => dma_cmd_valid, cmd_op => dma_cmd_op, cmd_addr => dma_cmd_addr,
       cmd_words => dma_cmd_words, cmd_done => dma_cmd_done, cmd_busy => dma_cmd_busy,
+      cmd_err => dma_cmd_err, err_code => dma_err_code, abort => soft_reset,
       dbg_st => dma_dbg_st, dbg_beat => dma_dbg_beat,
       m_axi_araddr => m_axi_araddr, m_axi_arlen => m_axi_arlen,
       m_axi_arsize => m_axi_arsize, m_axi_arburst => m_axi_arburst,
@@ -240,7 +257,7 @@ begin
       u_ext_rd_addr => u_ext_rd_addr, u_ext_rd_data => u_ext_rd_data,
       lin_addr => dma_lin);
 
-  busy_all <= '0' when ts = T_IDLE else '1';
+  busy_all <= '0' when ts = T_IDLE and dma_cmd_busy = '0' else '1';
 
   -- vector de debug (REG_DEBUG 0x44), REGISTRADO (rompe ruta larga a 240 MHz):
   --   [31:16] tag de presencia 0xADC5
@@ -266,7 +283,6 @@ begin
       eng_start     <= '0';
       done_set      <= '0';
       err_set       <= '0';
-      irq           <= '0';
     elsif rising_edge(clk) then
       dma_cmd_valid <= '0';
       dma_cmd_words <= (others => '0');
@@ -288,23 +304,31 @@ begin
 
         -- LOAD H (solo)
         when T_LOADH_ISSUE =>
-          dma_cmd_valid <= '1';
-          dma_cmd_op    <= OP_LOAD_H;
-          dma_cmd_addr  <= h_base;
-          ts <= T_LOADH_WAIT;
+          if dma_cmd_busy = '0' then           -- e.g. still draining an abort
+            dma_cmd_valid <= '1';
+            dma_cmd_op    <= OP_LOAD_H;
+            dma_cmd_addr  <= h_base;
+            ts <= T_LOADH_WAIT;
+          end if;
         when T_LOADH_WAIT =>
-          if dma_cmd_done = '1' then ts <= T_FINISH; end if;
+          if dma_cmd_done = '1' then
+            if dma_cmd_err = '1' then ts <= T_ERROR; else ts <= T_FINISH; end if;
+          end if;
 
         -- MPC: LOAD G -> solve -> STORE U
         -- (H debe haberse cargado antes con una operacion MODE_LOAD_H previa;
         -- el firmware hace START(LOAD_H) y luego START(MPC_PGD))
         when T_LOADG_ISSUE =>
-          dma_cmd_valid <= '1';
-          dma_cmd_op    <= OP_LOAD_G;
-          dma_cmd_addr  <= g_base;
-          ts <= T_LOADG_WAIT;
+          if dma_cmd_busy = '0' then
+            dma_cmd_valid <= '1';
+            dma_cmd_op    <= OP_LOAD_G;
+            dma_cmd_addr  <= g_base;
+            ts <= T_LOADG_WAIT;
+          end if;
         when T_LOADG_WAIT =>
-          if dma_cmd_done = '1' then ts <= T_MPC_RUN; end if;
+          if dma_cmd_done = '1' then
+            if dma_cmd_err = '1' then ts <= T_ERROR; else ts <= T_MPC_RUN; end if;
+          end if;
 
         when T_MPC_RUN =>
           eng_start <= '1';
@@ -319,16 +343,26 @@ begin
           end if;
 
         when T_STOREU_ISSUE =>
-          if MUT = 2 then done_set <= '1'; end if;   -- MUT2: DONE prematuro
-          dma_cmd_valid <= '1';
-          dma_cmd_op    <= OP_STORE_U;
-          dma_cmd_addr  <= u_base;
-          ts <= T_STOREU_WAIT;
+          if dma_cmd_busy = '0' then
+            if MUT = 2 then done_set <= '1'; end if;   -- MUT2: DONE prematuro
+            dma_cmd_valid <= '1';
+            dma_cmd_op    <= OP_STORE_U;
+            dma_cmd_addr  <= u_base;
+            ts <= T_STOREU_WAIT;
+          end if;
         when T_STOREU_WAIT =>
-          if dma_cmd_done = '1' then ts <= T_FINISH; end if;
+          if dma_cmd_done = '1' then
+            if dma_cmd_err = '1' or eng_nan = '1' then ts <= T_ERROR;
+            else ts <= T_FINISH; end if;
+          end if;
 
         when T_FINISH =>
           done_set <= '1';
+          ts <= T_IDLE;
+
+        when T_ERROR =>
+          err_set  <= '1';
+          done_set <= '1';                     -- the operation is over (failed)
           ts <= T_IDLE;
 
       end case;

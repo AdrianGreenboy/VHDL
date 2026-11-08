@@ -13,6 +13,9 @@
 -- El bit de valid se propaga por una cadena de 5 registros (v_r) para alinear la
 -- salida. El RESULTADO NUMERICO es identico al FIR combinacional; solo llega 5
 -- ciclos mas tarde. Historia sin limpieza. Reset asincrono activo bajo. VHDL-2008.
+-- AUDIT 2026-11: y = sat16((acc + 2**14) >> 15): ROUND HALF-UP instead of
+-- truncation (DC bias). The 36-bit accumulator has >= 3 bits of headroom over
+-- the 16x(16x16) worst case, so the +2**14 cannot wrap.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -63,7 +66,7 @@ architecture rtl of rf_fir is
   function sat16 (v : signed(35 downto 0)) return std_logic_vector is
     variable s : signed(35 downto 0);
   begin
-    s := shift_right(v, 15);
+    s := shift_right(v + to_signed(16384, 36), 15);
     if s > 32767 then
       return std_logic_vector(to_signed(32767, 16));
     elsif s < -32768 then

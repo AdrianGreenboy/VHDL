@@ -5,7 +5,7 @@ set -u
 cd "$(dirname "$0")"
 rm -rf work_l1c
 mkdir -p work_l1c
-ghdl -a --std=08 --workdir=work_l1c ../rtl/eth_pkg.vhd ../rtl/eth_tx_mii.vhd ../rtl/eth_rx_mii.vhd ../rtl/eth_mac.vhd ../tb/tb_eth_mac_l1c.vhd || { echo "L1C: FALLO DE ANALISIS"; exit 1; }
+ghdl -a --std=08 --workdir=work_l1c ../rtl/eth_pkg.vhd ../rtl/eth_cdc_sync.vhd ../rtl/eth_async_fifo.vhd ../rtl/eth_mii_cdc.vhd ../rtl/eth_tx_mii.vhd ../rtl/eth_rx_mii.vhd ../rtl/eth_mac.vhd ../tb/tb_eth_mac_l1c.vhd || { echo "L1C: FALLO DE ANALISIS"; exit 1; }
 ghdl -e --std=08 --workdir=work_l1c tb_eth_mac_l1c || { echo "L1C: FALLO DE ELABORACION"; exit 1; }
 echo "--- MUT=0 (debe PASAR) ---"
 ghdl -r --std=08 --workdir=work_l1c tb_eth_mac_l1c -gG_MUT=0 || { echo "L1C: MUT0 FALLO (BUG)"; exit 1; }

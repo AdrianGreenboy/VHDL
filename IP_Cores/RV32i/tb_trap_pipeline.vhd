@@ -11,6 +11,9 @@ use ieee.numeric_std.all;
 use work.riscv_pkg.all;
 
 entity tb_trap_pipeline is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_trap_pipeline;
 
 architecture sim of tb_trap_pipeline is
@@ -27,6 +30,7 @@ begin
   clk <= not clk after TCK/2;
 
   u_cpu : entity work.cpu_pipeline
+    generic map (IMEM_SYNC => SYNC_MEM, DMEM_SYNC => SYNC_MEM)
     port map (clk => clk, rst => rst,
       imem_addr => imem_addr, imem_instr => imem_instr,
       dmem_addr => dmem_addr, dmem_wdata => dmem_wdata,
@@ -34,11 +38,11 @@ begin
       dbg_reg_addr => dbg_addr, dbg_reg_data => dbg_data, dbg_pc => dbg_pc);
 
   u_imem : entity work.imem
-    generic map (DEPTH => 256, INIT_FILE => "program_trap.mem")
-    port map (addr => imem_addr, instr => imem_instr);
+    generic map (DEPTH => 256, INIT_FILE => "program_trap.mem", SYNC_READ => SYNC_MEM)
+    port map (clk => clk, addr => imem_addr, instr => imem_instr);
 
   u_dmem : entity work.dmem
-    generic map (DEPTH => 256)
+    generic map (DEPTH => 256, SYNC_READ => SYNC_MEM)
     port map (clk => clk, addr => dmem_addr, wdata => dmem_wdata,
               wstrb => dmem_wstrb, rdata => dmem_rdata);
 

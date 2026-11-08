@@ -9,10 +9,14 @@
 --      Seguro por construccion; puede tener 1-2 ciclos de latencia.
 --
 --   2. EVENTOS (pulso 1 ciclo dp): ev_lock_gained, ev_lock_lost, ev_hi_ber,
---      ev_rx_err, ev_prbs_err. Toggle-sync: el pulso conmuta un toggle en el
---      dominio dp; el dominio AXI detecta el cambio de toggle (edge) y regenera
---      el pulso. Garantiza que ningun evento se pierde aunque los pulsos sean
---      mas rapidos que el reloj AXI (se serializan por el toggle).
+--      ev_rx_err, ev_prbs_err. req/ack handshake (pcs_evsync, the pattern of
+--      MAC_25G mac25g_evsync; audit 2026-11 fix M7): the source toggles req
+--      only when the previous toggle has been acknowledged back; events
+--      arriving meanwhile are COALESCED into one pending event (the AXI side
+--      only sets stickies), never dropped. This replaces the old toggle with
+--      a hard-coded COOLDOWN_N = 24 dp cycles, which assumed clk_dp/clk_axi
+--      > ~12 and silently discarded every event inside the cooldown (an
+--      event right after another one was lost, not coalesced).
 --
 --   3. MULTIBIT (contadores 32b): captura-en-snapshot. El pulso stats_snap
 --      (AXI) cruza al dominio dp por toggle-sync; en dp congela un registro
@@ -21,12 +25,100 @@
 --      snapshots). Esto evita el gray-code y es el patron correcto para valores
 --      que solo se leen tras un evento de congelacion.
 --
+-- Power-on (fix M6, ASIC): every toggle flop (event req, snapshot request,
+-- snapshot done) has an ASYNCHRONOUS power-on reset of its own domain
+-- (por_dp / por_axi, from pcs_porsync); the synchroniser chains are never
+-- reset and the edge detectors are gated by the functional reset of the
+-- destination domain. The functional domain resets must be released at
+-- least 4 destination clock edges after the power-on reset (pcs_porsync
+-- does this when its output is OR-ed into the domain reset). A reset of only
+-- ONE domain no longer resets a toggle, so it cannot fabricate an edge.
+--
 -- Riesgo de metaestabilidad: acotado a los dobles-FF. El shadow multibit NO
 -- cruza como bus vivo: se lee solo cuando esta estatico, tras confirmar por
 -- handshake que el snapshot en dp termino (snap_done cruza de vuelta a AXI).
 --
 -- MIT License.
 -------------------------------------------------------------------------------
+-- ==== helper: event synchroniser with req/ack handshake ====
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity pcs_evsync is
+  port (
+    clk_src : in std_logic; rst_src : in std_logic; por_src : in std_logic;
+    ev_in   : in std_logic;
+    clk_dst : in std_logic; rst_dst : in std_logic;
+    ev_out  : out std_logic
+  );
+end entity pcs_evsync;
+
+architecture rtl of pcs_evsync is
+  signal pend, busy, req : std_logic := '0';
+  signal a1, a2 : std_logic := '0';          -- ack (= req seen in dst) in src
+  signal r1, r2, r3 : std_logic := '0';      -- req in dst
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of a1, a2, r1, r2 : signal is "TRUE";
+begin
+  process(clk_src)
+  begin
+    if rising_edge(clk_src) then
+      a1 <= r2; a2 <= a1;                    -- chain: no reset
+    end if;
+  end process;
+
+  process(clk_src, por_src)
+  begin
+    if por_src = '1' then
+      req <= '0'; pend <= '0'; busy <= '0';
+    elsif rising_edge(clk_src) then
+      if rst_src = '1' then
+        pend <= '0'; busy <= '0';            -- req is NOT reset (no fake edge)
+      elsif busy = '0' and (pend = '1' or ev_in = '1') then
+        req <= not req; busy <= '1'; pend <= '0';
+      else
+        if ev_in = '1' then pend <= '1'; end if;
+        if busy = '1' and a2 = req then busy <= '0'; end if;
+      end if;
+    end if;
+  end process;
+
+  process(clk_dst)
+  begin
+    if rising_edge(clk_dst) then
+      r1 <= req; r2 <= r1; r3 <= r2;          -- chain: no reset
+    end if;
+  end process;
+  ev_out <= (r2 xor r3) and not rst_dst;
+end architecture rtl;
+
+
+-- ==== helper: power-on reset synchroniser (async assert, sync release) ====
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity pcs_porsync is
+  generic (STAGES : positive := 4);
+  port (clk : in std_logic; por_n : in std_logic; por : out std_logic);
+end entity pcs_porsync;
+
+architecture rtl of pcs_porsync is
+  signal sr : std_logic_vector(STAGES-1 downto 0) := (others => '0');
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of sr : signal is "TRUE";
+begin
+  process(clk, por_n)
+  begin
+    if por_n = '0' then
+      sr <= (others => '1');
+    elsif rising_edge(clk) then
+      sr <= sr(STAGES-2 downto 0) & '0';
+    end if;
+  end process;
+  por <= sr(STAGES-1);
+end architecture rtl;
+
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -39,6 +131,9 @@ entity pcs_cdc is
     -- dominio AXI
     clk_axi : in std_logic;
     rst_axi : in std_logic;
+    -- asynchronous power-on resets of each domain (pcs_porsync); '0' = FPGA
+    por_dp  : in std_logic := '0';
+    por_axi : in std_logic := '0';
 
     -- ==== ESTADO: dp -> axi (nivel, doble FF) ====
     dp_block_lock : in  std_logic;
@@ -104,27 +199,6 @@ architecture rtl of pcs_cdc is
   attribute ASYNC_REG of m_tx_active,  s_tx_active  : signal is "TRUE";
   attribute ASYNC_REG of m_rx_active,  s_rx_active  : signal is "TRUE";
 
-  -- toggle-sync eventos: toggle en dp, doble FF + edge en axi.
-  -- COOLDOWN (critico): dos eventos en ciclos dp consecutivos harian dos
-  -- toggles seguidos que el dominio axi (mucho mas lento) NO llega a muestrear
-  -- -> el flanco se cancela y el evento se pierde. Cada toggle se gatea con un
-  -- contador que garantiza un nivel estable de COOLDOWN_N ciclos dp, superior
-  -- a 2 ciclos axi con margen. Como los destinos son stickies, basta con que
-  -- llegue el primero de una rafaga.
-  constant COOLDOWN_N : natural := 24;   -- 24 x 2.56ns = 61ns > 2 ciclos axi
-  signal tg_lg, tg_ll, tg_hb, tg_re, tg_pe : std_logic := '0';  -- dominio dp
-  signal cd_lg, cd_ll, cd_hb, cd_re, cd_pe : natural range 0 to COOLDOWN_N := 0;
-  signal a1_lg, a2_lg, a3_lg : std_logic := '0';
-  signal a1_ll, a2_ll, a3_ll : std_logic := '0';
-  signal a1_hb, a2_hb, a3_hb : std_logic := '0';
-  signal a1_re, a2_re, a3_re : std_logic := '0';
-  signal a1_pe, a2_pe, a3_pe : std_logic := '0';
-  attribute ASYNC_REG of a1_lg, a2_lg : signal is "TRUE";
-  attribute ASYNC_REG of a1_ll, a2_ll : signal is "TRUE";
-  attribute ASYNC_REG of a1_hb, a2_hb : signal is "TRUE";
-  attribute ASYNC_REG of a1_re, a2_re : signal is "TRUE";
-  attribute ASYNC_REG of a1_pe, a2_pe : signal is "TRUE";
-
   -- snapshot handshake
   signal snap_tg_axi : std_logic := '0';        -- toggle en axi
   signal s1_dp, s2_dp, s3_dp : std_logic := '0'; -- sync en dp
@@ -166,80 +240,53 @@ begin
   axi_tx_active <=s_tx_active;  axi_rx_active<=s_rx_active;
 
   ----------------------------------------------------------------------------
-  -- 2. EVENTOS: toggle en dp
+  -- 2. EVENTOS: req/ack handshake per event (no loss, coalescing)
   ----------------------------------------------------------------------------
-  process(clk_dp)
-  begin
-    if rising_edge(clk_dp) then
-      if rst_dp = '1' then
-        tg_lg<='0'; tg_ll<='0'; tg_hb<='0'; tg_re<='0'; tg_pe<='0';
-        cd_lg<=0; cd_ll<=0; cd_hb<=0; cd_re<=0; cd_pe<=0;
-      else
-        if cd_lg > 0 then cd_lg <= cd_lg - 1;
-        elsif dp_ev_lock_gained='1' then tg_lg <= not tg_lg; cd_lg <= COOLDOWN_N; end if;
-        if cd_ll > 0 then cd_ll <= cd_ll - 1;
-        elsif dp_ev_lock_lost='1' then tg_ll <= not tg_ll; cd_ll <= COOLDOWN_N; end if;
-        if cd_hb > 0 then cd_hb <= cd_hb - 1;
-        elsif dp_ev_hi_ber='1' then tg_hb <= not tg_hb; cd_hb <= COOLDOWN_N; end if;
-        if cd_re > 0 then cd_re <= cd_re - 1;
-        elsif dp_ev_rx_err='1' then tg_re <= not tg_re; cd_re <= COOLDOWN_N; end if;
-        if cd_pe > 0 then cd_pe <= cd_pe - 1;
-        elsif dp_ev_prbs_err='1' then tg_pe <= not tg_pe; cd_pe <= COOLDOWN_N; end if;
-      end if;
-    end if;
-  end process;
-
-  -- doble FF + tercer FF para detectar edge en axi
-  process(clk_axi)
-  begin
-    if rising_edge(clk_axi) then
-      if rst_axi = '1' then
-        a1_lg<='0';a2_lg<='0';a3_lg<='0'; a1_ll<='0';a2_ll<='0';a3_ll<='0';
-        a1_hb<='0';a2_hb<='0';a3_hb<='0'; a1_re<='0';a2_re<='0';a3_re<='0';
-        a1_pe<='0';a2_pe<='0';a3_pe<='0';
-      else
-        a1_lg<=tg_lg; a2_lg<=a1_lg; a3_lg<=a2_lg;
-        a1_ll<=tg_ll; a2_ll<=a1_ll; a3_ll<=a2_ll;
-        a1_hb<=tg_hb; a2_hb<=a1_hb; a3_hb<=a2_hb;
-        a1_re<=tg_re; a2_re<=a1_re; a3_re<=a2_re;
-        a1_pe<=tg_pe; a2_pe<=a1_pe; a3_pe<=a2_pe;
-      end if;
-    end if;
-  end process;
-
-  -- pulso axi = XOR de los dos ultimos FF (edge del toggle)
-  axi_ev_lock_gained <= a2_lg xor a3_lg;
-  axi_ev_lock_lost   <= a2_ll xor a3_ll;
-  axi_ev_hi_ber      <= a2_hb xor a3_hb;
-  axi_ev_rx_err      <= a2_re xor a3_re;
-  axi_ev_prbs_err    <= a2_pe xor a3_pe;
+  u_ev_lg: entity work.pcs_evsync port map (clk_src=>clk_dp, rst_src=>rst_dp, por_src=>por_dp,
+    ev_in=>dp_ev_lock_gained, clk_dst=>clk_axi, rst_dst=>rst_axi, ev_out=>axi_ev_lock_gained);
+  u_ev_ll: entity work.pcs_evsync port map (clk_src=>clk_dp, rst_src=>rst_dp, por_src=>por_dp,
+    ev_in=>dp_ev_lock_lost, clk_dst=>clk_axi, rst_dst=>rst_axi, ev_out=>axi_ev_lock_lost);
+  u_ev_hb: entity work.pcs_evsync port map (clk_src=>clk_dp, rst_src=>rst_dp, por_src=>por_dp,
+    ev_in=>dp_ev_hi_ber, clk_dst=>clk_axi, rst_dst=>rst_axi, ev_out=>axi_ev_hi_ber);
+  u_ev_re: entity work.pcs_evsync port map (clk_src=>clk_dp, rst_src=>rst_dp, por_src=>por_dp,
+    ev_in=>dp_ev_rx_err, clk_dst=>clk_axi, rst_dst=>rst_axi, ev_out=>axi_ev_rx_err);
+  u_ev_pe: entity work.pcs_evsync port map (clk_src=>clk_dp, rst_src=>rst_dp, por_src=>por_dp,
+    ev_in=>dp_ev_prbs_err, clk_dst=>clk_axi, rst_dst=>rst_axi, ev_out=>axi_ev_prbs_err);
 
   ----------------------------------------------------------------------------
   -- 3. SNAPSHOT: axi_snap_req -> toggle axi -> sync dp -> congela shadow ->
   --    toggle done dp -> sync axi -> pulso snap_done
   ----------------------------------------------------------------------------
   -- toggle de request en axi
-  process(clk_axi)
+  process(clk_axi, por_axi)
   begin
-    if rising_edge(clk_axi) then
-      if rst_axi = '1' then snap_tg_axi <= '0';
-      elsif axi_snap_req = '1' then snap_tg_axi <= not snap_tg_axi;
+    if por_axi = '1' then
+      snap_tg_axi <= '0';
+    elsif rising_edge(clk_axi) then
+      if rst_axi = '0' and axi_snap_req = '1' then snap_tg_axi <= not snap_tg_axi;
       end if;
     end if;
   end process;
 
   -- sync del toggle en dp + deteccion de edge -> congelar shadow
   process(clk_dp)
-    variable snap_edge : std_logic;
   begin
     if rising_edge(clk_dp) then
+      s1_dp<=snap_tg_axi; s2_dp<=s1_dp; s3_dp<=s2_dp;   -- chain: no reset
+    end if;
+  end process;
+
+  process(clk_dp, por_dp)
+    variable snap_edge : std_logic;
+  begin
+    if por_dp = '1' then
+      done_tg_dp <= '0';
+    elsif rising_edge(clk_dp) then
       if rst_dp = '1' then
-        s1_dp<='0'; s2_dp<='0'; s3_dp<='0'; done_tg_dp<='0';
         shadow_tx<=(others=>'0'); shadow_rx<=(others=>'0');
         shadow_re<=(others=>'0'); shadow_be<=(others=>'0');
         shadow_lt<=(others=>'0');
       else
-        s1_dp<=snap_tg_axi; s2_dp<=s1_dp; s3_dp<=s2_dp;
         snap_edge := s2_dp xor s3_dp;
         if snap_edge = '1' then
           -- captura atomica de los 5 contadores en el mismo ciclo dp
@@ -260,13 +307,10 @@ begin
   process(clk_axi)
   begin
     if rising_edge(clk_axi) then
-      if rst_axi = '1' then d1_axi<='0'; d2_axi<='0'; d3_axi<='0';
-      else
-        d1_axi<=done_tg_dp; d2_axi<=d1_axi; d3_axi<=d2_axi;
-      end if;
+      d1_axi<=done_tg_dp; d2_axi<=d1_axi; d3_axi<=d2_axi;  -- chain: no reset
     end if;
   end process;
 
-  axi_snap_done <= d2_axi xor d3_axi;
+  axi_snap_done <= (d2_axi xor d3_axi) and not rst_axi;
 
 end architecture rtl;

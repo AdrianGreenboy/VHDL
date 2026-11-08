@@ -235,7 +235,10 @@ The layer-4 runner first generates the ISS reference:
 python3 sim/iss_eth.py   # writes iss_signature.txt
 ```
 
-`spw_fifo.vhd` is referenced from `~/spw_ip/` (never duplicated); the runners
+Audit 2026-11: the MMIO FIFOs are now the local synchronous-read `rtl/eth_fifo.vhd` and
+real MII uses `rtl/eth_cdc_sync.vhd`, `rtl/eth_async_fifo.vhd`, `rtl/eth_mii_cdc.vhd`;
+`bash sim/run_audit.sh` runs the new CDC / max-length / overflow tests (see `AUDIT_FIXES.md`).
+(Historical note:) `spw_fifo.vhd` was referenced from `~/spw_ip/` (never duplicated); the runners
 fall back to a local copy if not found.
 
 ## 10. Build & run — Vivado

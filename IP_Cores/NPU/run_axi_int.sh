@@ -12,7 +12,7 @@ python3 gen_ddr_image.py oracle/oracle_npu.py model/npu_weights.hex \
 echo "[2/3] analizando con cache limpia..."
 rm -rf build_int && mkdir -p build_int
 ghdl -a --std=08 --workdir=build_int \
-  rtl/npu_pkg.vhd rtl/npu_axi_pkg.vhd rtl/npu_array.vhd \
+  rtl/npu_pkg.vhd rtl/npu_axi_pkg.vhd rtl/npu_array.vhd rtl/npu_sram.vhd \
   rtl/npu_seq_conv1.vhd rtl/npu_seq_full.vhd rtl/npu_top.vhd \
   rtl/npu_dma.vhd rtl/npu_axi_slave.vhd rtl/npu_axi_top.vhd \
   tb/axi_ddr_model.vhd tb/tb_npu_axi.vhd 2>&1 | grep -v "warning" || true

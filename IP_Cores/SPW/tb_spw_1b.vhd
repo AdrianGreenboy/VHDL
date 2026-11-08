@@ -72,7 +72,7 @@ begin
     generic map (DISC_CYCLES => 85)
     port map (
       clk        => clk,
-      arstn      => arstn,
+      rst      => not arstn,
       en         => en,
       rxen       => rxen,
       din        => din,
@@ -338,6 +338,27 @@ begin
     expect_tok(K_EOP);
     expect_tok(K_NULL);
     report "FASE G OK: trafico a 50 Mbit/s";
+
+    -- FASE H (audit 2026-11): simultaneous D/S transition -> err_par + HALT
+    bp := 100 ns;
+    relink;
+    bb_null;
+    bb_data(x"5A");
+    expect_tok(K_NULL);
+    expect_tok(K_DATA, x"5A");
+    vd := not vd; vs := not vs;          -- both lines toggle at once
+    din <= vd; sin <= vs;
+    wait for bp;
+    expect_tok(K_ERRP);
+    bb_null;                             -- ignored while halted
+    wait for 500 ns;
+    expect_quiet;
+    relink;
+    bb_null;
+    bb_data(x"A5");
+    expect_tok(K_NULL);
+    expect_tok(K_DATA, x"A5");
+    report "FASE H OK: transicion simultanea D/S detectada";
 
     report "CAPA 1b PASS";
     done <= true;

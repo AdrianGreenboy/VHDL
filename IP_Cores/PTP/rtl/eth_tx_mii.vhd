@@ -13,6 +13,11 @@
 --
 -- Nibble bajo primero (orden MII). FCS transmitido byte bajo primero,
 -- nibble bajo primero, SIN pasar por el propio CRC.
+--
+-- mii_ce may come from the internal /4 divider (LOOP_INT) or from
+-- eth_mii_cdc (external PHY: one ce per free slot of the TX_CLK async FIFO,
+-- possibly on consecutive core cycles). The engine is agnostic: one nibble
+-- per ce. This file is shared by ETH, PTP (byte-identical copy) and TSN.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;

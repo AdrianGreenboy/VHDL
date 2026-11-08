@@ -1,5 +1,7 @@
 # IIC — Memory-Mapped I²C Master/Slave IP Core for the RV32I SoC v3
 
+> **Audit 2026-11:** register semantics changed (W1C stickies, new bits). See the section *Audit 2026-11 changes* at the end and `AUDIT_FIXES.md`.
+
 Silicon-validated I²C controller (master + slave engines) for the RV32I SoC v3
 family, mapped at `0x7000_0000` on the internal dmem bus. Byte-level command
 interface (PIO + level IRQ), slave path backed by two FWFT byte FIFOs, full
@@ -273,3 +275,25 @@ peripheral itself is pending an own bring-up binary: the packaged rootfs
 carries the cross `usart-bringup` from the clone lineage (tracked
 separately as the bring-up debt work item).
 
+## Audit 2026-11 changes (supersedes conflicting statements above)
+
+Details, file:line references and verification: `AUDIT_FIXES.md`.
+
+* **FIFO**: private `i2c_byte_fifo.vhd` with SYNCHRONOUS reset (the old copy
+  had an asynchronous reset driven from logic, `aresetn <= not rst`).
+* **STAT (0x04) is write-1-to-clear per bit** (write `0xFFFFFFFF` to clear
+  all). New: STAT[9]/[10] = filtered SCL/SDA levels, STAT[25] = TIMEOUT*,
+  IRQ_EN[8]/IRQ_STAT[8] = TIMEOUT.
+* **0x30 TOUT** [15:0]: master timeout in quarter-bit periods (0 = off,
+  reset default). Covers clock stretching held too long and a stuck bus in
+  WAITFREE; on expiry the master releases both lines and returns to idle.
+* **CMD[13] = BUS_CLEAR**: 9 SCL pulses with SDA released, then STOP
+  (UM10204 3.1.16). NOBYTE/STOP and BUS_CLEAR are accepted with EN = 0, so a
+  disabled master can always release a held bus.
+* After reset `bus_busy = 1` until a STOP or BUS_FREE_Q (generic, default 8)
+  quarters of idle lines are observed; tBUF (4 quarters) is honoured after a
+  foreign STOP before our START.
+* rdata is gated by `sel`; WM values are clamped to the FIFO depth.
+* Firmware (`i2c_test.s`, `i2c_bringup.c`) updated for W1C.
+* GHDL regression: `./run_ghdl.sh all` (adds `tb_i2c_master_audit`,
+  `tb_i2c_byte_fifo`).

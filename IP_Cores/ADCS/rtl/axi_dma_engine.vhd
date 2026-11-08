@@ -15,6 +15,19 @@
 -- es REGISTRADO (latencia 1); u_ext_rd_addr se fija en IDLE/WRESP y el dato se
 -- consume un ciclo despues en DMA_WDATA.
 --
+-- Audit 2026-11:
+--   * RRESP / BRESP /= OKAY: the beat is NOT written into the bank, the
+--     command ends immediately with cmd_done + cmd_err (err_code "01").
+--   * Watchdog: a single AXI handshake (AR, R, AW, W, B) that does not
+--     complete within WDOG cycles aborts the command (cmd_done + cmd_err,
+--     err_code "10") and drops the handshake signals. NOTE: dropping a valid
+--     before its ready is an AXI protocol violation; it is only done when the
+--     slave is considered dead, and the interconnect then needs a reset.
+--   * abort (soft reset): the engine stops at the next safe point -- an
+--     address phase not yet issued is skipped, an issued one is completed
+--     (R beat accepted, or W beat + B response) -- and returns to IDLE
+--     without cmd_done. It no longer gets reset in the middle of a handshake.
+--
 -- MUT (solo verificacion, 0 en uso normal):
 --   1 = AxPROT=000 (secure): el BFM del NoC lo rechaza => timeout/deadlock
 --   2 = beat termina en total (off-by-one): una palabra de mas
@@ -29,6 +42,7 @@ entity axi_dma_engine is
   generic (
     AXI_ADDR_W : natural := 32;
     AXI_DATA_W : natural := 32;
+    WDOG       : natural := 4096;   -- max cycles per AXI handshake
     MUT        : natural := 0
   );
   port (
@@ -40,6 +54,9 @@ entity axi_dma_engine is
     cmd_addr   : in  std_logic_vector(AXI_ADDR_W-1 downto 0);
     cmd_words  : in  std_logic_vector(15 downto 0);
     cmd_done   : out std_logic;
+    cmd_err    : out std_logic;     -- with cmd_done: the command failed
+    err_code   : out std_logic_vector(1 downto 0);  -- 01 xRESP error, 10 timeout
+    abort      : in  std_logic := '0';  -- soft reset: drain and stop
     cmd_busy   : out std_logic;
     dbg_st     : out std_logic_vector(3 downto 0);
     dbg_beat   : out std_logic_vector(15 downto 0);
@@ -102,6 +119,9 @@ architecture rtl of axi_dma_engine is
   signal beat    : unsigned(15 downto 0);
   signal total   : unsigned(15 downto 0);
   signal cur_row, cur_col : unsigned(IDX_W-1 downto 0);
+  signal wd      : natural range 0 to WDOG := 0;
+  signal fail    : std_logic;
+  signal fail_code : std_logic_vector(1 downto 0);
 
   function st_code(s : st_e) return std_logic_vector is
   begin
@@ -129,10 +149,12 @@ begin
 
   p_fsm : process (clk, rst_n)
     variable last_beat : unsigned(15 downto 0);
+    variable waiting   : boolean;
   begin
     if rst_n = '0' then
       st <= DMA_IDLE;
-      cmd_done <= '0';
+      cmd_done <= '0'; cmd_err <= '0'; err_code <= "00";
+      fail <= '0'; fail_code <= "00"; wd <= 0;
       beat <= (others => '0');  total <= (others => '0');
       cur_row <= (others => '0');  cur_col <= (others => '0');
       op_q <= (others => '0');  base_q <= (others => '0');
@@ -148,14 +170,25 @@ begin
       u_ext_rd_addr <= (others => '0');
     elsif rising_edge(clk) then
       cmd_done <= '0';
+      cmd_err  <= '0';
       h_wr_en  <= '0';
       g_wr_en  <= '0';
+
+      -- watchdog on every AXI wait state
+      waiting := st = DMA_RWAIT or st = DMA_RDATA or st = DMA_WAWAIT or
+                 st = DMA_WDWAIT or st = DMA_WRESP;
+      if not waiting then
+        wd <= 0;
+      elsif wd < WDOG then
+        wd <= wd + 1;
+      end if;
 
       -- total efectivo con MUT2 (una palabra de mas)
       case st is
 
         when DMA_IDLE =>
-          if cmd_valid = '1' then
+          fail <= '0'; fail_code <= "00";
+          if cmd_valid = '1' and abort = '0' then
             op_q    <= cmd_op;
             base_q  <= unsigned(cmd_addr);
             beat    <= (others => '0');
@@ -190,9 +223,13 @@ begin
 
         -- LECTURA
         when DMA_RADDR =>
-          m_axi_araddr  <= std_logic_vector(base_q + (beat & "00"));
-          m_axi_arvalid <= '1';
-          st            <= DMA_RWAIT;
+          if abort = '1' then
+            st <= DMA_IDLE;                    -- nothing issued yet
+          else
+            m_axi_araddr  <= std_logic_vector(base_q + (beat & "00"));
+            m_axi_arvalid <= '1';
+            st            <= DMA_RWAIT;
+          end if;
 
         when DMA_RWAIT =>
           if m_axi_arready = '1' then
@@ -204,7 +241,10 @@ begin
         when DMA_RDATA =>
           if m_axi_rvalid = '1' and m_axi_rready = '1' then
             m_axi_rready <= '0';
-            if op_q = OP_LOAD_H then
+            if m_axi_rresp /= "00" then
+              fail <= '1'; fail_code <= "01";  -- SLVERR / DECERR: stop, no write
+              st <= DMA_FIN;
+            elsif op_q = OP_LOAD_H then
               h_wr_en   <= '1';
               h_wr_row  <= std_logic_vector(cur_row);
               h_wr_col  <= std_logic_vector(cur_col);
@@ -216,7 +256,11 @@ begin
             end if;
             last_beat := total - 1;
             if MUT = 2 then last_beat := total; end if;
-            if beat = last_beat then
+            if m_axi_rresp /= "00" then
+              null;
+            elsif abort = '1' then
+              st <= DMA_IDLE;                  -- drained at a beat boundary
+            elsif beat = last_beat then
               st <= DMA_FIN;
             else
               beat <= beat + 1;
@@ -232,9 +276,13 @@ begin
 
         -- ESCRITURA (STORE_U)
         when DMA_WADDR =>
-          m_axi_awaddr  <= std_logic_vector(base_q + (beat & "00"));
-          m_axi_awvalid <= '1';
-          st            <= DMA_WAWAIT;
+          if abort = '1' then
+            st <= DMA_IDLE;                    -- nothing issued yet
+          else
+            m_axi_awaddr  <= std_logic_vector(base_q + (beat & "00"));
+            m_axi_awvalid <= '1';
+            st            <= DMA_WAWAIT;
+          end if;
 
         when DMA_WAWAIT =>
           if m_axi_awready = '1' then
@@ -263,7 +311,11 @@ begin
             m_axi_bready <= '0';
             last_beat := total - 1;
             if MUT = 2 then last_beat := total; end if;
-            if beat = last_beat then
+            if m_axi_bresp /= "00" then
+              fail <= '1'; fail_code <= "01"; st <= DMA_FIN;
+            elsif abort = '1' then
+              st <= DMA_IDLE;                  -- drained (B received)
+            elsif beat = last_beat then
               st <= DMA_FIN;
             else
               beat <= beat + 1;
@@ -278,9 +330,21 @@ begin
 
         when DMA_FIN =>
           cmd_done <= '1';
+          cmd_err  <= fail;
+          err_code <= fail_code;
           st       <= DMA_IDLE;
 
       end case;
+
+      -- watchdog expiry: the slave is dead -> drop the handshake, fail
+      if waiting and wd >= WDOG then
+        m_axi_arvalid <= '0'; m_axi_rready <= '0';
+        m_axi_awvalid <= '0'; m_axi_wvalid <= '0'; m_axi_wlast <= '0';
+        m_axi_bready  <= '0';
+        h_wr_en <= '0'; g_wr_en <= '0';
+        fail <= '1'; fail_code <= "10";
+        if abort = '1' then st <= DMA_IDLE; else st <= DMA_FIN; end if;
+      end if;
     end if;
   end process;
 

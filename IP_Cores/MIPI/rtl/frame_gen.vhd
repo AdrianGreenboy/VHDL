@@ -6,6 +6,9 @@
 --   VC1: bars      pixel(x,y) = 0xFFF if (x/16) odd else 0x000
 -- Each frame: FS short packet, H long packets (RAW12), FE short packet.
 -- RAW12 pack: b0=P0[11:4], b1=P1[11:4], b2=(P1[3:0]<<4)|P0[3:0].
+-- AUDIT 2026-11: byte_sot marks the first byte of every packet (FS, each line
+-- long packet, FE) so the packet layer can resynchronise exactly as it does on
+-- a D-PHY SoT. The byte stream itself is unchanged (byte-identical to oracle).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -25,6 +28,7 @@ entity frame_gen is
     stall     : in  std_logic;                        -- hold generation (FIFO full)
     byte_out  : out std_logic_vector(7 downto 0);
     byte_valid: out std_logic;
+    byte_sot  : out std_logic;                        -- first byte of a packet
     busy      : out std_logic;
     done      : out std_logic                        -- pulse when both frames sent
   );
@@ -48,6 +52,7 @@ architecture rtl of frame_gen is
 
   signal bo  : std_logic_vector(7 downto 0) := (others=>'0');
   signal bv  : std_logic := '0';
+  signal bs  : std_logic := '0';
   signal busy_i : std_logic := '0';
   signal done_i : std_logic := '0';
 
@@ -83,7 +88,7 @@ begin
     variable wc_slv : std_logic_vector(15 downto 0);
   begin
     if rising_edge(clk) then
-      bv <= '0'; done_i <= '0';
+      bv <= '0'; bs <= '0'; done_i <= '0';
       if rst='1' then
         st <= S_IDLE; busy_i <= '0'; vc <= 0; yline <= 0; xpair <= 0; byte_ph <= 0;
       elsif stall='1' then
@@ -100,7 +105,7 @@ begin
           -- Frame Start short packet: DataID=vc<<6|FS, data16=0, ECC
           when S_FS0 =>
             did := std_logic_vector(to_unsigned(vc,2)) & DT_FS;
-            bo <= did; bv <= '1'; st <= S_FS1;
+            bo <= did; bv <= '1'; bs <= '1'; st <= S_FS1;
           when S_FS1 =>
             bo <= x"00"; bv <= '1'; st <= S_FS2;
           when S_FS2 =>
@@ -116,7 +121,7 @@ begin
           -- Long packet header
           when S_LH0 =>
             did := did_lp(vc);
-            bo <= did; bv <= '1'; st <= S_LH1;
+            bo <= did; bv <= '1'; bs <= '1'; st <= S_LH1;
           when S_LH1 =>
             wc := LINE_BYTES;
             wc_slv := std_logic_vector(to_unsigned(wc,16));
@@ -179,7 +184,7 @@ begin
           -- Frame End short packet
           when S_FE0 =>
             did := std_logic_vector(to_unsigned(vc,2)) & DT_FE;
-            bo <= did; bv <= '1'; st <= S_FE1;
+            bo <= did; bv <= '1'; bs <= '1'; st <= S_FE1;
           when S_FE1 =>
             bo <= x"00"; bv <= '1'; st <= S_FE2;
           when S_FE2 =>
@@ -208,6 +213,7 @@ begin
 
   byte_out   <= bo;
   byte_valid <= bv;
+  byte_sot   <= bs;
   busy       <= busy_i;
   done       <= done_i;
 end architecture;

@@ -79,10 +79,15 @@ begin
           if unsigned(now_ns) >= lat_v then
             ns_v  := unsigned(now_ns) - lat_v;
             sec_v := unsigned(now_sec);
-          else
+          elsif unsigned(now_sec) /= 0 then
             -- borrow: restamos del segundo anterior
             ns_v  := unsigned(now_ns) + NS_PER_SEC - lat_v;
             sec_v := unsigned(now_sec) - 1;
+          else
+            -- audit 2026-11: at sec=0 a borrow would wrap sec to 2^48-1;
+            -- the corrected time is before the epoch -> clamp to 0.0
+            ns_v  := (others => '0');
+            sec_v := (others => '0');
           end if;
           sec_r <= sec_v;
           ns_r  <= ns_v;

@@ -144,3 +144,17 @@ Mismo bit-align en ambos registros. `irq_out` del core = OR de (`IRQ_STATUS` AND
 
 El oráculo Python modela: el banco completo (RW, RW1C, WO/SC), el mapeo IRQ = STATUS_masked, y el modelo de contadores bajo una traza de eventos determinista. La firma FNV-1a 32-bit se calcula sobre la secuencia concatenada de:
 `(offset, tipo_acceso, dato_resultante)` de cada transacción AXI de la traza de test, más el estado final de los 6 contadores tras snapshot. Bit-idéntica RTL vs Python = único criterio PASS de Layer 1/2.
+
+## Audit 2026-11
+
+* AXI4-Lite write channel: AW and W are held independently (address, data
+  and strobes latched at their handshakes); `awready`/`wready` are low
+  while the corresponding holding register is full. Read: `arready = not
+  rvalid`.
+* `WSTRB` is honoured per byte lane; `CMD`/`STATS_SNAP` need byte lane 0.
+* Unmapped or unaligned offsets answer `SLVERR`; RO offsets accept writes
+  with `OKAY` and ignore them.
+* `STATUS.BLOCK_LOCK` / `HI_BER` now come from the clause-49 block sync of
+  the RX datapath (64 valid headers to lock, 16 invalid in a 64-header
+  window to lose it, hi_ber = 16 invalid headers in a 125 us window);
+  `CNT_RX_ERR` counts invalid sync headers. Counters saturate.

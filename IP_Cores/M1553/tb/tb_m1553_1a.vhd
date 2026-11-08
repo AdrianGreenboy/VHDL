@@ -6,6 +6,10 @@
 -- Vigilante de cable independiente: transiciones solo en rejilla de 500 ns,
 -- tx_en con duracion multiplo exacto de palabra (20 us), bus en reposo a '0'.
 -- Mensajes de FALLO sin tildes (GHDL rechaza no-ASCII en asserts).
+-- Audit 2026-11: a second instance (u_fs, FS_TIMEOUT = 5000 cycles) checks
+-- the fail-safe transmitter timer (continuous transmission cut at exactly
+-- FS_TIMEOUT cycles, sticky fault, no restart until rst) and the abort
+-- input. Its stimulus runs in parallel and must finish before the end.
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -31,6 +35,14 @@ architecture sim of tb_m1553_1a is
 
   signal rx_count  : integer := 0;
 
+  -- fail-safe / abort instance
+  constant FS_T    : integer := 5000;          -- 50 us at 100 MHz
+  signal fs_rst    : std_logic := '1';
+  signal fs_start  : std_logic := '0';
+  signal fs_abort  : std_logic := '0';
+  signal fs_busy, fs_txen, fs_txd, fs_flt : std_logic;
+  signal fs_done   : boolean := false;
+
   constant NWORDS : integer := 14;
 
   type t_words is array (natural range <>) of std_logic_vector(15 downto 0);
@@ -55,6 +67,112 @@ begin
       clk => clk, rst => rst,
       start => start, word_type => word_type, data => data,
       busy => busy, tx_en => tx_en, tx_data => tx_data);
+
+  u_fs : entity work.m1553_word_tx
+    generic map (FS_TIMEOUT => FS_T)
+    port map (
+      clk => clk, rst => fs_rst,
+      start => fs_start, word_type => '0', data => x"A5A5",
+      busy => fs_busy, abort => fs_abort, fs_fault => fs_flt,
+      tx_en => fs_txen, tx_data => fs_txd);
+
+  ------------------------------------------------------------------
+  -- Fail-safe timer and abort (independent checker by absolute time)
+  ------------------------------------------------------------------
+  fs_stim : process
+    variable t_on, t_off : time;
+  begin
+    fs_rst <= '1';
+    wait for 200 ns;
+    wait until rising_edge(clk);
+    fs_rst <= '0';
+    -- continuous transmission: keep a start pending every 10 us
+    wait until rising_edge(clk);
+    fs_start <= '1';
+    wait until rising_edge(clk);
+    fs_start <= '0';
+    wait until fs_txen = '1';
+    t_on := now;
+    for i in 1 to 9 loop            -- 90 us of requests (> 50 us limit)
+      wait for 10 us;
+      wait until rising_edge(clk);
+      fs_start <= '1';
+      wait until rising_edge(clk);
+      fs_start <= '0';
+    end loop;
+    assert fs_txen = '0' and fs_txd = '0'
+      report "FALLO FS: transmision continua no cortada por el temporizador"
+      severity failure;
+    assert fs_flt = '1'
+      report "FALLO FS: fallo fail-safe no registrado" severity failure;
+    -- the cut happened exactly FS_T cycles after tx_en rose
+    t_off := t_on + FS_T * T_CLK;
+    -- (checked by the monitor below)
+    -- more requests: the output must stay off (sticky)
+    for i in 1 to 4 loop
+      wait for 10 us;
+      wait until rising_edge(clk);
+      fs_start <= '1';
+      wait until rising_edge(clk);
+      fs_start <= '0';
+      assert fs_txen = '0' and fs_flt = '1'
+        report "FALLO FS: el transmisor rearranco sin re-habilitacion"
+        severity failure;
+    end loop;
+    wait for 30 us;
+    -- explicit re-enable (reset) clears the fault; one word goes out normally
+    wait until rising_edge(clk);
+    fs_rst <= '1';
+    wait until rising_edge(clk);
+    fs_rst <= '0';
+    wait until rising_edge(clk);
+    assert fs_flt = '0'
+      report "FALLO FS: el fallo no se limpio con la re-habilitacion"
+      severity failure;
+    fs_start <= '1';
+    wait until rising_edge(clk);
+    fs_start <= '0';
+    wait until fs_txen = '1';
+    t_on := now;
+    wait until fs_txen = '0';
+    assert now - t_on = T_WORD
+      report "FALLO FS: palabra tras re-habilitacion de duracion incorrecta"
+      severity failure;
+    -- abort mid-word: line quiet on the next cycle, nothing pending
+    wait for 5 us;
+    wait until rising_edge(clk);
+    fs_start <= '1';
+    wait until rising_edge(clk);
+    fs_start <= '0';
+    wait for 7 us;
+    wait until rising_edge(clk);
+    fs_start <= '1';                -- pending second word
+    fs_abort <= '1';
+    wait until rising_edge(clk);
+    fs_start <= '0';
+    fs_abort <= '0';
+    wait until rising_edge(clk);
+    assert fs_txen = '0' and fs_busy = '0'
+      report "FALLO FS: abort no detuvo la palabra en curso"
+      severity failure;
+    wait for 30 us;
+    assert fs_txen = '0'
+      report "FALLO FS: palabra pendiente emitida tras abort" severity failure;
+    fs_done <= true;
+    wait;
+  end process;
+
+  fs_mon : process
+    variable t_on : time;
+  begin
+    wait until fs_txen = '1';
+    t_on := now;
+    wait until fs_txen = '0';
+    assert now - t_on = FS_T * T_CLK
+      report "FALLO FS: corte fail-safe fuera de FS_TIMEOUT ciclos"
+      severity failure;
+    wait;
+  end process;
 
   ------------------------------------------------------------------
   -- Estimulo
@@ -100,6 +218,9 @@ begin
 
     -- cierre
     wait for 50 us;
+    if not fs_done then
+      wait until fs_done;
+    end if;
     assert rx_count = NWORDS
       report "FALLO: cuenta de palabras recibidas incorrecta"
       severity failure;

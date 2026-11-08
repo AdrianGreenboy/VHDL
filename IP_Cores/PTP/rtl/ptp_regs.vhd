@@ -20,13 +20,25 @@
 --   0x1C SMAC_HI   src_mac[47:32]                                  (rw)
 --   0x20 SMAC_LO   src_mac[31:0]                                   (rw)
 --   0x24 STATUS    [0]=rx_sync [1]=rx_resp [2]=mpd_valid [3]=off_v (r, W1C)
---   0x28 NOW_SEC   segundos (lectura congela NOW_NS)               (r)
+--                  audit 2026-11 (all W1C per bit, set wins):
+--                  [4]=pd_timeout [5]=tx_ts_timeout [6]=resp_lost
+--                  [7]=resp_mismatch [8]=not_as_capable (lost > allowed)
+--                  [9]=rx_oversize [10]=phy_cdc_err
+--   0x28 NOW_SEC   segundos [31:0] (lectura congela NOW_NS y NOW_SECHI) (r)
 --   0x2C NOW_NS    nanosegundos (congelado por lectura de NOW_SEC) (r)
 --   0x30 MPD_LO    meanPathDelay[31:0] (lectura congela MPD_HI)    (r)
 --   0x34 MPD_HI    meanPathDelay[63:32]                            (r)
 --   0x38 OFFSET    ultimo offset medido (signed ns)                (r)
 --   0x3C RATE_ADJ  rate_adj actual del servo                       (r)
 --   0x40 IRQEN     mascara de interrupcion (bit-a-bit con STATUS)  (rw)
+--   0x44..0x58     debug probes (r)
+--   0x5C NOW_SECHI segundos [47:32] (congelado por lectura de NOW_SEC) (r)
+--   0x60 TMO       timeout de toda espera PTP en ciclos de core; 0 = sin
+--                  timeout (v1). Reset: 0x0010_0000 (~10.5 ms @100 MHz) (rw)
+--   0x64 PD_CFG    [7:0] allowedLostResponses (reset 3)
+--                  [8] =1 disables the Resp seq/portIdentity check (debug) (rw)
+--   0x68 PD_STAT   [7:0] lostResponses [8] asCapable (live)          (r)
+-- CONTROL[2] enable: '0' holds the port datapath in reset (clock keeps running).
 -- ---------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -57,6 +69,9 @@ entity ptp_regs is
     src_mac    : out std_logic_vector(47 downto 0);
     send_sync    : out std_logic;                  -- pulso
     start_pdelay : out std_logic;                  -- pulso
+    tmo_cycles   : out unsigned(31 downto 0);
+    allowed_lost : out unsigned(7 downto 0);
+    chk_resp     : out std_logic;
     -- estado desde el datapath
     now_sec    : in  std_logic_vector(SEC_W-1 downto 0);
     now_ns     : in  std_logic_vector(NS_W-1 downto 0);
@@ -67,6 +82,15 @@ entity ptp_regs is
     rate_adj   : in  std_logic_vector(RATE_W-1 downto 0);
     rx_sync_ev : in  std_logic;                    -- pulso: Sync recibido
     rx_resp_ev : in  std_logic;                    -- pulso: Pdelay_Resp recibido
+    -- audit 2026-11 events (pulses) and live state
+    ev_pd_timeout    : in std_logic := '0';
+    ev_ts_timeout    : in std_logic := '0';
+    ev_resp_lost     : in std_logic := '0';
+    ev_resp_mismatch : in std_logic := '0';
+    ev_rx_oversize   : in std_logic := '0';
+    ev_phy_err       : in std_logic := '0';
+    pd_lost_cnt      : in unsigned(7 downto 0) := (others => '0');
+    pd_as_capable    : in std_logic := '1';
     dbg_state  : in  std_logic_vector(31 downto 0);
     dbg_rxdst  : in  std_logic_vector(47 downto 0);
     dbg_rxinfo : in  std_logic_vector(31 downto 0);
@@ -89,8 +113,13 @@ architecture rtl of ptp_regs is
   -- comandos (pulsos)
   signal send_sync_r, start_pdelay_r : std_logic := '0';
 
-  -- STATUS stickies: [0]rx_sync [1]rx_resp [2]mpd_valid [3]offset_valid
-  signal status_r : std_logic_vector(3 downto 0) := (others => '0');
+  -- STATUS stickies (W1C per bit): see map above
+  constant NSTAT  : integer := 11;
+  signal status_r : std_logic_vector(NSTAT-1 downto 0) := (others => '0');
+  signal tmo_r    : std_logic_vector(31 downto 0) := x"00100000";
+  signal pdcfg_r  : std_logic_vector(31 downto 0) := x"00000003";
+  signal sechi_snap : std_logic_vector(15 downto 0) := (others => '0');
+  signal nac_d    : std_logic := '1';
 
   -- snapshots atomicos
   signal ns_snap  : std_logic_vector(NS_W-1 downto 0) := (others => '0');
@@ -120,6 +149,10 @@ architecture rtl of ptp_regs is
   constant A_DBGD2  : std_logic_vector(5 downto 0) := "010100"; -- 0x50 nivel FIFO | len drop
   constant A_DBGD3  : std_logic_vector(5 downto 0) := "010101"; -- 0x54 wptr | rptr
   constant A_DBGD4  : std_logic_vector(5 downto 0) := "010110"; -- 0x58 1er byte a FIFO
+  constant A_SECHI  : std_logic_vector(5 downto 0) := "010111"; -- 0x5C
+  constant A_TMO    : std_logic_vector(5 downto 0) := "011000"; -- 0x60
+  constant A_PDCFG  : std_logic_vector(5 downto 0) := "011001"; -- 0x64
+  constant A_PDSTAT : std_logic_vector(5 downto 0) := "011010"; -- 0x68
 begin
 
   -- salidas de control
@@ -135,14 +168,15 @@ begin
   src_mac    <= smac_hi_r(15 downto 0) & smac_lo_r;
   send_sync    <= send_sync_r;
   start_pdelay <= start_pdelay_r;
+  tmo_cycles   <= unsigned(tmo_r);
+  allowed_lost <= unsigned(pdcfg_r(7 downto 0));
+  chk_resp     <= not pdcfg_r(8);
 
   -- IRQ por nivel: OR de STATUS enmascarado por IRQEN
-  irq <= '1' when (status_r and irqen_r(3 downto 0)) /= "0000" else '0';
+  irq <= '1' when (status_r and irqen_r(NSTAT-1 downto 0)) /= (status_r'range => '0') else '0';
 
   -- ---- rdata COMBINACIONAL ----
-  process(addr, sel, ctrl_r, servo_r, lat_r, clkid_r, port_r, smac_hi_r,
-          smac_lo_r, status_r, now_sec, ns_snap, mpd_ns, mpdhi_snap,
-          offset_ns, rate_adj, irqen_r, dbg_state, dbg_rxdst, dbg_rxinfo, dbg_fptr, dbg_ftx)
+  process(all)
   begin
     rdata <= (others => '0');
     if sel = '1' then
@@ -155,7 +189,7 @@ begin
         when A_PORT   => rdata <= port_r;
         when A_SMACH  => rdata <= smac_hi_r;
         when A_SMACL  => rdata <= smac_lo_r;
-        when A_STATUS => rdata <= (31 downto 4 => '0') & status_r;
+        when A_STATUS => rdata <= (31 downto NSTAT => '0') & status_r;
         when A_NOWSEC => rdata <= now_sec(31 downto 0);   -- 32b bajos del sec
         when A_NOWNS  => rdata <= ns_snap;                -- congelado
         when A_MPDLO  => rdata <= mpd_ns(31 downto 0);
@@ -169,6 +203,11 @@ begin
         when A_DBGD2  => rdata <= dbg_rxinfo;
         when A_DBGD3  => rdata <= dbg_fptr;
         when A_DBGD4  => rdata <= dbg_ftx;
+        when A_SECHI  => rdata <= x"0000" & sechi_snap;   -- congelado
+        when A_TMO    => rdata <= tmo_r;
+        when A_PDCFG  => rdata <= pdcfg_r;
+        when A_PDSTAT => rdata <= (31 downto 9 => '0') & pd_as_capable
+                                  & std_logic_vector(pd_lost_cnt);
         when others   => rdata <= (others => '0');
       end case;
     end if;
@@ -176,8 +215,8 @@ begin
 
   -- ---- escritura + stickies + snapshots ----
   process(clk)
-    variable set_v : std_logic_vector(3 downto 0);
-    variable clr_v : std_logic_vector(3 downto 0);
+    variable set_v : std_logic_vector(NSTAT-1 downto 0);
+    variable clr_v : std_logic_vector(NSTAT-1 downto 0);
   begin
     if rising_edge(clk) then
       -- pulsos de comando: default 0 (auto-clear)
@@ -191,10 +230,18 @@ begin
         smac_lo_r <= (others => '0'); irqen_r <= (others => '0');
         status_r <= (others => '0');
         ns_snap <= (others => '0'); mpdhi_snap <= (others => '0');
+        sechi_snap <= (others => '0');
+        tmo_r <= x"00100000"; pdcfg_r <= x"00000003";
+        nac_d <= '1';
       else
         -- eventos que ARMAN stickies este ciclo
+        nac_d <= pd_as_capable;
         set_v := (0 => rx_sync_ev, 1 => rx_resp_ev,
-                  2 => mpd_valid,  3 => offset_valid);
+                  2 => mpd_valid,  3 => offset_valid,
+                  4 => ev_pd_timeout, 5 => ev_ts_timeout,
+                  6 => ev_resp_lost, 7 => ev_resp_mismatch,
+                  8 => nac_d and not pd_as_capable,     -- asCapable 1->0 edge
+                  9 => ev_rx_oversize, 10 => ev_phy_err);
         clr_v := (others => '0');
 
         -- escrituras
@@ -211,7 +258,9 @@ begin
             when A_PORT   => port_r  <= wdata;
             when A_SMACH  => smac_hi_r <= wdata;
             when A_SMACL  => smac_lo_r <= wdata;
-            when A_STATUS => clr_v := wdata(3 downto 0);   -- W1C
+            when A_STATUS => clr_v := wdata(NSTAT-1 downto 0);   -- W1C per bit
+            when A_TMO    => tmo_r   <= wdata;
+            when A_PDCFG  => pdcfg_r <= wdata;
             when A_IRQEN  => irqen_r <= wdata;
             when others   => null;
           end case;
@@ -219,12 +268,15 @@ begin
 
         -- snapshot atomico: leer NOW_SEC congela ns; leer MPD_LO congela hi
         if sel = '1' and we = '0' then
-          if addr = A_NOWSEC then ns_snap <= now_ns; end if;
+          if addr = A_NOWSEC then
+            ns_snap    <= now_ns;
+            sechi_snap <= now_sec(47 downto 32);
+          end if;
           if addr = A_MPDLO  then mpdhi_snap <= mpd_ns(63 downto 32); end if;
         end if;
 
         -- actualizar stickies: set gana sobre clear en el mismo ciclo
-        for i in 0 to 3 loop
+        for i in 0 to NSTAT-1 loop
           if set_v(i) = '1' then
             status_r(i) <= '1';
           elsif clr_v(i) = '1' then

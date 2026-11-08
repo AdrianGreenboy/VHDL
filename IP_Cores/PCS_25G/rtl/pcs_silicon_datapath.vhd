@@ -41,7 +41,15 @@ entity pcs_silicon_datapath is
     ber_count   : out std_logic_vector(31 downto 0);
     chk_locked  : out std_logic;
     tx_word_cnt : out std_logic_vector(31 downto 0);
-    rx_block_cnt: out std_logic_vector(31 downto 0)
+    rx_block_cnt: out std_logic_vector(31 downto 0);
+
+    -- clause-49 block sync of the RX path (audit 2026-11, fix A3)
+    resync      : in  std_logic := '0';
+    rx_lock     : out std_logic;
+    rx_hi_ber   : out std_logic;
+    rx_ev_goodsh: out std_logic;      -- one pulse per valid sync header
+    rx_ev_badsh : out std_logic;      -- one pulse per invalid sync header
+    rx_ev_slip  : out std_logic
   );
 end entity pcs_silicon_datapath;
 
@@ -63,6 +71,7 @@ architecture rtl of pcs_silicon_datapath is
   -- RX datapath
   signal rx_in_ready, rx_out_valid, rx_out_isdata : std_logic;
   signal rx_out_payload : std_logic_vector(63 downto 0);
+  signal rx_lock_i : std_logic;
   -- checker
   signal chk_din : std_logic_vector(63 downto 0);
   signal chk_en  : std_logic;
@@ -158,14 +167,20 @@ begin
 
   -- ==== RX datapath ====
   u_rx: entity work.pcs_rx_datapath
-    port map (clk=>clk_dp, rst=>rst_dp,
+    port map (clk=>clk_dp, rst=>rst_dp, resync=>resync,
               in_valid=>loop_valid, in_word=>loop_word, in_ready=>rx_in_ready,
               out_valid=>rx_out_valid, out_payload=>rx_out_payload,
-              out_is_data=>rx_out_isdata);
+              out_is_data=>rx_out_isdata, out_hdr_ok=>open,
+              out_lock=>rx_lock_i, out_hi_ber=>rx_hi_ber,
+              ev_goodsh=>rx_ev_goodsh, ev_badsh=>rx_ev_badsh,
+              ev_slip=>rx_ev_slip, ev_lost=>open);
+  rx_lock <= rx_lock_i;
 
   -- ==== PRBS31 checker sobre el payload recuperado ====
   chk_din <= rx_out_payload;
-  chk_en  <= rx_out_valid and prbs_chk_en;
+  -- only blocks received with block_lock are checked (clause 49: no data is
+  -- delivered without lock)
+  chk_en  <= rx_out_valid and prbs_chk_en and rx_lock_i;
   u_chk: entity work.prbs31_chk
     port map (clk=>clk_dp, rst=>rst_dp, en=>chk_en, clr_ber=>clr_ber, din=>chk_din,
               err_count=>ber_count, locked=>chk_locked);

@@ -85,7 +85,7 @@
     li   x15, 4032
     jal  x28, move_region
     li   x14, 256
-    li   x22, 6144
+    li   x22, 11520
     li   x15, 1952
     jal  x28, move_region
     li   x5, 4096
@@ -227,7 +227,7 @@
     li   x22, 2176
     li   x15, 3309
     jal  x28, move_region
-    li   x14, 6144
+    li   x14, 11520
     li   x22, 0
     li   x15, 1952
     jal  x28, move_region

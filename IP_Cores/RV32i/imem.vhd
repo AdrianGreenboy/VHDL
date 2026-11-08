@@ -6,6 +6,9 @@
 --  32 bits por linea, estilo $readmemh). Lectura asincrona: la palabra en la
 --  direccion 'addr' aparece de forma combinacional (adecuado para single-cycle).
 --
+--  Simulation-only model (textio init). SYNC_READ = true models a 1-cycle
+--  synchronous ROM/SRAM, for testing cpu_pipeline with IMEM_SYNC = true.
+--
 --  El programa se compila aparte (ver sim/asm.py) y se coloca en el directorio
 --  desde donde se corre la simulacion.
 -- =============================================================================
@@ -20,9 +23,11 @@ use work.riscv_pkg.all;
 entity imem is
   generic (
     DEPTH     : natural := 256;          -- numero de palabras
-    INIT_FILE : string  := "program.mem"
+    INIT_FILE : string  := "program.mem";
+    SYNC_READ : boolean := false         -- true: 1-cycle synchronous read
   );
   port (
+    clk   : in  std_logic := '0';        -- only used with SYNC_READ
     addr  : in  word_t;                  -- direccion de byte (se usa [.. :2])
     instr : out word_t
   );
@@ -61,5 +66,15 @@ architecture rtl of imem is
   -- indice de palabra: quita los 2 bits bajos de la direccion de byte
   constant IDX_HI : natural := 1 + integer(ceil(log2(real(DEPTH))));
 begin
-  instr <= ROM(to_integer(unsigned(addr(IDX_HI downto 2))));
+  g_async : if not SYNC_READ generate
+    instr <= ROM(to_integer(unsigned(addr(IDX_HI downto 2))));
+  end generate;
+  g_sync : if SYNC_READ generate
+    process(clk)
+    begin
+      if rising_edge(clk) then
+        instr <= ROM(to_integer(unsigned(addr(IDX_HI downto 2))));
+      end if;
+    end process;
+  end generate;
 end architecture rtl;

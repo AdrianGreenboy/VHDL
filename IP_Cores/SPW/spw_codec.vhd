@@ -20,13 +20,23 @@ use ieee.numeric_std.all;
 
 entity spw_codec is
   generic (
+    -- audit 2026-11 (400 Mbit/s ASIC target):
+    --   G_RX_MODE 1 = Data-Strobe clock-recovery receiver (spw_rx_dsr), DEFAULT
+    --             0 = oversampling receiver (spw_rx, <= 50 Mbit/s at 100 MHz)
+    --               for FPGA builds where a recovered-clock domain is
+    --               impractical; it also flags simultaneous D/S transitions.
+    --   G_TX_CLK  0 = transmitter on clk (div >= 2), as before
+    --             1 = transmitter on the dedicated tx_clk (spw_tx_cdc, div >= 1)
+    G_RX_MODE   : integer := 1;
+    G_TX_CLK    : integer := 0;
     DISC_CYCLES : integer := 85;
     T64_CYCLES  : integer := 640;
     T128_CYCLES : integer := 1280
   );
   port (
     clk            : in  std_logic;
-    arstn          : in  std_logic;
+    tx_clk         : in  std_logic := '0';  -- used only with G_TX_CLK = 1
+    rst          : in  std_logic;  -- synchronous, active high
     en             : in  std_logic;
     div            : in  std_logic_vector(7 downto 0);
     link_start     : in  std_logic;
@@ -90,13 +100,16 @@ begin
   err_disc <= e_disc;
 
   -- latch de peticion de time-code
-  time_latch : process (clk, arstn)
+  time_latch : process (clk)
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       time_req_i <= '0';
       time_lat   <= (others => '0');
-    elsif rising_edge(clk) then
-      if en = '0' then
+    else  -- (synchronous reset, audit 2026-11)
+      if en = '0' or allow_nchar_i = '0' then
+        -- audit 2026-11: a tick_in outside Run is discarded (it must not be
+        -- emitted later when the link reaches Run)
         time_req_i <= '0';
       elsif tick_in = '1' then
         time_lat   <= time_in;
@@ -105,12 +118,14 @@ begin
         time_req_i <= '0';
       end if;
     end if;
+    end if;
   end process time_latch;
 
+  g_tx0 : if G_TX_CLK = 0 generate
   u_tx : entity work.spw_tx
     port map (
       clk         => clk,
-      arstn       => arstn,
+      rst       => rst,
       en          => en,
       div         => div,
       txen        => txen_i,
@@ -127,12 +142,25 @@ begin
       dout        => dout,
       sout        => sout
     );
+  end generate g_tx0;
 
+  g_tx1 : if G_TX_CLK /= 0 generate
+  u_tx : entity work.spw_tx_cdc
+    port map (
+      clk => clk, rst => rst, tx_clk => tx_clk, en => en, div => div,
+      txen => txen_i, allow_fct => allow_fct_i, allow_nchar => allow_nchar_i,
+      fct_req => fct_req_i, fct_ack => fct_ack_i,
+      time_req => time_req_i, time_val => time_lat, time_ack => time_ack_i,
+      d_valid => d_valid_i, d_data => tx_data, d_ack => d_ack_i,
+      dout => dout, sout => sout);
+  end generate g_tx1;
+
+  g_rx0 : if G_RX_MODE = 0 generate
   u_rx : entity work.spw_rx
     generic map (DISC_CYCLES => DISC_CYCLES)
     port map (
       clk        => clk,
-      arstn      => arstn,
+      rst      => rst,
       en         => en,
       rxen       => rxen_i,
       din        => din,
@@ -148,6 +176,19 @@ begin
       err_esc    => e_esc,
       err_disc   => e_disc
     );
+  end generate g_rx0;
+
+  g_rx1 : if G_RX_MODE /= 0 generate
+  u_rx : entity work.spw_rx_dsr
+    generic map (DISC_CYCLES => DISC_CYCLES)
+    port map (
+      clk => clk, rst => rst, en => en, rxen => rxen_i,
+      din => din, sin => sin,
+      first_null => first_null_i, got_null => got_null_i, got_fct => got_fct_i,
+      got_time => got_time_i, time_out => time_out_i,
+      rx_we => rx_we_i, rx_data => rx_data_i,
+      err_par => e_par, err_esc => e_esc, err_disc => e_disc);
+  end generate g_rx1;
 
   u_link : entity work.spw_link
     generic map (
@@ -156,7 +197,7 @@ begin
     )
     port map (
       clk            => clk,
-      arstn          => arstn,
+      rst          => rst,
       en             => en,
       link_start     => link_start,
       link_autostart => link_autostart,

@@ -15,6 +15,14 @@
 --
 -- Twiddle W_2N: ROM fija de 512 (W_1024), subindexada con stride 1024/(2N).
 -- Conjugacion de ci en 17 bits (leccion -32768 de la entrega 1).
+--
+-- AUDIT 2026-11 (numeric): A and B are kept at 17 bits (ai/bi reach +32768
+-- when Zi = -32768 is conjugated), W*B at 18 bits (|W*B| <= 46341), the final
+-- sum at 19 bits, then sat16. No intermediate wrap. Identical to the oracle.
+-- AUDIT 2026-11 (ASIC): the Z buffer has ONE registered read port (Z[k] and
+-- Z[N-k] are fetched in two consecutive cycles) and the X buffer has ONE
+-- registered read port (rd_xr/rd_xi valid 1 cycle after rd_idx). Both buffers
+-- are plain 1R1W synchronous memories -> SRAM-macro / BRAM mappable.
 -------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -78,7 +86,7 @@ architecture rtl of fft_unsplit_dp is
   constant WRE : rom_t := gen_wre;
   constant WIM : rom_t := gen_wim;
 
-  type state_t is (S_IDLE, S_RUN1, S_RUN2, S_RUN3, S_RUN4, S_DONE);
+  type state_t is (S_IDLE, S_RA, S_RB, S_RC, S_RUN1, S_RUN2, S_RUN3, S_RUN4, S_DONE);
   signal state : state_t := S_IDLE;
 
   signal n_r     : integer range 1 to NMAX := NMAX;
@@ -87,9 +95,16 @@ architecture rtl of fft_unsplit_dp is
   signal k_r     : integer range 0 to NMAX := 0;
 
   -- registros de pipeline del unsplit (rompen la cadena combinacional larga)
-  signal ar_p, ai_p, br_p, bi_p : signed(15 downto 0) := (others=>'0');
+  signal ar_p, ai_p, br_p, bi_p : signed(16 downto 0) := (others=>'0');
   signal wr_p, wi_p             : signed(15 downto 0) := (others=>'0');
-  signal wbr_p, wbi_p           : signed(15 downto 0) := (others=>'0');
+  signal wbr_p, wbi_p           : signed(17 downto 0) := (others=>'0');
+  -- single registered read port of the Z buffer + capture of Z[kk]
+  signal z_raddr                : integer range 0 to NMAX-1 := 0;
+  signal zq_r, zq_i             : signed(15 downto 0) := (others=>'0');
+  signal zk_r, zk_i             : signed(15 downto 0) := (others=>'0');
+  signal km_r                   : integer range 0 to NMAX-1 := 0;
+  -- single registered read port of the X buffer
+  signal xq_r, xq_i             : signed(15 downto 0) := (others=>'0');
   signal rom_addr_p             : integer range 0 to NMAX := 0;
   signal klt_p                  : std_logic := '0';   -- k_r < n_r registrado
   -- ayudas para evitar multiplicador/modulo variables (n_r, stride son 2^x):
@@ -97,23 +112,19 @@ architecture rtl of fft_unsplit_dp is
   signal log2_stride_r : integer range 0 to 10 := 0;
   signal nmask_r       : integer range 0 to NMAX := 0;   -- n_r - 1
 
-  function qmul(a, b : signed(15 downto 0)) return signed is
-    variable p : signed(31 downto 0);
-  begin
-    p := a*b; p := p + to_signed(16384,32);
-    return resize(shift_right(p,15),16);
-  end function;
-  function qmul17(a : signed(15 downto 0); b : signed(16 downto 0)) return signed is
+  -- 17b x 16b Q1.15 product, round-half-up, full-width 18-bit result.
+  function qmulw(a : signed(16 downto 0); b : signed(15 downto 0)) return signed is
     variable p : signed(32 downto 0);
   begin
     p := a*b; p := p + to_signed(16384,33);
-    return resize(shift_right(p,15),16);
+    return resize(shift_right(p,15),18);
   end function;
-  function rsr1(v : signed) return signed is
-    variable t : signed(v'length downto 0);
+  -- (v + 1) >> 1 of a 17-bit sum, result 17 bits (range [-32768, 32768]).
+  function rs1_17(v : signed(16 downto 0)) return signed is
+    variable t : signed(17 downto 0);
   begin
-    t := resize(v,v'length+1)+1;
-    return resize(shift_right(t,1),16);
+    t := resize(v,18)+1;
+    return resize(shift_right(t,1),17);
   end function;
   function sat16(v : signed) return signed is
   begin
@@ -124,9 +135,31 @@ architecture rtl of fft_unsplit_dp is
 
 begin
 
+  -- Z buffer: 1 write port (load) + 1 registered read port (FSM)
   process(clk)
-    variable kk, km : integer range 0 to NMAX;
-    variable cr : signed(15 downto 0);
+  begin
+    if rising_edge(clk) then
+      if wr_en='1' then
+        zr_b(to_integer(unsigned(wr_idx))) <= signed(wr_zr);
+        zi_b(to_integer(unsigned(wr_idx))) <= signed(wr_zi);
+      end if;
+      zq_r <= zr_b(z_raddr);
+      zq_i <= zi_b(z_raddr);
+    end if;
+  end process;
+
+  -- X buffer read port (registered): rd_x* valid 1 cycle after rd_idx
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      xq_r <= xr_b(to_integer(unsigned(rd_idx)));
+      xq_i <= xi_b(to_integer(unsigned(rd_idx)));
+    end if;
+  end process;
+
+  process(clk)
+    variable kk : integer range 0 to NMAX;
+    variable cr : signed(16 downto 0);
     variable ci : signed(16 downto 0);
   begin
     if rising_edge(clk) then
@@ -134,10 +167,6 @@ begin
       if rst='1' then
         state <= S_IDLE; busy <= '0'; k_r <= 0;
       else
-        if wr_en='1' then
-          zr_b(to_integer(unsigned(wr_idx))) <= signed(wr_zr);
-          zi_b(to_integer(unsigned(wr_idx))) <= signed(wr_zi);
-        end if;
 
         case state is
           when S_IDLE =>
@@ -151,20 +180,34 @@ begin
               log2_stride_r <= 10 - to_integer(unsigned(log2n2));
               nmask_r <= (2 ** (to_integer(unsigned(log2n2))-1)) - 1;
               k_r     <= 0;
-              state   <= S_RUN1;
+              state   <= S_RA;
             end if;
 
-          -- Etapa 1: mezcla A/B y direccion de ROM (registradas).
-          -- kk = k_r and (n_r-1) ; rom_addr = k_r << log2_stride  (n_r,stride 2^x)
-          when S_RUN1 =>
+          -- Read phase (one Z read port): address Z[kk], then Z[km].
+          -- kk = k_r and (n_r-1) ; km = (N-k) mod N   (n_r is a power of 2)
+          when S_RA =>
             kk := to_integer(to_unsigned(k_r,11) and to_unsigned(nmask_r,11));
-            if k_r = 0 then km := 0; else km := n_r - k_r; end if;
-            cr := zr_b(km);
-            ci := -resize(zi_b(km), 17);
-            ar_p <= rsr1(resize(zr_b(kk),17) + resize(cr,17));
-            ai_p <= rsr1(resize(zi_b(kk),17) + ci);
-            br_p <= rsr1(resize(zr_b(kk),17) - resize(cr,17));
-            bi_p <= rsr1(resize(zi_b(kk),17) - ci);
+            z_raddr <= kk;
+            if k_r = 0 or k_r = n_r then km_r <= 0; else km_r <= n_r - k_r; end if;
+            state <= S_RB;
+
+          when S_RB =>
+            z_raddr <= km_r;          -- zq <= Z[kk] at the end of this cycle
+            state <= S_RC;
+
+          when S_RC =>
+            zk_r <= zq_r; zk_i <= zq_i;   -- capture Z[kk]; zq <= Z[km] next
+            state <= S_RUN1;
+
+          -- Etapa 1: mezcla A/B y direccion de ROM (registradas).
+          -- rom_addr = k_r << log2_stride
+          when S_RUN1 =>
+            cr := resize(zq_r, 17);
+            ci := -resize(zq_i, 17);
+            ar_p <= rs1_17(resize(zk_r,17) + cr);
+            ai_p <= rs1_17(resize(zk_i,17) + ci);
+            br_p <= rs1_17(resize(zk_r,17) - cr);
+            bi_p <= rs1_17(resize(zk_i,17) - ci);
             if k_r < n_r then
               rom_addr_p <= to_integer(shift_left(to_unsigned(k_r,11), log2_stride_r));
               klt_p <= '1';
@@ -187,19 +230,19 @@ begin
 
           -- Etapa 3: multiplicaciones complejas W*B (registradas).
           when S_RUN3 =>
-            wbr_p <= resize(qmul(br_p,wr_p) - qmul(bi_p,wi_p),16);
-            wbi_p <= resize(qmul(br_p,wi_p) + qmul(bi_p,wr_p),16);
+            wbr_p <= qmulw(br_p,wr_p) - qmulw(bi_p,wi_p);
+            wbi_p <= qmulw(br_p,wi_p) + qmulw(bi_p,wr_p);
             state <= S_RUN4;
 
           -- Etapa 4: sumas finales y escritura al buffer de salida.
           when S_RUN4 =>
-            xr_b(k_r) <= sat16(resize(ar_p,17) + resize(wbi_p,17));
-            xi_b(k_r) <= sat16(resize(ai_p,17) - resize(wbr_p,17));
+            xr_b(k_r) <= sat16(resize(ar_p,19) + resize(wbi_p,19));
+            xi_b(k_r) <= sat16(resize(ai_p,19) - resize(wbr_p,19));
             if k_r = n_r then
               state <= S_DONE;
             else
               k_r <= k_r + 1;
-              state <= S_RUN1;
+              state <= S_RA;
             end if;
 
           when S_DONE =>
@@ -209,7 +252,7 @@ begin
     end if;
   end process;
 
-  rd_xr <= std_logic_vector(xr_b(to_integer(unsigned(rd_idx))));
-  rd_xi <= std_logic_vector(xi_b(to_integer(unsigned(rd_idx))));
+  rd_xr <= std_logic_vector(xq_r);
+  rd_xi <= std_logic_vector(xq_i);
 
 end architecture;

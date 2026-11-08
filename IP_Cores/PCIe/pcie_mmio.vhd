@@ -13,6 +13,11 @@
 --
 -- rdata COMBINACIONAL: mux directo del registro seleccionado por addr. NO
 -- registrar (bug de Layer 4 documentado).
+--
+-- Audit 2026-11: FIFOs are pcie_byte_fifo (registered read + prefetch, full
+-- guard, sticky overflow); the RX FIFO is fed with the VALIDATED TLP stream
+-- of the node; new RO registers ERR_STAT (0x3C) / LINK_ERR (0x40), RX_CTRL
+-- bit1 = RX overflow, IRQ bit4 = completion timeout.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -83,6 +88,9 @@ architecture rtl of pcie_mmio is
   signal rxf_wr, rxf_full, rxf_rd, rxf_empty : std_logic;
   signal rxf_wdata, rxf_rdata : std_logic_vector(7 downto 0);
   signal rxf_level : unsigned(9 downto 0);
+  signal txf_ovf, txl_ovf, rxf_ovf : std_logic;
+  signal n_cpl_tmo : std_logic;
+  signal n_tmo_cnt, n_nak, n_bad : std_logic_vector(15 downto 0);
 
   -- maquina de drenado TX: saca bytes de la FIFO hacia el nodo
   type txst_t is (TX_IDLE, TX_RUN);
@@ -109,30 +117,34 @@ begin
               tlresp_valid=>n_tr_v, tlresp_data=>n_tr_d,
               tlresp_start=>n_tr_s, tlresp_last=>n_tr_l,
               rxtlp_valid=>n_rx_v, rxtlp_data=>n_rx_d,
-              rxtlp_start=>n_rx_s, rxtlp_last=>n_rx_l);
+              rxtlp_start=>n_rx_s, rxtlp_last=>n_rx_l,
+              cpl_tmo=>n_cpl_tmo, cpl_tmo_cnt=>n_tmo_cnt, bad_rx=>n_bad,
+              nak_tx=>n_nak, rpl_tmo=>open, ur_cnt=>open, retrain_cnt=>open);
 
   n_start  <= reg_control(C_START);
   n_hotrst <= reg_control(C_HOTRST);
 
   -- ================= FIFOs =================
-  u_txfifo : entity work.byte_fifo
+  u_txfifo : entity work.pcie_byte_fifo
     generic map (LOG2_DEPTH => 9)
     port map (clk=>clk, aresetn=>resetn, wr_en=>txf_wr, wr_data=>txf_wdata,
               full=>txf_full, rd_en=>txf_rd, rd_data=>txf_rdata,
-              empty=>txf_empty, level=>txf_level);
-  u_txlast : entity work.byte_fifo
+              empty=>txf_empty, level=>txf_level, ovf=>txf_ovf);
+  u_txlast : entity work.pcie_byte_fifo
     generic map (LOG2_DEPTH => 9)
     port map (clk=>clk, aresetn=>resetn, wr_en=>txl_wr, wr_data=>txl_wdata,
               full=>txl_full, rd_en=>txl_rd, rd_data=>txl_rdata,
-              empty=>txl_empty, level=>txl_level);
-  u_rxfifo : entity work.byte_fifo
+              empty=>txl_empty, level=>txl_level, ovf=>txl_ovf);
+  u_rxfifo : entity work.pcie_byte_fifo
     generic map (LOG2_DEPTH => 9)
     port map (clk=>clk, aresetn=>resetn, wr_en=>rxf_wr, wr_data=>rxf_wdata,
               full=>rxf_full, rd_en=>rxf_rd, rd_data=>rxf_rdata,
-              empty=>rxf_empty, level=>rxf_level);
+              empty=>rxf_empty, level=>rxf_level, ovf=>rxf_ovf);
 
   -- escritura en la FIFO TX: cuando el firmware escribe REG_TX_DATA
   txf_wdata <= wdata(7 downto 0);
+  -- a byte written while the TX FIFO is full is dropped by the FIFO (sticky
+  -- TX overflow in ERR_STAT); the firmware must poll TX_CTRL.full.
   txf_wr <= '1' when (wr_hit='1' and a_idx=work.pcie_mmio_pkg.REG_TX_DATA) else '0';
   -- la marca de last se empuja en paralelo: 0x01 si push_last, else 0x00.
   -- El firmware escribe REG_TX_DATA con el byte; para el ULTIMO byte, escribe
@@ -159,7 +171,7 @@ begin
       tlp_ready <= 0;
     elsif rising_edge(clk) then
       -- contabilidad de TLPs completos: +1 al escribir un 'last'
-      if txf_wr='1' and wdata(8)='1' then
+      if txf_wr='1' and wdata(8)='1' and txf_full='0' and tlp_ready < 255 then
         tlp_ready <= tlp_ready + 1;
       end if;
 
@@ -172,7 +184,7 @@ begin
           -- avanza mientras la DLL acepte; al drenar el 'last' cierra el TLP
           if txf_empty='0' and n_req_rdy='1' and txl_rdata(0)='1' then
             txst <= TX_IDLE;
-            if not (txf_wr='1' and wdata(8)='1') then
+            if not (txf_wr='1' and wdata(8)='1' and txf_full='0' and tlp_ready < 255) then
               tlp_ready <= tlp_ready - 1;
             end if;
           end if;
@@ -201,9 +213,13 @@ begin
         reg_irq_stat(I_CPL_RX) <= '1';
       end if;
       if n_msi='1' then reg_irq_stat(I_MSI_TX) <= '1'; end if;
+      if n_cpl_tmo='1' then reg_irq_stat(I_CPL_TMO) <= '1'; end if;
       -- W1C: escribir 1 limpia el bit
       if wr_hit='1' and a_idx=work.pcie_mmio_pkg.REG_IRQ_STAT then
         for b in 0 to 3 loop
+          if wdata(b)='1' then reg_irq_stat(b) <= '0'; end if;
+        end loop;
+        for b in 4 to 4 loop
           if wdata(b)='1' then reg_irq_stat(b) <= '0'; end if;
         end loop;
       end if;
@@ -240,7 +256,8 @@ begin
   -- ================= rdata COMBINACIONAL =================
   process(a_idx, reg_control, n_up, n_state, reg_irq_stat, reg_irq_en,
           rxf_rdata, rxf_empty, rxf_level, txf_full, txf_level,
-          n_bar, n_mwr, n_mrd, n_good, reg_msi_addr, reg_msi_data)
+          n_bar, n_mwr, n_mrd, n_good, reg_msi_addr, reg_msi_data,
+          rxf_ovf, txf_ovf, n_tmo_cnt, n_nak, n_bad, n_rpl)
   begin
     case a_idx is
       when work.pcie_mmio_pkg.REG_CONTROL   => rdata <= reg_control;
@@ -260,11 +277,19 @@ begin
       when work.pcie_mmio_pkg.REG_RX_CTRL   =>
         rdata <= (others=>'0');
         rdata(R_EMPTY) <= rxf_empty;
+        rdata(R_OVF)   <= rxf_ovf;
         rdata(15 downto 8) <= std_logic_vector(rxf_level(7 downto 0));
       when work.pcie_mmio_pkg.REG_BAR0_LAST => rdata <= n_bar;
       when work.pcie_mmio_pkg.REG_MWR_CNT   => rdata <= x"0000" & n_mwr;
       when work.pcie_mmio_pkg.REG_MRD_CNT   => rdata <= x"0000" & n_mrd;
       when work.pcie_mmio_pkg.REG_GOOD_RX   => rdata <= x"0000" & n_good;
+      when work.pcie_mmio_pkg.REG_ERR_STAT  =>
+        rdata <= (others=>'0');
+        rdata(15 downto 0)  <= n_tmo_cnt;
+        rdata(23 downto 16) <= n_nak(7 downto 0);
+        rdata(24) <= rxf_ovf;
+        rdata(25) <= txf_ovf;
+      when work.pcie_mmio_pkg.REG_LINK_ERR  => rdata <= n_rpl & n_bad;
       when work.pcie_mmio_pkg.REG_MSI_ADDR  => rdata <= reg_msi_addr;
       when work.pcie_mmio_pkg.REG_MSI_DATA  => rdata <= reg_msi_data;
       when work.pcie_mmio_pkg.REG_DBG_STATE =>

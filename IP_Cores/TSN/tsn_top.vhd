@@ -7,8 +7,23 @@
 -- rxd(o)/rx_dv(o) del MISMO indice (validacion en silicio sin PHY). Con
 -- loop_int='0' se exponen los pines MII externos.
 --
+-- Audit 2026-11:
+--   * rx_src="00" (external PHY) is now a REAL MII: per port, mii_rx_clk(i)
+--     / mii_tx_clk(i) from the PHY and an eth_mii_cdc (Gray async FIFOs,
+--     2-FF synchronizers, reset synchronizers) between the PHY clocks and the
+--     core. v1 sampled the pins with the internal 25 MHz enable (no CDC).
+--     In rx_src="01"/"10" the engines keep the internal mii_ce (unchanged).
+--     Change rx_src only while the ports are idle.
+--   * PTP timestamp hooks: rx_sfd(i) / tx_sfd(i) are 1-cycle core-domain
+--     pulses at the RX SFD (after the RX FIFO) / TX wire SFD of each port
+--     (+/-1 core clock, fixed latency) -- the hook needed for 802.1AS and
+--     for Qbv gate timing (phase 2).
+--   * RX max length 1522 (802.1Q tagged); longer frames are dropped by the
+--     RX engine (counted in DROP_FCS and flagged in ERR_STICKY).
+--
 -- Bus dmem del SoC: sel/we/addr(8:0)/wdata/rdata (rdata COMBINACIONAL).
--- STATUS se compone aqui de la observabilidad del xbar.
+-- STATUS: [3:0] descriptor pending per input, [7:4] egress engine busy per
+-- output (level, IPG included), [11:8] ingress byte read this cycle (pulse).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -33,7 +48,12 @@ entity tsn_top is
     mii_txd   : out byte_arr4;                        -- solo [3:0] util
     mii_tx_en : out std_logic_vector(3 downto 0);
     mii_rxd   : in  byte_arr4;                        -- solo [3:0] util
-    mii_rx_dv : in  std_logic_vector(3 downto 0)
+    mii_rx_dv : in  std_logic_vector(3 downto 0);
+    mii_rx_clk : in std_logic_vector(3 downto 0) := (others => '0');  -- PHY RX_CLK
+    mii_tx_clk : in std_logic_vector(3 downto 0) := (others => '0');  -- PHY TX_CLK
+    -- PTP timestamp hooks (core-domain pulses)
+    rx_sfd    : out std_logic_vector(3 downto 0);
+    tx_sfd    : out std_logic_vector(3 downto 0)
   );
 end entity;
 
@@ -43,6 +63,17 @@ architecture rtl of tsn_top is
   signal rxdv : std_logic_vector(3 downto 0);
   signal r_data : byte_arr4;
   signal r_valid, r_last, r_crc, r_runt : std_logic_vector(3 downto 0);
+  signal r_ovs, r_fcsdrop : std_logic_vector(3 downto 0);
+  -- per-port clock-enables and CDC
+  signal ext : std_logic;
+  signal rx_ce_p, tx_ce_p : std_logic_vector(3 downto 0);
+  signal x_rx_ce, x_rx_dv, x_tx_ce, x_sfd_w, x_ovf, x_unf : std_logic_vector(3 downto 0);
+  signal x_rx_nib : byte_arr4 := (others => (others => '0'));
+  signal x_txd : byte_arr4 := (others => (others => '0'));
+  signal x_txen : std_logic_vector(3 downto 0);
+  signal eng_sfd, rxe_sfd, cdc_txen, cdc_sfd : std_logic_vector(3 downto 0);
+  signal err_set : std_logic_vector(8 downto 0);
+  signal inj_err : std_logic;
 
   -- ingress -> xbar
   signal dv, dtag, dpop, ird_en, ird_valid, ircm, irrw
@@ -86,8 +117,30 @@ architecture rtl of tsn_top is
   signal inj_rxd : std_logic_vector(3 downto 0);
   signal inj_rx_dv : std_logic;
 begin
+  ext <= '1' when rx_src = "00" else '0';
+
+  -- external PHY interface per port (always present; idle unless rx_src=00)
+  g_cdc : for i in 0 to 3 generate
+    cdc_i : entity work.eth_mii_cdc
+      port map (clk => clk, rst => rst,
+        rx_ce => x_rx_ce(i), rx_nib => x_rx_nib(i)(3 downto 0), rx_dv => x_rx_dv(i),
+        tx_ce => x_tx_ce(i), tx_nib => txd_i(i)(3 downto 0), tx_en => cdc_txen(i),
+        tx_sfd => cdc_sfd(i), tx_sfd_wire => x_sfd_w(i),
+        rx_ovf => x_ovf(i), tx_unf => x_unf(i),
+        mii_rx_clk => mii_rx_clk(i), mii_rxd => mii_rxd(i)(3 downto 0),
+        mii_rx_dv => mii_rx_dv(i),
+        mii_tx_clk => mii_tx_clk(i), mii_txd => x_txd(i)(3 downto 0),
+        mii_tx_en => x_txen(i));
+    cdc_txen(i) <= txen_i(i) and ext;
+    cdc_sfd(i)  <= eng_sfd(i) and ext;
+    rx_ce_p(i)  <= x_rx_ce(i) when ext = '1' else mii_ce;
+    tx_ce_p(i)  <= x_tx_ce(i) when ext = '1' else mii_ce;
+    tx_sfd(i)   <= x_sfd_w(i) when ext = '1' else eng_sfd(i);
+    rx_sfd(i)   <= rxe_sfd(i);
+  end generate;
+
   -- mux de entrada RX de 3 vias por puerto:
-  --   rx_src="00" pin externo | "01" loop_int (TX propio) | "10" inyector
+  --   rx_src="00" pin externo (via CDC) | "01" loop_int (TX propio) | "10" inyector
   -- el inyector solo conduce el puerto inj_port; los demas quedan en reposo.
   g_loop : for i in 0 to 3 generate
     process(all)
@@ -104,23 +157,29 @@ begin
             rxd(i)  <= (others => '0');
             rxdv(i) <= '0';
           end if;
-        when others =>                    -- pin externo
-          rxd(i)  <= mii_rxd(i);
-          rxdv(i) <= mii_rx_dv(i);
+        when others =>                    -- pin externo (RX_CLK domain -> CDC)
+          rxd(i)  <= x_rx_nib(i);
+          rxdv(i) <= x_rx_dv(i);
       end case;
     end process;
-    mii_txd(i)   <= txd_i(i);
-    mii_tx_en(i) <= txen_i(i);
+    -- pads: TX_CLK registers in external mode; engine lines otherwise (v1)
+    mii_txd(i)   <= x_txd(i) when ext = '1' else txd_i(i);
+    mii_tx_en(i) <= x_txen(i) when ext = '1' else txen_i(i);
   end generate;
 
   -- RX MII x4 (promisc: el switch reenvia todo)
   g_rx : for i in 0 to 3 generate
     rx_i : entity work.eth_rx_mii
-      port map (clk => clk, rst => rst, mii_ce => mii_ce,
+      generic map (G_MAXLEN => 1522)            -- 802.1Q tagged max frame
+      port map (clk => clk, rst => rst, mii_ce => rx_ce_p(i),
         macaddr => x"000000000000", promisc => '1',
         rxd => rxd(i)(3 downto 0), rx_dv => rxdv(i),
         rx_data => r_data(i), rx_valid => r_valid(i), rx_last => r_last(i),
-        ev_ok => open, ev_crc => r_crc(i), ev_runt => r_runt(i), ev_drop => open);
+        ev_ok => open, ev_crc => r_crc(i), ev_runt => r_runt(i), ev_drop => open,
+        ev_oversize => r_ovs(i), rx_sfd_pulse => rxe_sfd(i),
+        dbg_dst => open, dbg_nb => open);
+    -- the ingress 'drop by RX validity' counter also counts oversize frames
+    r_fcsdrop(i) <= r_runt(i) or r_ovs(i);
   end generate;
 
   -- ingress x4
@@ -129,7 +188,7 @@ begin
       generic map (LOG2_DEPTH => 11)
       port map (clk => clk, rst => rst,
         rx_data => r_data(i), rx_valid => r_valid(i), rx_last => r_last(i),
-        ev_crc => r_crc(i), ev_runt => r_runt(i),
+        ev_crc => r_crc(i), ev_runt => r_fcsdrop(i),
         rd_en => ird_en(i), rd_data => ird_data(i), rd_valid => ird_valid(i),
         rd_commit => ircm(i), rd_rewind => irrw(i),
         desc_valid => dv(i), desc_mac => dmac(i), desc_len => dlen(i),
@@ -160,10 +219,10 @@ begin
         mii_last => atx_last(i), mii_ready => atx_ready(i),
         mii_busy => atx_busy(i));
     tx_i : entity work.eth_tx_mii
-      port map (clk => clk, rst => rst, mii_ce => mii_ce,
+      port map (clk => clk, rst => rst, mii_ce => tx_ce_p(i),
         tx_data => atx_data(i), tx_valid => atx_valid(i), tx_last => atx_last(i),
         tx_ready => atx_ready(i), tx_busy => atx_busy(i), underrun => open,
-        txd => txd_i(i)(3 downto 0), tx_en => txen_i(i));
+        txd => txd_i(i)(3 downto 0), tx_en => txen_i(i), tx_sfd_pulse => eng_sfd(i));
     txd_i(i)(7 downto 4) <= "0000";
   end generate;
 
@@ -173,12 +232,14 @@ begin
     port map (clk => clk, rst => rst, mii_ce => mii_ce,
       wr_push => inj_push, wr_word => inj_word, clr_buf => inj_clr,
       len_bytes => inj_len, go => inj_go, port_sel => inj_psel,
-      busy => inj_busy,
+      busy => inj_busy, err => inj_err,
       inj_port => inj_port, inj_rxd => inj_rxd, inj_rx_dv => inj_rx_dv);
 
-  -- STATUS: fifo no-vacia (hay descriptor), salida ocupada, entrada drenando
+  -- STATUS: descriptor pendiente (nivel), salida ocupada (nivel), byte de
+  -- entrada leido este ciclo (pulso). v1 put the 1-cycle cnt_tx pulse in
+  -- [7:4], contradicting the documented "salida ocupada" level.
   st_fifo  <= dv;
-  st_obusy <= x_cnt_tx;                 -- proxy de actividad (pulso por trama)
+  st_obusy <= atx_busy;                 -- egress engine busy (IPG included)
   st_drain <= ird_en;                   -- alguna entrada esta siendo leida
   status_in <= st_drain & st_obusy & st_fifo;
   dbg_in    <= x"000000" & "00" & inj_busy & enable & st_drain(0)
@@ -194,5 +255,9 @@ begin
       inj_len => inj_len, inj_go => inj_go, inj_psel => inj_psel,
       inj_busy => inj_busy,
       p_rx => c_rx, p_tx => x_cnt_tx, p_ovf => c_ovf, p_fcs => c_fcs,
-      p_tag => c_tag, status_in => status_in, dbg_in => dbg_in);
+      p_tag => c_tag, status_in => status_in, dbg_in => dbg_in,
+      err_set => err_set);
+  -- ERR_STICKY sources: [3:0] RX oversize, [7:4] CDC FIFO ovf/unf (ext PHY),
+  -- [8] injector request refused
+  err_set <= inj_err & ((x_ovf or x_unf) and (3 downto 0 => ext)) & r_ovs;
 end architecture;

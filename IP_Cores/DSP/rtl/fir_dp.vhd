@@ -17,6 +17,12 @@
 --
 -- Estilo (leccion Vivado #2): sin lookups indexados en funciones. La linea
 -- de retardo y la RAM de coeficientes son arrays con indice registrado.
+--
+-- AUDIT 2026-11: cfg_len is clamped to 1..MAXTAPS when a sample is pushed
+-- (0 -> 1, >MAXTAPS -> MAXTAPS), and coef_idx is reduced modulo HALFMAX, so an
+-- out-of-range configuration can never index outside the delay line / coef
+-- RAM (previously: negative jb index for LEN=0, half_r > HALFMAX for LEN>64).
+-- dsp_mmio additionally rejects such a START with STATUS.ERR.
 -------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -66,6 +72,13 @@ architecture rtl of fir_dp is
   signal xa_r, xb_r, c_r : signed(15 downto 0) := (others => '0');
   signal center_r        : boolean := false;
 
+  function clamp_len(v : std_logic_vector) return integer is
+    variable n : integer := to_integer(unsigned(v));
+  begin
+    if n < 1 then return 1; elsif n > MAXTAPS then return MAXTAPS; end if;
+    return n;
+  end function;
+
   function sat16(v : signed) return std_logic_vector is
   begin
     if v > to_signed(32767, v'length) then
@@ -98,7 +111,7 @@ begin
       else
         -- carga de coeficientes (independiente del estado)
         if coef_we = '1' then
-          cmem(to_integer(unsigned(coef_idx))) <= signed(coef_dat);
+          cmem(to_integer(unsigned(coef_idx)) mod HALFMAX) <= signed(coef_dat);
         end if;
 
         case state is
@@ -112,8 +125,8 @@ begin
               end loop;
               dline(0) <= signed(x_in);
               -- congelar LEN de esta muestra
-              len_r  <= to_integer(unsigned(cfg_len));
-              half_r <= (to_integer(unsigned(cfg_len)) + 1) / 2;
+              len_r  <= clamp_len(cfg_len);
+              half_r <= (clamp_len(cfg_len) + 1) / 2;
               acc    <= (others => '0');
               k      <= 0;
               busy   <= '1';

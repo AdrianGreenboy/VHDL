@@ -8,13 +8,25 @@
 -- Encadenado sin hueco: un pulso de start durante la palabra en curso deja
 -- la siguiente pendiente y se emite contigua (data words de un mensaje).
 -- rst sincrono activo alto (patron heredado del SoC).
+--
+-- Fail-safe transmitter timer (MIL-STD-1553B 4.4.1.3 as referenced by the
+-- audit), independent of the word FSM: a separate counter measures how long
+-- tx_en has been continuously asserted. When it reaches FS_TIMEOUT cycles
+-- the output is forced off (tx_en = '0', tx_data = '0') and fs_fault latches.
+-- fs_fault is cleared ONLY by rst (the cores drive rst from EN, so an
+-- explicit disable / re-enable is required). Default 80000 cycles = 800 us
+-- at 100 MHz: margin over the longest legal continuous transmission of one
+-- terminal (command or status + 32 data words = 33 x 20 us = 660 us).
+-- abort: synchronous stop of the current/pending word (superseding command
+-- on the other bus); the line goes quiet on the next cycle.
 
 library ieee;
 use ieee.std_logic_1164.all;
 
 entity m1553_word_tx is
   generic (
-    CYCLES_PER_HALFBIT : integer := 50
+    CYCLES_PER_HALFBIT : integer := 50;
+    FS_TIMEOUT         : integer := 80000   -- fail-safe limit (cycles)
   );
   port (
     clk       : in  std_logic;
@@ -24,6 +36,8 @@ entity m1553_word_tx is
     data      : in  std_logic_vector(15 downto 0);
     busy      : out std_logic;
     loaded    : out std_logic;                      -- pulso: palabra cargada
+    abort     : in  std_logic := '0';               -- stop now (no new word)
+    fs_fault  : out std_logic;                      -- fail-safe tripped (sticky)
     tx_en     : out std_logic;
     tx_data   : out std_logic
   );
@@ -41,6 +55,10 @@ architecture rtl of m1553_word_tx is
   signal pend      : std_logic := '0';
   signal pend_wt   : std_logic := '0';
   signal pend_data : std_logic_vector(15 downto 0) := (others => '0');
+
+  -- fail-safe timer (independent of the word FSM)
+  signal fs_cnt : integer range 0 to FS_TIMEOUT := 0;
+  signal fs_r   : std_logic := '0';
 
   -- paridad impar: total de unos en (dato + paridad) es impar
   function odd_parity(d : std_logic_vector(15 downto 0)) return std_logic is
@@ -73,9 +91,26 @@ architecture rtl of m1553_word_tx is
 
 begin
 
-  busy    <= run or pend;
-  tx_en   <= run;
-  tx_data <= lvl when run = '1' else '0';
+  busy     <= run or pend;
+  tx_en    <= run and (not fs_r);
+  tx_data  <= lvl when run = '1' and fs_r = '0' else '0';
+  fs_fault <= fs_r;
+
+  fs_p : process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then
+        fs_cnt <= 0;
+        fs_r   <= '0';
+      elsif run = '0' then
+        fs_cnt <= 0;
+      elsif fs_cnt = FS_TIMEOUT - 1 then
+        fs_r <= '1';                -- latched until rst
+      else
+        fs_cnt <= fs_cnt + 1;
+      end if;
+    end if;
+  end process;
 
   process(clk)
     variable do_load       : boolean;
@@ -143,6 +178,16 @@ begin
           pend      <= '1';
           pend_wt   <= word_type;
           pend_data <= data;
+        end if;
+
+        -- abort wins over everything of this cycle
+        if abort = '1' then
+          run    <= '0';
+          pend   <= '0';
+          loaded <= '0';
+          lvl    <= '0';
+          cnt    <= 0;
+          hb     <= 0;
         end if;
       end if;
     end if;

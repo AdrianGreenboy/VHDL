@@ -21,14 +21,14 @@ W = sys.argv[1] if len(sys.argv) > 1 else "/tmp/mac25g_mut"
 # vectores de sim/run_layers.sh: <workdir de run_layers>/vec
 VEC = os.path.join(os.environ.get("MAC25G_SIM", "/tmp/mac25g_sim"), "vec")
 
-PCS_FILES = ["pcs_scrambler.vhd", "pcs_gearbox_tx.vhd", "pcs_gearbox_rx.vhd",
+PCS_FILES = ["pcs_scrambler.vhd", "pcs_gearbox_tx.vhd", "pcs_gearbox_rx.vhd", "pcs_blocksync.vhd",
              "pcs_tx_datapath.vhd", "pcs_rx_datapath.vhd", "pcs_mmio_bridge.vhd"]
 MAC_FILES = ["mac25g_crc_pkg.vhd", "mac25g_pkg.vhd", "mac25g_pcs_tx.vhd", "mac25g_gen.vhd",
              "mac25g_tx.vhd", "mac25g_rx.vhd", "mac25g_chk.vhd", "mac25g_pcs66.vhd",
-             "mac25g_datapath.vhd", "mac25g_sync.vhd", "mac25g_top.vhd"]
+             "mac25g_flow.vhd", "mac25g_datapath.vhd", "mac25g_sync.vhd", "mac25g_top.vhd"]
 TB_FILES = ["tb_mac_pkg.vhd", "tb_mac_pcs_tx.vhd", "tb_mac_tx.vhd",
             "tb_mac_rx.vhd", "tb_mac_chk.vhd", "tb_mac_datapath.vhd",
-            "tb_mac_top.vhd", "tb_mac_sync.vhd"]
+            "tb_mac_top.vhd", "tb_mac_sync.vhd", "tb_mac_flow.vhd"]
 
 L3B = ["-gVEC=l3_l3b.txt", "-gINJ=true"]
 TXB = ["-gVEC=tx_txb.txt", "-gLEN_MIN=20", "-gLEN_MAX=90", "-gSTEP=1", "-gNFR=71"]
@@ -105,12 +105,14 @@ MUTS = [
      "pend <= '0'; busy <= '0'; req <= '0';",
      "tb_mac_sync", [], "LAYER1C_PASS"),
     ("M25", "PCS 66b: sync header invertido solo en TX", "mac25g_pcs66.vhd",
-     "if in_is_data = '1' then sync_d1 <= \"01\"; else sync_d1 <= \"10\"; end if;",
      "if in_is_data = '1' then sync_d1 <= \"10\"; else sync_d1 <= \"01\"; end if;",
+     "if in_is_data = '1' then sync_d1 <= \"01\"; else sync_d1 <= \"10\"; end if;",
      "tb_mac_datapath", [], "LAYER3_PASS"),
+    # audit 2026-11: with the TX frame FIFO the L3 bursts never fill it, so
+    # the skid is only exercised when the TX is paused (FIFO full)
     ("M26", "register slice sin skid (pierde palabras)", "mac25g_datapath.vhd",
      "rs_ready <= not rs_sv;", "rs_ready <= '1';",
-     "tb_mac_datapath", [], "LAYER3_PASS"),
+     "tb_mac_flow", ["-gTEST=pause"], "TB_MAC_FLOW_PAUSE_PASS"),
     ("M27", "sof no reinicia el CRC del RX", "mac25g_rx.vhd",
      "v_crc := crc_acc or (31 downto 0 => r2_sof);", "v_crc := crc_acc;",
      "tb_mac_rx", [], "LAYER2B_PASS"),
@@ -158,7 +160,7 @@ def main():
         if rc == 0:
             rc, out = run(["ghdl", "-e"] + gf + [tb], d)
         if rc == 0:
-            rc, out = run(["ghdl", "-r"] + gf + [tb] + gens, VEC, timeout=300)
+            rc, out = run(["ghdl", "-r"] + gf + [tb] + gens, VEC, timeout=900)
         killed = (pas not in out)
         verdict = "MUERTA" if killed else "SOBREVIVE"
         if not killed:

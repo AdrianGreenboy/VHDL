@@ -37,6 +37,10 @@ entity basemul_k is
     -- destination port (read for accumulate, then write)
     d_addr    : out std_logic_vector(7 downto 0);
     d_rdata   : in  std_logic_vector(15 downto 0);
+    -- '1' in the cycle the destination read address is presented. The
+    -- polynomial memory serves this read from the operand-A copy, which is
+    -- what keeps every physical bank 1R1W (audit 2026-11).
+    d_re      : out std_logic;
     d_wdata   : out std_logic_vector(15 downto 0);
     d_we      : out std_logic;
     busy      : out std_logic;
@@ -109,6 +113,7 @@ begin
         busy_r  <= '0';
         done_r  <= '0';
         d_we    <= '0';
+        d_re    <= '0';
         a_addr  <= (others => '0');
         b_addr  <= (others => '0');
         d_addr  <= (others => '0');
@@ -116,6 +121,7 @@ begin
       else
         done_r <= '0';
         d_we   <= '0';
+        d_re   <= '0';
 
         case fsm is
 
@@ -175,6 +181,7 @@ begin
 
           when S_ACC0 =>
             d_addr <= std_logic_vector(to_unsigned(2 * pair, 8));
+            d_re   <= '1';
             fsm    <= S_ACC0D;
 
           -- One settle state: the destination memory is synchronous, so data
@@ -199,6 +206,7 @@ begin
 
           when S_ACC1 =>
             d_addr <= std_logic_vector(to_unsigned(2 * pair + 1, 8));
+            d_re   <= '1';
             fsm    <= S_ACC1D;
 
           when S_ACC1D =>

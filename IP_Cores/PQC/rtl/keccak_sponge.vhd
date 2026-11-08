@@ -16,6 +16,17 @@
 --   4. read bytes: pulse dout_re when dout_valid='1'; dout holds the byte.
 --      The sponge permutes transparently between rate blocks.
 --   ready is low while a permutation is in flight.
+--
+-- Protocol errors (audit 2026-11). A command the sponge cannot honour used
+-- to be dropped silently. Each of the following now sets the sticky err
+-- output (cleared by err_clr or reset):
+--   init while a permutation is in flight, din_we outside the absorb phase
+--   (or together with init / absorb_done), absorb_done outside the absorb
+--   phase, dout_re outside the squeeze phase.
+-- Zeroization: a zero pulse clears the state and the output byte and runs
+-- one permutation over the all-zero state, so that keccak_f1600's internal
+-- register ends holding f(0) (a public constant) instead of the last secret
+-- state. zbusy is high until that permutation completes.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -40,13 +51,18 @@ entity keccak_sponge is
     dout_re     : in  std_logic;
     dout_valid  : out std_logic;
     -- status
-    ready       : out std_logic);
+    ready       : out std_logic;
+    -- zeroization and protocol-error reporting
+    zero        : in  std_logic := '0';
+    zbusy       : out std_logic;
+    err         : out std_logic;
+    err_clr     : in  std_logic := '0');
 end entity keccak_sponge;
 
 architecture rtl of keccak_sponge is
 
   type t_fsm is (S_IDLE, S_ABSORB, S_PERM_ABS, S_PAD, S_PERM_PAD,
-                 S_SQUEEZE, S_PERM_SQZ);
+                 S_SQUEEZE, S_PERM_SQZ, S_ZERO);
 
   signal fsm       : t_fsm := S_IDLE;
 
@@ -64,6 +80,8 @@ architecture rtl of keccak_sponge is
 
   signal ready_r   : std_logic := '0';
   signal dvalid_r  : std_logic := '0';
+  signal err_r     : std_logic := '0';
+  signal zreq      : std_logic := '0';
 
   -- XOR one byte into the state at byte offset p (little-endian lanes).
   function xor_byte (s : t_state; p : integer; b : std_logic_vector(7 downto 0))
@@ -104,6 +122,40 @@ begin
 
   ready      <= ready_r;
   dout_valid <= dvalid_r;
+  err        <= err_r;
+  zbusy      <= '1' when (zreq = '1' or zero = '1' or fsm = S_ZERO) else '0';
+
+  -- Sticky protocol-error detector. Purely observational: it does not change
+  -- how any command is handled.
+  err_proc : process (clk)
+    variable bad : boolean;
+  begin
+    if rising_edge(clk) then
+      if rst_n = '0' then
+        err_r <= '0';
+      else
+        bad := false;
+        if init = '1' and k_busy = '1' then
+          bad := true;
+        end if;
+        if din_we = '1' and not (fsm = S_ABSORB and init = '0' and
+                                 absorb_done = '0') then
+          bad := true;
+        end if;
+        if absorb_done = '1' and not (fsm = S_ABSORB and init = '0') then
+          bad := true;
+        end if;
+        if dout_re = '1' and not (fsm = S_SQUEEZE and init = '0') then
+          bad := true;
+        end if;
+        if bad then
+          err_r <= '1';
+        elsif err_clr = '1' then
+          err_r <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
 
   process (clk)
     variable s_tmp : t_state;
@@ -119,10 +171,27 @@ begin
         ready_r  <= '0';
         dvalid_r <= '0';
         dout     <= (others => '0');
+        zreq     <= '0';
       else
         k_start <= '0';
 
-        if init = '1' and k_busy = '0' then
+        if (zero = '1' or zreq = '1') and fsm /= S_ZERO then
+          -- Zeroization has priority over every command. If a permutation
+          -- is in flight, wait for it (its output is discarded).
+          if k_busy = '0' then
+            st       <= (others => (others => '0'));
+            k_in     <= (others => (others => '0'));
+            k_start  <= '1';
+            dout     <= (others => '0');
+            pos      <= 0;
+            ready_r  <= '0';
+            dvalid_r <= '0';
+            zreq     <= '0';
+            fsm      <= S_ZERO;
+          else
+            zreq <= '1';
+          end if;
+        elsif init = '1' and k_busy = '0' then
           -- Global synchronous restart. Accepted from any state so that a
           -- caller can begin a new absorb without first draining a squeeze.
           st  <= (others => (others => '0'));
@@ -215,6 +284,12 @@ begin
               dvalid_r <= '1';
               ready_r  <= '1';
               fsm      <= S_SQUEEZE;
+            end if;
+
+          when S_ZERO =>
+            -- f(0) is a public constant; keep st cleared, not loaded.
+            if k_done = '1' then
+              fsm <= S_IDLE;
             end if;
 
         end case;

@@ -36,6 +36,8 @@ entity rf_loopmix is
   );
 end entity rf_loopmix;
 
+-- AUDIT 2026-11: the four Q1.15 product reductions ROUND HALF-UP,
+-- (p + 2**14) >> 15, like the rest of the family (was truncation).
 architecture rtl of rf_loopmix is
   function sat16 (v : signed(33 downto 0)) return signed is
   begin
@@ -71,8 +73,8 @@ begin
         -- up-mix e^+jth con saturacion Q1.15 en la etapa RF
         ri_v := resize(bi_v * c_v, 34) - resize(bq_v * s_v, 34);
         rq_v := resize(bq_v * c_v, 34) + resize(bi_v * s_v, 34);
-        rfi_v := sat16(resize(shift_right(ri_v, 15), 34));
-        rfq_v := sat16(resize(shift_right(rq_v, 15), 34));
+        rfi_v := sat16(resize(shift_right(ri_v + 16384, 15), 34));
+        rfq_v := sat16(resize(shift_right(rq_v + 16384, 15), 34));
         if loop_en_i = '0' then
           rfi_v := (others => '0');
           rfq_v := (others => '0');
@@ -82,8 +84,8 @@ begin
         -- down-mix e^-jth con la MISMA fila (s,c)
         di_v := resize(rfi_v * c_v, 34) + resize(rfq_v * s_v, 34);
         dq_v := resize(rfq_v * c_v, 34) - resize(rfi_v * s_v, 34);
-        i_o <= std_logic_vector(sat16(resize(shift_right(di_v, 15), 34)));
-        q_o <= std_logic_vector(sat16(resize(shift_right(dq_v, 15), 34)));
+        i_o <= std_logic_vector(sat16(resize(shift_right(di_v + 16384, 15), 34)));
+        q_o <= std_logic_vector(sat16(resize(shift_right(dq_v + 16384, 15), 34)));
         valid_o <= '1';
       end if;
     end if;

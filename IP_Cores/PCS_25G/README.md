@@ -25,6 +25,15 @@ the slowest speed grade of the device. That frequency is not arbitrary: it is th
 
 ---
 
+## Audit 2026-11
+
+See [AUDIT_FIXES.md](AUDIT_FIXES.md) for the findings, the RTL changes and
+the new tests. The silicon results quoted in this README predate those
+changes (notably the IEEE 802.3 sync-header order on the wire, the
+clause-49 block lock with bit slip, and the AXI-Lite write channel), so the
+current RTL must be re-validated on the board and against a standard 25G
+link partner before they can be claimed again.
+
 ## 1. Feature set (frozen scope)
 
 - **64B/66B encoding** with the IEEE 802.3 self-synchronous scrambler
@@ -127,6 +136,9 @@ firmware DMAs to a behavioural DDR model. It is the silicon run, rehearsed.
 
 ### Running the simulations
 
+Full regression (all layers + the audit 2026-11 tests): `bash sim/run_layers.sh /tmp/pcs25g_sim`.
+Manual steps:
+
 ```bash
 cd ~/vhdl_repo/IP_Cores/PCS_25G
 python3 oracle/pcs_prbs_oracle.py          # FNV32_PRBS=0x50BA6983
@@ -134,7 +146,7 @@ python3 oracle/gen_tb_prbs.py > rtl/tb_pcs_prbs31.vhd
 
 rm -rf /tmp/w && mkdir -p /tmp/w
 ghdl -a --std=08 --workdir=/tmp/w rtl/pcs_scrambler.vhd rtl/pcs_gearbox_tx.vhd \
-  rtl/pcs_gearbox_rx.vhd rtl/pcs_tx_datapath.vhd rtl/pcs_rx_datapath.vhd \
+  rtl/pcs_gearbox_rx.vhd rtl/pcs_blocksync.vhd rtl/pcs_tx_datapath.vhd rtl/pcs_rx_datapath.vhd \
   rtl/pcs_prbs31.vhd rtl/pcs_silicon_datapath.vhd rtl/pcs_regbank.vhd \
   rtl/pcs_dataplane.vhd rtl/pcs_cdc.vhd rtl/pcs_stats_top.vhd \
   rtl/pcs_mmio_bridge.vhd rtl/tb_*.vhd

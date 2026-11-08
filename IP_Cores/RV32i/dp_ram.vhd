@@ -9,6 +9,20 @@
 --    * axi_owns = '0' (core corriendo): el core escribe.
 --  Precarga opcional desde archivo hex via INIT_FILE (mismo formato .mem que
 --  usa el ensamblador; sirve para simulacion y para init de RAM en sintesis).
+--
+--  audit-2026-11: SYNC_READ generic.
+--    SYNC_READ = false (default): legacy asynchronous read (LUTRAM on FPGA).
+--      Kept for the many existing SoCs that pair it with a same-cycle core.
+--    SYNC_READ = true : both read ports are registered (1-cycle synchronous
+--      read, read-first on a same-address write). This is the behaviour of an
+--      SRAM macro and of FPGA block RAM, and is the mode to use for ASIC
+--      (IHP SG13G2 / sky130): replace this behavioural array by the 2-port
+--      macro with the same latency. Pair it with cpu_pipeline IMEM_SYNC /
+--      DMEM_SYNC and axil_soc MEM_SYNC.
+--  INIT_FILE (textio) is a simulation / FPGA-bitstream convenience only: an
+--  ASIC SRAM powers up undefined, so ASIC builds must leave INIT_FILE = "" and
+--  load the program through the AXI port (host via axil_soc, or the
+--  boot_loader from the boot ROM package).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -21,7 +35,8 @@ use work.riscv_pkg.all;
 entity dp_ram is
   generic (
     DEPTH     : natural := 256;
-    INIT_FILE : string  := ""      -- "" = sin precarga
+    INIT_FILE : string  := "";     -- "" = sin precarga (simulation / FPGA only)
+    SYNC_READ : boolean := false   -- true: 1-cycle synchronous read (SRAM / BRAM)
   );
   port (
     clk       : in  std_logic;
@@ -89,6 +104,21 @@ begin
     end if;
   end process;
 
-  cpu_rdata <= mem(cpu_idx);
-  axi_rdata <= mem(axi_idx);
+  g_async : if not SYNC_READ generate
+    cpu_rdata <= mem(cpu_idx);
+    axi_rdata <= mem(axi_idx);
+  end generate;
+
+  g_sync : if SYNC_READ generate
+    -- registered read ports; the write process above updates 'mem' on the
+    -- same edge, so a read of the address being written returns the OLD
+    -- word (read-first), like a typical SRAM macro / BRAM in READ_FIRST mode
+    process(clk)
+    begin
+      if rising_edge(clk) then
+        cpu_rdata <= mem(cpu_idx);
+        axi_rdata <= mem(axi_idx);
+      end if;
+    end process;
+  end generate;
 end architecture rtl;

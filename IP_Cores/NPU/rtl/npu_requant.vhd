@@ -41,8 +41,24 @@ architecture rtl of npu_requant is
   signal dout3  : signed(C_DATA_W-1 downto 0);
 
   constant C_SH : natural := G_SHIFT;
+  -- Audit 2026-11: termino de redondeo 2**(C_SH-1) construido en el ancho
+  -- del producto (2**(C_SH-1) como integer desbordaba con G_SHIFT > 31, y
+  -- G_SHIFT = 0 daba 2**-1).
+  function rnd_term (sh, w : natural) return signed is
+    variable r : signed(w-1 downto 0) := (others => '0');
+  begin
+    if sh >= 1 and sh <= w - 1 then
+      r(sh - 1) := '1';
+    end if;
+    return r;
+  end function;
+  constant C_RND : signed(G_ACC_W+C_MULT_W-1 downto 0) :=
+    rnd_term(C_SH, G_ACC_W+C_MULT_W);
 
 begin
+
+  assert C_SH <= G_ACC_W + C_MULT_W - 2
+    report "npu_requant: G_SHIFT demasiado grande para el producto" severity failure;
 
   -- ---------------- Etapa 1: ReLU y registro ----------------
   process(clk)
@@ -84,7 +100,7 @@ begin
           -- MUT 4: truncamiento, sin termino de redondeo
           null;
         else
-          p := p + to_signed(2**(C_SH-1), p'length);
+          p := p + C_RND;
         end if;
         prod2 <= p;
       end if;

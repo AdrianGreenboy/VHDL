@@ -7,6 +7,9 @@
 --    addr(31) = '1'  -> maestro AXI4 (DDR externa); congela el core (ready='0')
 --                       hasta que la transaccion termina.
 --  La direccion AXI = AXI_BASE + addr(30 downto 0) extendido a ADDR_W bits.
+--  audit-2026-11: dmem_err reports an AXI SLVERR/DECERR of the completed
+--  access (valid with dmem_ready); cpu_pipeline turns it into a load / store
+--  access-fault trap (mcause 5 / 7, mtval = address).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -19,7 +22,9 @@ entity mem_subsys is
     DEPTH     : natural := 256;
     INIT_FILE : string  := "";
     ADDR_W    : natural := 40;
-    AXI_BASE  : unsigned                       -- base de la DDR en el espacio AXI
+    AXI_BASE  : unsigned;                      -- base de la DDR en el espacio AXI
+    SYNC_READ : boolean := false               -- local RAM with 1-cycle sync read
+                                               -- (core must use DMEM_SYNC = true)
   );
   port (
     clk     : in  std_logic;
@@ -32,6 +37,7 @@ entity mem_subsys is
     dmem_req   : in  std_logic;
     dmem_rdata : out word_t;
     dmem_ready : out std_logic;
+    dmem_err   : out std_logic;   -- with dmem_ready: AXI error -> core access fault
 
     -- puerto AXI del lado del PS a la RAM local (opcional; tie-off si no se usa)
     loc_axi_addr  : in  word_t := (others => '0');
@@ -75,7 +81,8 @@ architecture rtl of mem_subsys is
   signal loc_wstrb   : std_logic_vector(3 downto 0);
 
   -- interfaz al bridge maestro
-  signal mst_req, mst_we, mst_done, mst_busy : std_logic;
+  signal mst_req, mst_we, mst_done, mst_busy, mst_err : std_logic;
+  signal err_lat : std_logic := '0';
   signal mst_addr  : std_logic_vector(ADDR_W-1 downto 0);
   signal mst_rdata : std_logic_vector(31 downto 0);
 
@@ -90,7 +97,7 @@ begin
   loc_wstrb <= dmem_wstrb when is_axi = '0' else "0000";
 
   u_local : entity work.dp_ram
-    generic map (DEPTH => DEPTH, INIT_FILE => INIT_FILE)
+    generic map (DEPTH => DEPTH, INIT_FILE => INIT_FILE, SYNC_READ => SYNC_READ)
     port map (
       clk => clk,
       cpu_addr => dmem_addr, cpu_wdata => dmem_wdata, cpu_wstrb => loc_wstrb,
@@ -110,7 +117,7 @@ begin
       clk => clk, aresetn => aresetn,
       req => mst_req, we => mst_we, addr => mst_addr,
       wdata => dmem_wdata, wstrb => dmem_wstrb, rdata => mst_rdata,
-      done => mst_done, busy => mst_busy,
+      done => mst_done, err => mst_err, busy => mst_busy,
       m_axi_awaddr => m_axi_awaddr, m_axi_awlen => m_axi_awlen, m_axi_awsize => m_axi_awsize,
       m_axi_awburst => m_axi_awburst, m_axi_awvalid => m_axi_awvalid, m_axi_awready => m_axi_awready,
       m_axi_wdata => m_axi_wdata, m_axi_wstrb => m_axi_wstrb, m_axi_wlast => m_axi_wlast,
@@ -130,6 +137,7 @@ begin
         astate    <= A_IDLE;
         mst_req   <= '0';
         rdata_lat <= (others => '0');
+        err_lat   <= '0';
       else
         mst_req <= '0';
         case astate is
@@ -141,6 +149,7 @@ begin
           when A_BUSY =>
             if mst_done = '1' then
               rdata_lat <= mst_rdata;
+              err_lat   <= mst_err;
               astate    <= A_DONE;
             end if;
           when A_DONE =>
@@ -152,6 +161,8 @@ begin
 
   -- rdata y ready hacia el core
   dmem_rdata <= rdata_lat when is_axi = '1' else loc_rdata;
+  -- bus error of the completed AXI access (the local RAM never errors)
+  dmem_err   <= '1' when (is_axi = '1' and astate = A_DONE and err_lat = '1') else '0';
   dmem_ready <= '1' when is_axi = '0' else
                 '1' when astate = A_DONE else
                 '0';

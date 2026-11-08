@@ -5,7 +5,9 @@
 --   GT (rxdata/rxheader + valid) -> registro -> eth21_gtmap_rx
 --     -> eth21_blocklock (cl.49, maneja rxgearboxslip)
 --     -> mac25g_pcs66_rx (descrambler, Core 20) -> mac25g_rx (Core 20)
---     -> eth21_udp_chk
+--     -> RX frame FIFO (audit 2026-11: MAC control frames consumed, frames
+--        without room dropped, drained with rx_tready) -> eth21_udp_chk
+--     mac25g_rx -> mac25g_pause_rx (PAUSE frames -> TX domain via eth21_top)
 --
 -- Solo con block_lock pasan bloques al descrambler y al MAC (sin lock el MAC
 -- no ve nada). Contadores (indice local -> registro global en eth21_top):
@@ -58,7 +60,17 @@ entity eth21_rxpath is
     ev_crc     : out std_logic;
     ev_chkerr  : out std_logic;
 
-    cnt_flat   : out std_logic_vector(19*32-1 downto 0)
+    cnt_flat   : out std_logic_vector(19*32-1 downto 0);
+
+    -- 802.3x flow control (audit 2026-11)
+    rx_tready   : in  std_logic := '1';             -- consumer back-pressure
+    rx_hi_wm    : in  unsigned(15 downto 0) := to_unsigned(384, 16);
+    rx_lo_wm    : in  unsigned(15 downto 0) := to_unsigned(128, 16);
+    pause_stb   : out std_logic;                    -- good PAUSE received
+    pause_q     : out std_logic_vector(15 downto 0);
+    xoff        : out std_logic;                    -- RX FIFO above high WM
+    -- 0 RX_PAUSE_FRAMES 1 RX_CTRL (consumed) 2 RX_FIFO_DROP 3 RX_FIFO_MAX
+    cnt2_flat   : out std_logic_vector(4*32-1 downto 0)
   );
 end entity eth21_rxpath;
 
@@ -88,6 +100,16 @@ architecture rtl of eth21_rxpath is
   signal cnt      : cnt_t := (others => (others => '0'));
   signal rx_act   : std_logic := '0';
   signal slip_r   : std_logic := '0';
+  signal x_ctrl, x_pstb : std_logic;
+  signal x_pq     : std_logic_vector(15 downto 0);
+  signal f_tdata  : std_logic_vector(63 downto 0);
+  signal f_tkeep  : std_logic_vector(7 downto 0);
+  signal f_tlast, f_tuser, f_tvalid, f_ovf, f_drop : std_logic;
+  signal f_level  : unsigned(10 downto 0);
+  signal xoff_r   : std_logic := '0';
+  signal q2_p, q2_c, q2_o : std_logic := '0';
+  type cnt2_t is array (0 to 3) of unsigned(31 downto 0);
+  signal cnt2     : cnt2_t := (others => (others => '0'));
   attribute MAX_FANOUT : integer;
   attribute MAX_FANOUT of clr_r : signal is 64;
 begin
@@ -125,7 +147,8 @@ begin
 
   u_pcs: entity work.mac25g_pcs66_rx
     port map (clk=>clk, rst=>rst, in_valid=>b_v, in_block=>b_blk,
-              out_valid=>pr_valid, out_payload=>pr_pl, out_is_data=>pr_isd);
+              out_valid=>pr_valid, out_payload=>pr_pl, out_is_data=>pr_isd,
+              out_hdr_ok=>open);
 
   u_rx: entity work.mac25g_rx
     port map (clk=>clk, rst=>rst,
@@ -137,14 +160,42 @@ begin
               ev_runt0=>e_r0, ev_over=>e_over, ev_abort=>e_ab, ev_abort0=>e_a0,
               ev_filt=>e_filt, ev_proto=>e_proto, link_up=>lnk);
 
+  -- PAUSE detection; MAC control frames are consumed by the RX FIFO
+  u_prx: entity work.mac25g_pause_rx
+    port map (clk=>clk, rst=>rst, own_mac=>own_mac,
+              s_tdata=>r_tdata, s_tlast=>r_tlast, s_tuser=>r_tuser, s_tvalid=>r_tvalid,
+              is_ctrl=>x_ctrl, pause_stb=>x_pstb, pause_quanta=>x_pq);
+
+  u_rxq: entity work.mac25g_axis_fifo
+    generic map (AW => 10, STORE_FW => true, NO_BP => true)
+    port map (clk=>clk, rst=>rst,
+              s_tdata=>r_tdata, s_tkeep=>r_tkeep, s_tlast=>r_tlast,
+              s_tuser=>r_tuser, s_tdrop=>x_ctrl, s_tvalid=>r_tvalid, s_tready=>open,
+              m_tdata=>f_tdata, m_tkeep=>f_tkeep, m_tlast=>f_tlast, m_tuser=>f_tuser,
+              m_tvalid=>f_tvalid, m_tready=>rx_tready,
+              level=>f_level, ev_ovf=>f_ovf, ev_drop=>f_drop);
+
+  process(clk)
+  begin
+    if rising_edge(clk) then
+      if rst = '1' then xoff_r <= '0';
+      elsif resize(f_level, 16) >= rx_hi_wm then xoff_r <= '1';
+      elsif resize(f_level, 16) <= rx_lo_wm then xoff_r <= '0';
+      end if;
+    end if;
+  end process;
+  pause_stb <= x_pstb;
+  pause_q   <= x_pq;
+  xoff      <= xoff_r;
+
   -- el checker espera las tramas del propio generador (loopback): destino =
   -- peer_mac, origen = own_mac, IP origen = own_ip
   u_chk: entity work.eth21_udp_chk
     port map (clk=>clk, rst=>rst, restart=>chk_restart,
               dst=>peer_mac, src=>own_mac, sip=>own_ip, dip=>peer_ip,
               sport=>sport, dport=>dport,
-              s_tdata=>r_tdata, s_tkeep=>r_tkeep, s_tlast=>r_tlast,
-              s_tuser=>r_tuser, s_tvalid=>r_tvalid,
+              s_tdata=>f_tdata, s_tkeep=>f_tkeep, s_tlast=>f_tlast,
+              s_tuser=>f_tuser, s_tvalid=>f_tvalid and rx_tready,
               ev_ok=>c_ok, ev_bad=>c_bad, ev_seq=>c_seq, ev_rxerr=>c_rxe);
 
   -- contadores
@@ -179,24 +230,36 @@ begin
   process(clk)
     procedure inc(signal c : inout unsigned(31 downto 0); en : std_logic) is
     begin
-      if en = '1' then c <= c + 1; end if;
+      if en = '1' and c /= x"FFFFFFFF" then c <= c + 1; end if;    -- saturates
     end procedure;
+    function sat_add(c : unsigned(31 downto 0); x : unsigned(31 downto 0)) return unsigned is
+      variable t : unsigned(32 downto 0);
+    begin
+      t := ('0' & c) + ('0' & x);
+      if t(32) = '1' then return x"FFFFFFFF"; else return t(31 downto 0); end if;
+    end function;
   begin
     if rising_edge(clk) then
       clr_r <= rst or cnt_clear;
+      q2_p <= x_pstb; q2_c <= f_drop; q2_o <= f_ovf;
       if clr_r = '1' then
         cnt <= (others => (others => '0'));
+        cnt2 <= (others => (others => '0'));
         rx_act <= '0';
       else
         if q_rxok = '1' then
-          cnt(0) <= cnt(0) + 1;
-          cnt(1) <= cnt(1) + resize(q_rxb, 32);
+          inc(cnt(0), '1');
+          cnt(1) <= sat_add(cnt(1), resize(q_rxb, 32));
           rx_act <= '1';
         end if;
         inc(cnt(2), q_crc);
-        cnt(3) <= cnt(3) + resize(q_runt, 32);
+        cnt(3) <= sat_add(cnt(3), resize(q_runt, 32));
         inc(cnt(4), q_over);
-        cnt(5) <= cnt(5) + resize(q_abort, 32);
+        cnt(5) <= sat_add(cnt(5), resize(q_abort, 32));
+        inc(cnt2(0), q2_p);
+        inc(cnt2(1), q2_c);
+        inc(cnt2(2), q2_o);
+        if resize(f_level, 32) > cnt2(3) then cnt2(3) <= resize(f_level, 32); end if;
         inc(cnt(6), q_filt);
         inc(cnt(7), q_proto);
         inc(cnt(8), q_cok);
@@ -216,6 +279,9 @@ begin
 
   gen_flat: for i in 0 to 18 generate
     cnt_flat(32*i+31 downto 32*i) <= std_logic_vector(cnt(i));
+  end generate;
+  gen_flat2: for i in 0 to 3 generate
+    cnt2_flat(32*i+31 downto 32*i) <= std_logic_vector(cnt2(i));
   end generate;
 
   st_lock   <= lock;

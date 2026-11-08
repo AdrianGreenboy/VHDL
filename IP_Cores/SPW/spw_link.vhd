@@ -36,7 +36,7 @@ entity spw_link is
   );
   port (
     clk            : in  std_logic;
-    arstn          : in  std_logic;
+    rst          : in  std_logic;  -- synchronous, active high
     en             : in  std_logic;
     link_start     : in  std_logic;
     link_autostart : in  std_logic;
@@ -98,20 +98,21 @@ begin
                   and unsigned(rx_room) >= resize(outst, 7) + 8
              else '0';
 
-  main : process (clk, arstn)
+  main : process (clk)
     variable any_err  : boolean;
     variable any_char : boolean;
     variable to_erst  : boolean;
     variable v_credit : unsigned(6 downto 0);
     variable v_outst  : unsigned(6 downto 0);
   begin
-    if arstn = '0' then
+    if rising_edge(clk) then
+      if rst = '1' then
       st     <= S_ERST;
       timer  <= 0;
       credit <= (others => '0');
       outst  <= (others => '0');
       errc_r <= '0';
-    elsif rising_edge(clk) then
+    else  -- (synchronous reset, audit 2026-11)
       errc_r <= '0';
 
       if en = '0' or link_disable = '1' then
@@ -227,6 +228,7 @@ begin
           outst  <= (others => '0');
         end if;
       end if;
+    end if;
     end if;
   end process main;
 

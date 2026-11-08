@@ -126,12 +126,14 @@ ghdl -a --std=08 \
   pcie_tl_pkg.vhd pcie_mmio_pkg.vhd \
   pcie_8b10b.vhd pcie_scrambler.vhd pcie_framer.vhd pcie_deframer.vhd \
   pcie_ltssm.vhd pcie_ts_gen.vhd pcie_dll_tx.vhd pcie_dll_rx.vhd \
-  pcie_tl_ep.vhd pcie_rx_adapt.vhd pcie_tlp_frame.vhd byte_fifo.vhd \
-  pcie_node.vhd pcie_mmio.vhd pcie_soc_mmio.vhd
+  pcie_dllp_rx.vhd pcie_rx_tlp_fifo.vhd pcie_byte_fifo.vhd pcie_elastic_buf.vhd \
+  pcie_tl_ep.vhd pcie_rx_adapt.vhd pcie_tlp_frame.vhd \
+  pcie_node.vhd pcie_mmio.vhd
 
 # run one layer (each has a deterministic, bit-identical end-timestamp)
 ghdl -a --std=08 tb_loop.vhd && ghdl -e --std=08 tb_loop
-ghdl -r --std=08 tb_loop --stop-time=30ms   # expect: PASS @ 5805000000 fs
+ghdl -r --std=08 tb_loop --stop-time=30ms   # expect: PASS @ 7895000000 fs
+# or everything (audit 2026-11):  ./run_regression.sh
 ```
 
 ### 4.2 Assemble the bring-up firmware
@@ -287,14 +289,20 @@ with a deterministic, bit-identical end-timestamp as its pass criterion:
 | Layer | Testbench      | Signature (fs)        |
 |:-----:|----------------|-----------------------|
 | 8b/10b | `tb_8b10b`    | `762085000000`        |
-| PHY    | `tb_phy`      | `403005000000`        |
+| PHY    | `tb_phy`      | `402965000000`        |
 | Train  | `tb_train`    | `127785000000`        |
-| DLL    | `tb_dll`      | `33015000000`         |
-| TL     | `tb_tl`       | `2565000000`          |
-| Loop   | `tb_loop`     | `5805000000`          |
-| MMIO   | `tb_mmio`     | `5275000000`          |
-| SoC    | `tb_soc`      | `9635000000`          |
-| SoC-MMIO | `tb_soc_mmio` | `5945000000`        |
+| DLL    | `tb_dll`      | `511285000000`        |
+| TL     | `tb_tl`       | `2745000000`          |
+| Loop   | `tb_loop`     | `7895000000`          |
+| MMIO   | `tb_mmio`     | `6635000000`          |
+| SoC    | `tb_soc`      | `11885000000`         |
+| Link   | `tb_link`     | `532665000000`        |
+| EB     | `tb_eb`       | PASS at ±2000 ppm     |
+
+Audit 2026-11: the signatures above are the post-audit ones (validated
+store-and-forward RX path, Ack/Nak DLLPs, rewritten `tb_dll`, new `tb_link` and
+`tb_eb`). Run everything with `./run_regression.sh`; see `AUDIT_FIXES.md`.
+(`tb_soc_mmio` / `pcie_soc_mmio.vhd` are not in this tree.)
 
 Mutations are expected to break each layer; the Python ISS oracle is written
 before the RTL for the SoC layer; firmware is checked against a small RV32IM
@@ -311,7 +319,11 @@ PetaLinux — never hot-loads a PDI (the Versal PLM rejects it with `0x03024001`
 | `pcie_scrambler.vhd` | LFSR scrambler with K-symbol bypass |
 | `pcie_framer.vhd` / `pcie_deframer.vhd` | ordered-set framing |
 | `pcie_ltssm.vhd` / `pcie_ts_gen.vhd` | LTSSM + TS1/TS2 generator |
-| `pcie_dll_tx.vhd` / `pcie_dll_rx.vhd` | DLL (LCRC-32, replay, ACK/NAK) |
+| `pcie_dll_tx.vhd` / `pcie_dll_rx.vhd` | DLL (LCRC-32, replay, ACK/NAK, timers) |
+| `pcie_dllp_rx.vhd` | Ack/Nak DLLP receiver (CRC-16) |
+| `pcie_rx_tlp_fifo.vhd` | commit/rollback RX TLP buffer (DLL RX -> TL) |
+| `pcie_byte_fifo.vhd` | FWFT FIFO, registered read (MMIO FIFOs) |
+| `pcie_elastic_buf.vhd` | RX elastic buffer (SKP add/drop), `USE_EB` |
 | `pcie_tl_ep.vhd` / `pcie_tlp_frame.vhd` | transaction layer + framing skid |
 | `pcie_rx_adapt.vhd` | deframer-token → byte-stream adapter |
 | `pcie_node.vhd` / `pcie_mmio.vhd` / `pcie_soc_mmio.vhd` | node / MMIO / RC+EP pair |

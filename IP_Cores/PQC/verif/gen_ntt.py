@@ -261,5 +261,5 @@ if __name__ == "__main__":
     selftest()
     emit_tables("ntt_tables_pkg.vhd")
     nk = emit_vectors("ntt_k_vectors.txt", QK, ntt_k, intt_k)
-    nd = emit_vectors("ntt_d_vectors.txt", QD, ntt_d, intt_d)
+    nd = emit_vectors("ntt_d_l1_vectors.txt", QD, ntt_d, intt_d)
     print("wrote ntt_tables_pkg.vhd, ntt_k=%d cases, ntt_d=%d cases" % (nk, nd))

@@ -62,9 +62,9 @@ FAIL=0
 
 # M1: kappa advances by L-1. Validated against the model: changes the output.
 run_mutation "M1 kappa step L-1 instead of L" full dsa_sign.vhd \
-'            kappa  <= kappa + G_L;
-            iter   <= iter + 1;|||            kappa  <= kappa + G_L - 1;
-            iter   <= iter + 1;' || FAIL=1
+'              kappa <= kappa + G_L;
+              iter  <= iter + 1;|||              kappa <= kappa + G_L - 1;
+              iter  <= iter + 1;' || FAIL=1
 
 # M2: kappa not advanced on the accepting iteration. This was a real defect:
 # the model consumes the base then adds L on every iteration, so reporting
@@ -85,8 +85,8 @@ run_mutation "M3 c_tilde absorbs w1 before mu" 3 dsa_sign.vhd \
 # M4: the r0 rejection removed. Validated against the model on vector 0.
 run_mutation "M4 r0 rejection removed" full dsa_sign.vhd \
 '            if absv(cv) >= to_signed(C_GAMMA2_DD - 196, C_CW) then
-              fsm <= S_REJECT;|||            if false then
-              fsm <= S_REJECT;' || FAIL=1
+              rej_f <= '"'"'1'"'"';|||            if false then
+              rej_f <= '"'"'1'"'"';' || FAIL=1
 
 # M5: y transformed in place, destroying the plain copy that z needs. This
 # was the real SP4 failure: invisible to SP1 (stops before the NTT) and to
@@ -146,7 +146,23 @@ run_mutation "M9 A seed bytes transposed" 2 dsa_sign.vhd \
 
 # M10: hint weight compared inclusively, admitting one hint above OMEGA.
 run_mutation "M10 hint weight bound inclusive" full dsa_sign.vhd \
-'            if hw_cnt > C_OMEGA_D then|||            if hw_cnt > C_OMEGA_D + 1 then' || FAIL=1
+'            if hw_cnt > C_OMEGA_D or rej_f = '"'"'1'"'"' then|||            if hw_cnt > C_OMEGA_D + 1 or rej_f = '"'"'1'"'"' then' || FAIL=1
+
+# M11 (audit 2026-11): the constant-time z check scans every coefficient and
+# decides after the last polynomial; dropping that decision accepts
+# out-of-bound z candidates.
+run_mutation "M11 z reject flag ignored" full dsa_sign.vhd \
+'              if rej_f = '"'"'1'"'"' then
+                fsm <= S_REJECT;
+              else
+                fsm <= S_CP_RD;
+              end if;
+            else
+              jj  <= jj + 1;
+              fsm <= S_ZC_RD;|||              fsm <= S_CP_RD;
+            else
+              jj  <= jj + 1;
+              fsm <= S_ZC_RD;' || FAIL=1
 
 if [ $FAIL -eq 0 ]; then
   echo "ALL MUTATIONS KILLED"

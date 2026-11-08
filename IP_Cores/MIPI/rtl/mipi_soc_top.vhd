@@ -8,6 +8,9 @@
 --   the framebuffers via the streaming FBDATA port, exactly as validated in L5.
 -- AXI master side: the MIPI DMA (mipi_dma_burst) copies framebuffers to DDR
 --   through a dedicated 40-bit AXI4 master (independent of the core's DMA).
+-- AUDIT 2026-11: external D-PHY PPI ports (4 lanes, ppi_clk = RxByteClkHS)
+--   and an interrupt output (csi2_mmio STATUS & IRQ_EN). With no PHY attached
+--   leave the PPI inputs at their defaults (self-test mode, CFG.src_ext=0).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -44,7 +47,14 @@ entity mipi_soc_top is
     m_wready  : in  std_logic;
     m_bresp   : in  std_logic_vector(1 downto 0);
     m_bvalid  : in  std_logic;
-    m_bready  : out std_logic
+    m_bready  : out std_logic;
+    -- AUDIT 2026-11: D-PHY RX PPI (4 lanes) + interrupt
+    ppi_clk    : in  std_logic := '0';
+    ppi_byte   : in  std_logic_vector(31 downto 0) := (others => '0');
+    ppi_valid  : in  std_logic_vector(3 downto 0) := (others => '0');
+    ppi_active : in  std_logic_vector(3 downto 0) := (others => '0');
+    ppi_sync   : in  std_logic_vector(3 downto 0) := (others => '0');
+    irq        : out std_logic
   );
 end entity;
 
@@ -68,6 +78,10 @@ architecture rtl of mipi_soc_top is
 
   -- 32-bit AXI addr from the MIPI DMA, zero-extended to AXI_AW for the NoC
   signal awaddr32 : std_logic_vector(31 downto 0);
+
+  signal c_src_ext, c_hw_sync, c_multi : std_logic;
+  signal c_nlanes : std_logic_vector(2 downto 0);
+  signal e_frame, e_rxovf, e_perr, e_fbovf, e_lerr : std_logic;
 begin
 
   selftest : entity work.csi2_selftest
@@ -75,7 +89,13 @@ begin
     port map (clk=>clk, rst=>rst, start=>st_start, done=>st_done,
               fb0_re=>fb0_re, fb0_raddr=>fb0_raddr, fb0_rdata=>fb0_rdata, fb0_count=>fb0_count,
               fb1_re=>fb1_re, fb1_raddr=>fb1_raddr, fb1_rdata=>fb1_rdata, fb1_count=>fb1_count,
-              hdr_2bit=>hdr2);
+              hdr_2bit=>hdr2,
+              cfg_src_ext=>c_src_ext, cfg_nlanes=>c_nlanes, cfg_hw_sync=>c_hw_sync,
+              cfg_multi_pkt=>c_multi,
+              ppi_clk=>ppi_clk, ppi_byte=>ppi_byte, ppi_valid=>ppi_valid,
+              ppi_active=>ppi_active, ppi_sync=>ppi_sync,
+              ev_frame=>e_frame, ev_rx_ovf=>e_rxovf, ev_pkt_err=>e_perr,
+              ev_fb_ovf=>e_fbovf, ev_lane_err=>e_lerr);
 
   mmio : entity work.csi2_mmio
     generic map (FB_DEPTH=>FB_DEPTH, FB_AWID=>FB_AWID)
@@ -86,7 +106,11 @@ begin
               dma_len=>dma_len_i, dma_done=>dma_done_i,
               fb0_re=>mm_fb0_re, fb0_raddr=>mm_fb0_ra, fb0_rdata=>fb0_rdata, fb0_count=>fb0_count,
               fb1_re=>mm_fb1_re, fb1_raddr=>mm_fb1_ra, fb1_rdata=>fb1_rdata, fb1_count=>fb1_count,
-              st_start=>st_start, st_done=>st_done, hdr_2bit=>hdr2);
+              st_start=>st_start, st_done=>st_done, hdr_2bit=>hdr2,
+              ev_rx_ovf=>e_rxovf, ev_fb_ovf=>e_fbovf, ev_pkt_err=>e_perr,
+              ev_lane_err=>e_lerr, ev_frame=>e_frame,
+              cfg_src_ext=>c_src_ext, cfg_nlanes=>c_nlanes, cfg_hw_sync=>c_hw_sync,
+              cfg_multi_pkt=>c_multi, irq=>irq);
 
   dma : entity work.mipi_dma_burst
     generic map (FB_AWID=>FB_AWID)

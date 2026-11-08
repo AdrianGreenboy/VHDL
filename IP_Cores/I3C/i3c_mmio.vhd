@@ -8,14 +8,29 @@
 --  en el flanco del req (contrato dmem del RV32i).
 --
 --  Semanticas (heredadas del IP IIC):
---    - STAT: los stickies se limpian con CUALQUIER escritura a STAT; los
---      sets del mismo ciclo GANAN sobre la limpieza.
+--    - STAT: stickies are WRITE-1-TO-CLEAR per bit (audit 2026-11; was:
+--      any write cleared all); a set in the same cycle WINS over the clear.
 --    - IRQ por NIVEL sin ack: irq = or(IRQ_EN and IRQ_STAT).
 --    - Overflow de FIFO: drop-newest + sticky.
---    - CMD: la escritura latchea los campos y arma issue_pend; cmd_valid
---      pulsa cuando el motor esta libre. Si tras un CMD con START aparece
---      IBI_REQ en vez de DONE, el comando se perdio contra un IBI entrante:
---      el firmware debe atender el IBI y reintentar.
+--    - CMD (audit 2026-11): the write latches the fields and arms pend;
+--      cmd_valid pulses when the engine is free, and pend is cleared ONLY
+--      when the controller really accepted the command (cmd_acc pulse; a
+--      rising busy is NOT used because an IBI START captured in IDLE also
+--      raises busy). Otherwise the command is re-issued once the engine is
+--      free again (e.g. it collided with an incoming IBI START in IDLE).
+--      CMD_DROP sticky (STAT[28], IRQ bit 15) is raised when a command is
+--      lost: CMD written while another one is still pending (the new one is
+--      dropped), pending command discarded because EN=0, or command
+--      rejected by the controller (non-IBI command while an IBI is pending:
+--      it completes with DONE + CMD_DROP and IBI_REQ stays set; firmware
+--      must serve the IBI and retry). STAT[11] CMD_PEND shows a pending
+--      command (live).
+--    - rdata is gated by sel (reads 0 when not selected; audit 2026-11).
+--    - WM registers are clamped to the FIFO depth (32; audit 2026-11).
+--    - div_pp floor (audit 2026-11): with LOOP_INT = 0 (external targets on
+--      their own clocks) the controller uses max(div_pp, MIN_DIV_PP_EXT=2);
+--      div_pp = 1 (12.5 MHz @ 100 MHz) is only allowed for the internal
+--      loop. SCLDIV reads back the programmed value.
 --    - LOOP_INT (CTRL b7): bus interno resuelto entre controller y target
 --      (wired-AND con pull-up implicito), pads liberados. Es el self-test.
 --
@@ -68,6 +83,9 @@ architecture rtl of i3c_mmio is
   signal s_done, s_arb, s_ibia, s_evda, s_rst : std_logic := '0';
   signal s_perr, s_ibid, s_ibin, s_hjd        : std_logic := '0';
   signal s_rxovf, s_ttxovf, s_trxovf          : std_logic := '0';
+  signal s_cmddrop                             : std_logic := '0';
+  signal wait_acc                              : std_logic := '0';
+  signal c_rej, c_acc                          : std_logic;
 
   -- comando latcheado + pendiente
   signal l_wdata : std_logic_vector(7 downto 0) := (others => '0');
@@ -104,7 +122,9 @@ architecture rtl of i3c_mmio is
   signal scl_int, sda_int : std_logic;
 
   -- FIFOs
-  signal aresetn : std_logic;
+  constant FDEPTH : natural := 32;
+  constant MIN_DIV_PP_EXT : natural := 2;            -- see tb_i3c_async
+  signal divpp_eff : std_logic_vector(15 downto 0);
   signal rx_wr, rx_rd, rx_full, rx_empty : std_logic;
   signal rx_q : std_logic_vector(7 downto 0);
   signal rx_lvl : unsigned(5 downto 0);
@@ -121,8 +141,11 @@ architecture rtl of i3c_mmio is
 
 begin
 
-  aresetn <= not rst;
   pid_w   <= pidh_r & pidl_r;
+
+  divpp_eff <= std_logic_vector(to_unsigned(MIN_DIV_PP_EXT, 16))
+               when (loop_r = '0' and unsigned(divpp_r) < MIN_DIV_PP_EXT)
+               else divpp_r;
 
   -- ==========================================================================
   --  Motores
@@ -130,7 +153,7 @@ begin
   u_ctrl : entity work.i3c_controller
     port map (
       clk => clk, rst => rst, en => en_r,
-      div_pp => divpp_r, div_od => divod_r,
+      div_pp => divpp_eff, div_od => divod_r,
       cmd_valid => cvalid_r, cmd_start => l_start, cmd_stop => l_stop,
       cmd_read => l_read, cmd_rlast => l_rlast, cmd_nobyte => l_nobyte,
       cmd_daa => l_daa, cmd_daadr => l_daadr,
@@ -139,7 +162,7 @@ begin
       busy => c_busy, done => c_done, rdata => c_rdata, rvalid => c_rvalid,
       ack_in => c_ack, t_bit => c_tbit, arb_lost => c_arb,
       ibi_req => c_ibireq, ibi_addr => c_ibiaddr, ibi_avalid => c_ibiav,
-      xact_open => c_xopen,
+      xact_open => c_xopen, cmd_rej => c_rej, cmd_acc => c_acc,
       scl_o => c_scl_o, scl_t => c_scl_t, scl_i => c_scl_i,
       sda_o => c_sda_o, sda_t => c_sda_t, sda_i => c_sda_i
     );
@@ -179,26 +202,26 @@ begin
   -- ==========================================================================
   --  FIFOs FWFT de 32 bytes
   -- ==========================================================================
-  u_rx : entity work.byte_fifo
+  u_rx : entity work.i3c_byte_fifo          -- sync reset (audit 2026-11)
     generic map (LOG2_DEPTH => 5)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => rx_wr, wr_data => c_rdata, full => rx_full,
       rd_en => rx_rd, rd_data => rx_q, empty => rx_empty, level => rx_lvl
     );
 
-  u_ttx : entity work.byte_fifo
+  u_ttx : entity work.i3c_byte_fifo          -- sync reset (audit 2026-11)
     generic map (LOG2_DEPTH => 5)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => ttx_wr, wr_data => wdata(7 downto 0), full => ttx_full,
       rd_en => t_txren, rd_data => ttx_q, empty => ttx_empty, level => ttx_lvl
     );
 
-  u_trx : entity work.byte_fifo
+  u_trx : entity work.i3c_byte_fifo          -- sync reset (audit 2026-11)
     generic map (LOG2_DEPTH => 5)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => trx_wr, wr_data => t_rxdata, full => trx_full,
       rd_en => trx_rd, rd_data => trx_q, empty => trx_empty, level => trx_lvl
     );
@@ -227,7 +250,7 @@ begin
               4 => rx_wmhit, 5 => trx_wmhit,
               6 => s_perr, 7 => s_ibid, 8 => s_ibin, 9 => s_hjd,
               10 => s_evda, 11 => s_rst, 12 => s_rxovf, 13 => s_ttxovf,
-              14 => s_trxovf, others => '0');
+              14 => s_trxovf, 15 => s_cmddrop, others => '0');
 
   irq <= '1' when (irqstat and irqen_r) /= x"00000000" else '0';
 
@@ -236,16 +259,19 @@ begin
   -- ==========================================================================
   process(all)
   begin
+    rdata <= (others => '0');
+    if sel = '1' then                                -- gated by sel (audit)
     case addr is
       when x"00" =>
         rdata <= (0 => en_r, 1 => ten_r, 7 => loop_r, others => '0');
       when x"04" =>
         rdata <= (0 => c_busy, 1 => c_xopen, 2 => c_ibireq, 3 => c_ack,
                   4 => c_tbit, 5 => t_inframe, 6 => t_dav, 7 => t_ibip,
-                  8 => t_hjp, 9 => t_ibien, 10 => t_hjen,
+                  8 => t_hjp, 9 => t_ibien, 10 => t_hjen, 11 => pend_r,
                   16 => s_done, 17 => s_arb, 18 => s_ibia, 19 => s_evda,
                   20 => s_rst, 21 => s_perr, 22 => s_ibid, 23 => s_ibin,
                   24 => s_hjd, 25 => s_rxovf, 26 => s_ttxovf, 27 => s_trxovf,
+                  28 => s_cmddrop,
                   others => '0');
       when x"08" =>
         rdata <= divod_r & divpp_r;
@@ -283,6 +309,7 @@ begin
       when others =>
         rdata <= (others => '0');
     end case;
+    end if;
   end process;
 
   -- ==========================================================================
@@ -307,6 +334,7 @@ begin
         s_done <= '0'; s_arb <= '0'; s_ibia <= '0'; s_evda <= '0';
         s_rst <= '0'; s_perr <= '0'; s_ibid <= '0'; s_ibin <= '0';
         s_hjd <= '0'; s_rxovf <= '0'; s_ttxovf <= '0'; s_trxovf <= '0';
+        s_cmddrop <= '0'; wait_acc <= '0';
         pend_r <= '0';
         l_start <= '0'; l_stop <= '0'; l_read <= '0'; l_rlast <= '0';
         l_nobyte <= '0'; l_daa <= '0'; l_daadr <= '0';
@@ -322,25 +350,39 @@ begin
               ten_r  <= wdata(1);
               loop_r <= wdata(7);
             when x"04" =>
-              -- limpiar stickies (los sets de este mismo ciclo GANAN abajo)
-              s_done <= '0'; s_arb <= '0'; s_ibia <= '0'; s_evda <= '0';
-              s_rst <= '0'; s_perr <= '0'; s_ibid <= '0'; s_ibin <= '0';
-              s_hjd <= '0'; s_rxovf <= '0'; s_ttxovf <= '0'; s_trxovf <= '0';
+              -- W1C per bit (audit 2026-11); same-cycle sets WIN below
+              if wdata(16) = '1' then s_done    <= '0'; end if;
+              if wdata(17) = '1' then s_arb     <= '0'; end if;
+              if wdata(18) = '1' then s_ibia    <= '0'; end if;
+              if wdata(19) = '1' then s_evda    <= '0'; end if;
+              if wdata(20) = '1' then s_rst     <= '0'; end if;
+              if wdata(21) = '1' then s_perr    <= '0'; end if;
+              if wdata(22) = '1' then s_ibid    <= '0'; end if;
+              if wdata(23) = '1' then s_ibin    <= '0'; end if;
+              if wdata(24) = '1' then s_hjd     <= '0'; end if;
+              if wdata(25) = '1' then s_rxovf   <= '0'; end if;
+              if wdata(26) = '1' then s_ttxovf  <= '0'; end if;
+              if wdata(27) = '1' then s_trxovf  <= '0'; end if;
+              if wdata(28) = '1' then s_cmddrop <= '0'; end if;
             when x"08" =>
               divpp_r <= wdata(15 downto 0);
               divod_r <= wdata(31 downto 16);
             when x"0C" =>
-              l_wdata  <= wdata(7 downto 0);
-              l_start  <= wdata(8);
-              l_stop   <= wdata(9);
-              l_read   <= wdata(10);
-              l_rlast  <= wdata(11);
-              l_nobyte <= wdata(12);
-              l_daa    <= wdata(13);
-              l_daadr  <= wdata(14);
-              l_ibiack <= wdata(15);
-              l_ibinak <= wdata(16);
-              pend_r   <= '1';
+              if pend_r = '1' or en_r = '0' then
+                null;                    -- dropped, CMD_DROP set below
+              else
+                l_wdata  <= wdata(7 downto 0);
+                l_start  <= wdata(8);
+                l_stop   <= wdata(9);
+                l_read   <= wdata(10);
+                l_rlast  <= wdata(11);
+                l_nobyte <= wdata(12);
+                l_daa    <= wdata(13);
+                l_daadr  <= wdata(14);
+                l_ibiack <= wdata(15);
+                l_ibinak <= wdata(16);
+                pend_r   <= '1';
+              end if;
             when x"18" =>
               sa_r <= wdata(6 downto 0);
             when x"1C" =>
@@ -358,18 +400,43 @@ begin
               hjgo_p  <= wdata(1);
             when x"44" =>
               irqen_r <= wdata;
-            when x"4C" =>
-              wmrx_r  <= unsigned(wdata(5 downto 0));
-              wmtrx_r <= unsigned(wdata(13 downto 8));
+            when x"4C" =>                -- clamped to the depth (audit)
+              if unsigned(wdata(5 downto 0)) > FDEPTH then
+                wmrx_r <= to_unsigned(FDEPTH, 6);
+              else
+                wmrx_r <= unsigned(wdata(5 downto 0));
+              end if;
+              if unsigned(wdata(13 downto 8)) > FDEPTH then
+                wmtrx_r <= to_unsigned(FDEPTH, 6);
+              else
+                wmtrx_r <= unsigned(wdata(13 downto 8));
+              end if;
             when others =>
               null;
           end case;
         end if;
 
-        -- emision del comando cuando el motor esta libre
-        if pend_r = '1' and c_busy = '0' and cvalid_r = '0' then
+        -- emision del comando cuando el motor esta libre (audit 2026-11:
+        -- pend is only cleared once the controller accepted the command)
+        wait_acc <= cvalid_r;
+        if pend_r = '1' and c_busy = '0' and cvalid_r = '0' and
+           wait_acc = '0' and en_r = '1' then
           cvalid_r <= '1';
-          pend_r   <= '0';
+        end if;
+        if c_acc = '1' then
+          pend_r <= '0';                 -- accepted (explicit handshake)
+        end if;
+        if pend_r = '1' and en_r = '0' and cvalid_r = '0' and
+           wait_acc = '0' then
+          pend_r    <= '0';              -- engine disabled: discard
+          s_cmddrop <= '1';
+        end if;
+        if sel = '1' and we = '1' and addr = x"0C" and
+           (pend_r = '1' or en_r = '0') then
+          s_cmddrop <= '1';              -- CMD written while one is pending
+        end if;
+        if c_rej = '1' then
+          s_cmddrop <= '1';              -- controller rejected the command
         end if;
 
         -- stickies: los sets van DESPUES de la limpieza para ganar el ciclo

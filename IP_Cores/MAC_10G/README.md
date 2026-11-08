@@ -219,6 +219,42 @@ the link):
   (0 lost) and on 61 M frames of continuous traffic with 0 bad payloads
   (before the PC tuning, with PC-side drops).
 
+## 6b. Audit 2026-11
+
+See [AUDIT_FIXES.md](AUDIT_FIXES.md). The silicon results above were
+obtained **before** these RTL changes (frame FIFOs, IEEE 802.3x PAUSE,
+register-bank WSTRB/SLVERR, CMD kill on timeout, power-on reset of the CDC
+toggles, IEEE-ordered block in the shared PCS66 with an identity
+`eth21_gtmap`). The wire bit order is unchanged by construction and is
+checked in simulation by the oracle's IEEE decoder, but a new bitstream must
+be re-validated against the ConnectX-3 Pro (and a 25G partner) before the
+results can be claimed for the current RTL.
+
+## 6c. PMA boundary for an ASIC SerDes (HERCOSS A1)
+
+`eth21_gt_rst`, `eth21_gtmap` and `eth21_clkmeter` are **Versal-GTYP
+specific** and stay so. Everything else (`eth21_txpath`, `eth21_rxpath`,
+the MAC_25G MAC/PCS66/flow blocks, `eth21_blocklock`) is technology neutral
+and meets the SerDes at this boundary, one 66-bit block per user clock:
+
+| Signal (per direction) | Width | Meaning |
+|---|---|---|
+| `tx_blk` | 66 | block in IEEE order: bit 0 = first bit on the wire; bits 1:0 = sync header (data `10`, control `01` as a vector, i.e. `0` then `1` on the wire for data), bits 65:2 = scrambled payload, payload bit 0 first |
+| `tx_clk` | 1 | block clock from the SerDes: line rate / 66 = 156.25 MHz at 10.3125 Gb/s, 390.625 MHz at 25.78125 Gb/s; the TX path never stalls and emits a valid block every cycle (idles without traffic) |
+| `rx_blk`, `rx_valid` | 66, 1 | received block in the same order, `rx_valid` = 1 when the SerDes gearbox delivers a block |
+| `rx_slip` | 1 | 1-cycle request from `eth21_blocklock` to shift the RX block boundary by one bit; the SerDes must apply it within `SLIP_WAIT` cycles (generic) and never shift without a request |
+| `tx_ready`, `rx_ready` | 1 | SerDes reset/PLL/CDR done per direction (they release the domain resets through the existing synchronisers) |
+
+In this repository the 66-bit block is exactly `mac25g_pcs66_tx.out_block`
+/ `mac25g_pcs66_rx.in_block`; on Versal `eth21_gtmap` turns it into
+`TXDATA/TXHEADER` (identity with the default flags). An ASIC SerDes with a
+64-bit parallel interface and no gearbox needs the Core 19 fabric gearboxes
+instead (`pcs_gearbox_tx/rx`, with bit slip since the audit; word bit 0 is
+serialised first). Power-on: drive `por_n` of `eth21_top` from the chip POR
+cell (see `MAC_25G/rtl/mac25g_sync.vhd` for the release order). No
+synchroniser chain may be retimed or replaced by scan flops; the ASYNC_REG
+attributes mark them.
+
 ## 7. Register map
 
 See [doc/register_map.md](doc/register_map.md).

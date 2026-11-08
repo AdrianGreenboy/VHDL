@@ -9,6 +9,9 @@
 #  Soporta: addi/add/sub/and/or/xor/sll/srl/sra/slt/sltu,
 #           mul/mulh/mulhsu/mulhu/div/divu/rem/remu,
 #           lw/sw, beq/bne/blt/bge/bltu/bgeu, jal, jalr, lui, auipc, y etiquetas.
+#  audit-2026-11: + lb/lh/lbu/lhu/sb/sh, fence, fence.i, wfi, ".word <value>"
+#  (raw word, e.g. to place an illegal encoding), CSR names misa/mvendorid/
+#  marchid/mimpid/mhartid.
 # =============================================================================
 import sys, re
 
@@ -49,7 +52,10 @@ ITYPE = {"addi":0,"slti":2,"sltiu":3,"xori":4,"ori":6,"andi":7,"slli":1,"srli":5
 BTYPE = {"beq":0,"bne":1,"blt":4,"bge":5,"bltu":6,"bgeu":7}
 CSRR  = {"csrrw":1,"csrrs":2,"csrrc":3,"csrrwi":5,"csrrsi":6,"csrrci":7}
 CSR_NAMES = {"mstatus":0x300,"mie":0x304,"mtvec":0x305,"mscratch":0x340,
-             "mepc":0x341,"mcause":0x342,"mtval":0x343,"mip":0x344}
+             "mepc":0x341,"mcause":0x342,"mtval":0x343,"mip":0x344,
+             "misa":0x301,"mvendorid":0xF11,"marchid":0xF12,"mimpid":0xF13,"mhartid":0xF14}
+LOADS  = {"lb":0,"lh":1,"lw":2,"lbu":4,"lhu":5}
+STORES = {"sb":0,"sh":1,"sw":2}
 
 def csr_num(t): return CSR_NAMES[t] if t in CSR_NAMES else int(t, 0)
 
@@ -93,12 +99,17 @@ def assemble(src):
             else:
                 immv = labels[a[2]] if a[2] in labels else int(a[2], 0)
                 words.append(enc_i(immv, reg(a[1]), f3, reg(a[0]), 0x13))
-        elif op == "lw":
+        elif op in LOADS:
             imm, rs1 = parse_mem_operand(a[1])
-            words.append(enc_i(imm, rs1, 2, reg(a[0]), 0x03))
-        elif op == "sw":
+            words.append(enc_i(imm, rs1, LOADS[op], reg(a[0]), 0x03))
+        elif op in STORES:
             imm, rs1 = parse_mem_operand(a[1])
-            words.append(enc_s(imm, reg(a[0]), rs1, 2, 0x23))
+            words.append(enc_s(imm, reg(a[0]), rs1, STORES[op], 0x23))
+        elif op == ".word":
+            words.append(int(a[0], 0) & 0xFFFFFFFF)
+        elif op == "fence":   words.append(0x0FF0000F)
+        elif op == "fence.i": words.append(0x0000100F)
+        elif op == "wfi":     words.append(0x10500073)
         elif op in BTYPE:
             f3 = BTYPE[op]
             target = labels[a[2]] if a[2] in labels else int(a[2])

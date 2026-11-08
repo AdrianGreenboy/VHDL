@@ -50,6 +50,21 @@ package pcie_dll_pkg is
   constant DB_INITFC2P : byte_t := x"C0";   -- InitFC2-P
   constant DB_UPDATEFCP: byte_t := x"80";   -- UpdateFC-P
 
+  -- ---- Audit 2026-11: Ack/Nak DLLP across the link ----
+  -- DLLP on the wire (between SDP and END): 6 bytes
+  --   b0 = type (DB_ACK / DB_NAK), b1 = 0x00, b2 = {0000, seq[11:8]},
+  --   b3 = seq[7:0], b4/b5 = CRC-16 over b0..b3 (f_dllp_crc, same
+  --   complement + per-byte bit-reverse rule as the LCRC; b4 = crc(7:0)).
+  -- NOTE: CRC byte order / bit order is self-consistent inside this IP and
+  -- mirrors the LCRC convention of this package. It has NOT been checked
+  -- against a third-party PCIe link partner.
+  function f_dllp_crc(b0, b1, b2, b3 : byte_t) return crc16_t;
+  -- complete 6-byte Ack/Nak DLLP, b0 in bits 47:40 ... b5 in bits 7:0
+  function f_acknak_dllp(is_nak : std_logic; seq : std_logic_vector(11 downto 0))
+    return std_logic_vector;
+  -- modular 12-bit sequence distance (a - b) mod 4096
+  function f_sdist(a, b : seq_t) return natural;
+
   -- Creditos de flow control (v1: solo categoria P/posted, hdr+data).
   constant FC_HDR_INIT  : integer := 16;    -- creditos de cabecera iniciales
   constant FC_DATA_INIT : integer := 64;    -- creditos de datos iniciales
@@ -105,6 +120,33 @@ package body pcie_dll_pkg is
     r(23 downto 16) := f_bitrev8(inv(23 downto 16));
     r(31 downto 24) := f_bitrev8(inv(31 downto 24));
     return r;
+  end function;
+
+  function f_dllp_crc(b0, b1, b2, b3 : byte_t) return crc16_t is
+    variable c : crc16_t := DCRC_SEED;
+  begin
+    c := f_crc16_byte(c, b0); c := f_crc16_byte(c, b1);
+    c := f_crc16_byte(c, b2); c := f_crc16_byte(c, b3);
+    return f_dcrc_final(c);
+  end function;
+
+  function f_acknak_dllp(is_nak : std_logic; seq : std_logic_vector(11 downto 0))
+    return std_logic_vector is
+    variable b0, b2, b3 : byte_t;
+    variable c : crc16_t;
+  begin
+    if is_nak = '1' then b0 := DB_NAK; else b0 := DB_ACK; end if;
+    b2 := "0000" & seq(11 downto 8);
+    b3 := seq(7 downto 0);
+    c  := f_dllp_crc(b0, x"00", b2, b3);
+    return b0 & x"00" & b2 & b3 & c(7 downto 0) & c(15 downto 8);
+  end function;
+
+  function f_sdist(a, b : seq_t) return natural is
+    variable d : unsigned(11 downto 0);
+  begin
+    d := a - b;
+    return to_integer(d);
   end function;
 
   function f_dcrc_final(crc : crc16_t) return crc16_t is

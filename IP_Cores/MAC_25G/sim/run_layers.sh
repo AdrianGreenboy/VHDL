@@ -37,18 +37,19 @@ RVS="$RV/riscv_pkg.vhd $RV/alu.vhd $RV/immgen.vhd $RV/regfile.vhd $RV/control.vh
      $RV/muldiv.vhd $RV/csr.vhd $RV/clint.vhd $RV/cpu_pipeline.vhd $RV/dp_ram.vhd \
      $RV/axi4_master.vhd $RV/dma_burst.vhd $RV/mem_subsys_dma.vhd $RV/axil_soc.vhd \
      $RV/axi_ddr_sim.vhd"
-RTL="$PCS/pcs_scrambler.vhd $PCS/pcs_gearbox_tx.vhd $PCS/pcs_gearbox_rx.vhd \
+RTL="$PCS/pcs_scrambler.vhd $PCS/pcs_gearbox_tx.vhd $PCS/pcs_gearbox_rx.vhd $PCS/pcs_blocksync.vhd \
      $PCS/pcs_tx_datapath.vhd $PCS/pcs_rx_datapath.vhd $PCS/pcs_mmio_bridge.vhd \
      $HERE/rtl/mac25g_crc_pkg.vhd $HERE/rtl/mac25g_pkg.vhd $HERE/rtl/mac25g_pcs_tx.vhd $HERE/rtl/mac25g_gen.vhd \
      $HERE/rtl/mac25g_tx.vhd $HERE/rtl/mac25g_rx.vhd $HERE/rtl/mac25g_chk.vhd $HERE/rtl/mac25g_pcs66.vhd \
-     $HERE/rtl/mac25g_datapath.vhd $HERE/rtl/mac25g_sync.vhd \
+     $HERE/rtl/mac25g_flow.vhd $HERE/rtl/mac25g_datapath.vhd $HERE/rtl/mac25g_sync.vhd \
      $HERE/rtl/mac25g_top.vhd $HERE/rtl/soc_top_mac.vhd"
 TBS="$HERE/tb/tb_mac_pkg.vhd $HERE/tb/tb_mac_pcs_tx.vhd $HERE/tb/tb_mac_tx.vhd \
      $HERE/tb/tb_mac_rx.vhd $HERE/tb/tb_mac_chk.vhd $HERE/tb/tb_mac_datapath.vhd \
-     $HERE/tb/tb_mac_top.vhd $HERE/tb/tb_soc_mac.vhd $HERE/tb/tb_mac_sync.vhd"
+     $HERE/tb/tb_mac_top.vhd $HERE/tb/tb_soc_mac.vhd $HERE/tb/tb_mac_sync.vhd \
+     $HERE/tb/tb_mac_flow.vhd $HERE/tb/tb_mac_cl49.vhd $HERE/tb/tb_mac_regs.vhd"
 $G -a $GF $RVS $RTL $TBS || exit 1
 for t in tb_mac_pkg tb_mac_pcs_tx tb_mac_tx tb_mac_rx tb_mac_chk tb_mac_datapath \
-         tb_mac_top tb_soc_mac tb_mac_sync; do
+         tb_mac_top tb_soc_mac tb_mac_sync tb_mac_flow tb_mac_cl49 tb_mac_regs; do
   $G -e $GF $t || exit 1
 done
 
@@ -94,6 +95,27 @@ run "L3 gearbox Core19 inyec."  LAYER3_PASS "$(sig L3B)" tb_mac_datapath -gGEARB
 run "L4 registros AXI4-Lite"  LAYER4_PASS -              tb_mac_top
 run "L4 registros via MMIO"   LAYER4MMIO_PASS -          tb_mac_top -gBRIDGE=true
 run "L5 SoC + firmware RV32"  LAYER5SIM_PASS -           tb_soc_mac
+
+# ---- audit 2026-11 ----
+arun() {  # arun <tag> <pass-pattern> <tb> [generics...]
+  local tag=$1 pat=$2; shift 2
+  local out
+  out=$(cd "$W/vec" && $G -r $GF "$@" 2>&1 | grep -E "TB_MAC|FAIL|failure|error")
+  if echo "$out" | grep -q "$pat"; then printf "  PASS  %-34s\n" "$tag"
+  else printf "  FAIL  %-34s\n%s\n" "$tag" "$(echo "$out" | head -4)"; FAILS=$((FAILS+1)); fi
+}
+echo "== audit 2026-11 =="
+python3 -I "$HERE/../PCS_25G/oracle/cl49_ref.py" tx 600 21 "$W/vec/cl49_b.txt" \
+        "$W/vec/cl49_w.txt" "$W/vec/cl49_b66.txt" || exit 1
+arun "A2 PCS66 bit-exact vs cl49_ref"  TB_MAC_CL49_pcs66_PASS  tb_mac_cl49 -gMODE=pcs66 \
+     -gFBLK=cl49_b.txt -gFEXP=cl49_b66.txt
+arun "A2 PCS TX bit-exact vs cl49_ref" TB_MAC_CL49_pcs_tx_PASS tb_mac_cl49 -gMODE=pcs_tx \
+     -gFBLK=cl49_b.txt -gFEXP=cl49_w.txt
+arun "M3 AXIS bubbles behind TX FIFO"  TB_MAC_FLOW_BUBBLE_PASS tb_mac_flow -gTEST=bubble
+arun "M3 negative: no FIFO -> underrun" TB_MAC_FLOW_BUBBLE_FAIL tb_mac_flow -gTEST=bubble \
+     -gUSE_FIFO=false
+arun "802.3x PAUSE XOFF/XON/honour/sw" TB_MAC_FLOW_PAUSE_PASS  tb_mac_flow -gTEST=pause
+arun "regs: WSTRB/SLVERR/CMD kill/GEN_COUNT=0" TB_MAC_REGS_PASS tb_mac_regs
 
 if [ $FAILS -eq 0 ]; then echo "== TODAS LAS CAPAS 1-5 PASAN =="; exit 0
 else echo "== $FAILS FALLOS =="; exit 1; fi

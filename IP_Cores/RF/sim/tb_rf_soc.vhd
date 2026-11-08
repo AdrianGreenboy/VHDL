@@ -2,7 +2,8 @@
 -- hardware. Emula al PS: (1) carga fw_rf.mem en el IMEM por AXI-Lite, (2) fija
 -- DDR_BASE=0, (3) arranca el core (CONTROL=0), (4) espera la IRQ del doorbell,
 -- (5) lee las 64 muestras de la DDR del RF (escritas por el SEGUNDO maestro) y
--- calcula el checksum canonico, comparandolo con el golden 0xB74940EB.
+-- calcula el checksum canonico, comparandolo con el golden 0x32783005
+-- (AUDIT 2026-11: round-half-up datapath; historical truncating 0xB74940EB).
 -- Hay dos BFM de DDR: uno para el maestro de la familia (sin uso en este test) y
 -- otro para el segundo maestro del RF (recibe la captura).
 library ieee;
@@ -18,7 +19,9 @@ architecture sim of tb_rf_soc is
   constant TCK    : time := 10 ns;
   constant SAW    : natural := 16;
   constant AXI_AW : natural := 40;
-  constant GOLDEN : std_logic_vector(31 downto 0) := x"B74940EB";
+  -- AUDIT 2026-11: round-half-up datapath -> new golden (model/rf_model.py
+  -- op0). The historical truncating build gave 0xB74940EB.
+  constant GOLDEN : std_logic_vector(31 downto 0) := x"32783005";
 
   signal aclk : std_logic := '0';
   signal aresetn : std_logic := '0';
@@ -212,7 +215,7 @@ begin
     if std_logic_vector(chk) = GOLDEN and errors = 0 then
       report "FIN SIMULACION RFSOC: PASS CHK=0x" & to_hstring(chk) & " N=64 @ " & time'image(now) severity note;
     else
-      report "FIN SIMULACION RFSOC: FAIL CHK=0x" & to_hstring(chk) & " esp=0x" & to_hstring(GOLDEN) severity error;
+      report "FIN SIMULACION RFSOC: FAIL CHK=0x" & to_hstring(chk) & " esp=0x" & to_hstring(GOLDEN) severity failure;
     end if;
     report "-----------------------------------------";
     std.env.finish;

@@ -117,6 +117,10 @@ polling). Validar en sim: `./run_xsim.sh accel_pipe`.
 
 1. Agrega `soc_top_pipe.vhd` y `soc_top_pipe_wrap.v` al proyecto; instancia
    `soc_top_pipe_wrap` en el BD en vez de `soc_top_wrap`.
+   Since audit-2026-11 `soc_top_pipe.vhd` / `soc_top_master.vhd` also need
+   `rv32_bootrom_pkg.vhd` and `boot_loader.vhd` in the project (they are only
+   instantiated with `BOOT_FROM_ROM = true`, but must be analysed). See
+   `AUDIT_FIXES.md` for the `SYNC_MEM` (ASIC SRAM) and boot-ROM generics.
 2. Conecta `u_soc/irq_out` a una **PL-PS IRQ** del CIPS: doble clic al CIPS ->
    PS-PL Interfaces -> habilita `IRQ0` (o `pl_ps_irq`), y cablea `irq_out` a esa
    linea (`connect_bd_net`).

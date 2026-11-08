@@ -62,18 +62,22 @@ catch {delete_bd_objs [get_bd_ports mii_rx_dv]}
 # fuera las fuentes del ETH (el soc_top_eth y su subsistema)
 remove_files [get_files -quiet {*eth_mmio.vhd *mem_subsys_eth.vhd \
   *soc_top_eth.vhd *soc_top_eth_wrap.v}]
-# el spw_fifo canonico SE QUEDA (WIDTH=9 lo usa el MAC del PTP tambien). Si no
-# estuviera, se re-anade sin duplicar.
-if {[llength [get_files -quiet *spw_fifo.vhd]] == 0} {
-  add_files -norecurse $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/spw_fifo.vhd
-}
+# audit 2026-11: the PTP frame FIFO is now rtl/ptp_fifo.vhd (synchronous-read,
+# renamed from the PTP copy of spw_fifo). The ETH project's spw_fifo may stay
+# (different entity name, unused by the PTP RTL) or be removed.
 
+# NOTE (audit 2026-11): ptp_axil_master.vhd below is NOT in the repository;
+# see PTP/rtl/MISSING_ptp_axil_master.md.
 # anadir TODO el RTL del PTP + core con DMA + wrapper. RTL del IP en
 # ~/vhdl_repo/IP_Cores/PTP/rtl ; el core y el subsistema modificados en ~/rv32i.
 add_files -norecurse [list \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_pkg.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_msg_pkg.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/eth_pkg.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_fifo.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/eth_cdc_sync.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/eth_async_fifo.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/eth_mii_cdc.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_clock.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_tstamp.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/PTP/rtl/ptp_pdelay.vhd \

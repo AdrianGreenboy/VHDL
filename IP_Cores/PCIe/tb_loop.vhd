@@ -200,11 +200,25 @@ begin
     hdr(4):=x"00"; hdr(5):=x"00"; hdr(6):=x"06"; hdr(7):=x"00";
     hdr(8):=x"00"; hdr(9):=x"00"; hdr(10):=x"00"; hdr(11):=x"50";
     hdr(12):=x"FE"; hdr(13):=x"ED"; hdr(14):=x"00"; hdr(15):=x"00";
+    -- audit 2026-11: CfgWr0 is non-posted; the EP now returns a Cpl. Like a
+    -- real driver, wait for each completion before using the programmed value
+    -- (the validated store-and-forward path has more latency than before).
     inject(hdr, 16);
-    for k in 0 to 20 loop wait until rising_edge(clk); end loop;
+    c := 0;
+    loop
+      wait until rising_edge(clk); c := c + 1;
+      exit when (b_tr_v='1' and b_tr_l='1');
+      assert c < 5000 report "FASE5: sin Cpl del CfgWr0 (0x50)" severity failure;
+    end loop;
     hdr(0):=B0_CFGWR0; hdr(3):=x"01"; hdr(11):=x"54";
     hdr(12):=x"00"; hdr(13):=x"00"; hdr(14):=x"CA"; hdr(15):=x"FE";
     inject(hdr, 16);
+    c := 0;
+    loop
+      wait until rising_edge(clk); c := c + 1;
+      exit when (b_tr_v='1' and b_tr_l='1');
+      assert c < 5000 report "FASE5: sin Cpl del CfgWr0 (0x54)" severity failure;
+    end loop;
     for k in 0 to 20 loop wait until rising_edge(clk); end loop;
     -- disparar MSI y capturar el MWr3 del EP
     cap_en<='1';

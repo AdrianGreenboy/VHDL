@@ -54,7 +54,7 @@
 waitA:  lw   x6, 4(x1)          # STAT
         and  x7, x6, x20
         beq  x7, x0, waitA      # esperar TXDONE_A
-        sw   x0, 4(x1)          # limpiar stickies
+        sw   x6, 4(x1)          # limpiar stickies vistos (STAT es W1C)
 
         # leer los 13 bytes del registro de B: byte0..byte4 = flags/ID/DLC
         lw   x9, 68(x1)         # RXFIFO_B pop byte0 (flags+ID[28:24] = 0x00)
@@ -95,7 +95,7 @@ lpayA:  lw   x9, 68(x1)         # datos 1..7
 waitB:  lw   x6, 4(x1)          # STAT
         and  x7, x6, x24
         beq  x7, x0, waitB      # esperar TXDONE_B
-        sw   x0, 4(x1)          # limpiar stickies
+        sw   x6, 4(x1)          # limpiar stickies vistos (STAT es W1C)
         lw   x9, 36(x1)         # RXFIFO_A pop byte0 (flags+ID alto = 0x75)
         andi x9, x9, 255
         sw   x9, 28(x0)         # local[7] = 0x75
@@ -147,7 +147,7 @@ cdone:  lw   x8, 4(x1)
         or   x11, x11, x8
         srli x11, x11, 19       # -> 1 si ARB_B se activo
         sw   x11, 36(x0)        # local[9] = 1
-        sw   x0, 4(x1)          # limpiar stickies
+        sw   x6, 4(x1)          # limpiar stickies vistos (STAT es W1C)
         # trama ganadora de A en B: byte4=DLC(1), primer dato=0xAA
         lw   x9, 68(x1)         # byte0
         lw   x9, 68(x1)         # byte1

@@ -1,11 +1,12 @@
 #!/bin/bash
 # Capa 1b del IP MIL-STD-1553: run limpio (firma) + 5 mutaciones del RX.
 # Uso: rtl/m1553_word_rx.vhd y tb/tb_m1553_1b.vhd bajo ~/m1553_ip, ejecutar
-# desde ~/m1553_ip. Firma esperada: 462205ns.
+# desde ~/m1553_ip. Firma esperada: 678205ns (audit 2026-11:
+# casos 13..17 con reposo alto; MB6 = caza de sync dependiente del reposo).
 set -u
 cd "$(dirname "$0")"
 
-echo "=== RUN LIMPIO (firma esperada: 462205ns) ==="
+echo "=== RUN LIMPIO (firma esperada: 678205ns) ==="
 ( rm -rf sim_1b && mkdir -p sim_1b && cd sim_1b && \
   ghdl -a --std=08 ../rtl/m1553_word_rx.vhd ../tb/tb_m1553_1b.vhd && \
   ghdl -e --std=08 tb_m1553_1b && \
@@ -13,7 +14,7 @@ echo "=== RUN LIMPIO (firma esperada: 462205ns) ==="
 
 echo
 echo "=== MUTACIONES DEL RX (todas deben FALLAR) ==="
-for m in 1 2 3 4 5; do
+for m in 1 2 3 4 5 6; do
   d=mut/rx_m$m; rm -rf $d; mkdir -p $d; cp rtl/m1553_word_rx.vhd $d/
   case $m in
     1) sed -i "s/if par = '1' then/if par = '0' then/" $d/m1553_word_rx.vhd
@@ -26,6 +27,8 @@ for m in 1 2 3 4 5; do
        desc="check Manchester anulado";;
     5) sed -i "s/word_type <= wt_i;/word_type <= not wt_i;/" $d/m1553_word_rx.vhd
        desc="tipo de palabra invertido";;
+    6) sed -i "s/            if edge and run >= RUN_MIN then/            if edge and run >= RUN_MIN and run <= RUN_MAX then/" $d/m1553_word_rx.vhd
+       desc="caza de sync dependiente del nivel de reposo";;
   esac
   ( cd $d && ghdl -a --std=08 m1553_word_rx.vhd ../../tb/tb_m1553_1b.vhd >/dev/null 2>&1 && \
     ghdl -e --std=08 tb_m1553_1b >/dev/null 2>&1 && \

@@ -3,16 +3,36 @@
 -- ----------------------------------------------------------------------------
 -- * Temporizacion de bit programable: quantum = (brp+1) ciclos de clk,
 --   bit = 1 (sync) + (tseg1+1) + (tseg2+1) cuantos, muestreo al final de TSEG1.
---   Hard sync en IDLE/SUSPEND, resincronizacion limitada por SJW (una por bit).
+--   Hard sync on a recessive->dominant edge in IDLE, SUSPEND and in the 3rd
+--   bit of INTERMISSION (SOF of a node that ends intermission early);
+--   resincronizacion limitada por SJW (una por bit).
 -- * TX con auto-reintento: tx_req latchea la peticion (pend) hasta tx_done o
 --   tx_abort. Perdida de arbitraje: el nucleo pasa a receptor y reintenta.
--- * Stuffing/destuffing SOF..CRC, CRC-15 (poli 0x4599), ACK, EOF, intermision,
+-- * Stuffing/destuffing SOF..CRC sequence INCLUSIVE (ISO 11898-1: if the last
+--   CRC bit completes a run of 5, one stuff bit precedes the CRC delimiter),
+--   CRC-15 (poli 0x4599), ACK, EOF, intermision,
 --   suspension (nodo pasivo tras transmitir), tramas de error activas/pasivas,
 --   tramas de overload, TEC/REC con estados activo/pasivo/bus-off y
 --   recuperacion automatica de bus-off (128 x 11 bits recesivos).
--- * Simplificaciones documentadas: excepciones de TEC secundarias (stuff error
---   en arbitraje, dominante tras flag propio, >13 dominantes) no implementadas;
---   dominante durante un delimitador reinicia la espera de recesivo.
+-- * Fault confinement per ISO 11898-1 (audit 2026-11):
+--     - receiver error REC+1; transmitter error TEC+8;
+--     - exception: passive transmitter with ACK error and no dominant bit
+--       seen while sending its passive flag -> no TEC change (a dominant bit
+--       during that passive flag applies the deferred +8);
+--     - exception: stuff error during arbitration where the stuff bit was
+--       recessive, sent recessive, monitored dominant -> no TEC change;
+--     - receiver sees dominant as the first bit after its error flag: REC+8;
+--     - bit error while sending an active error flag or an overload flag:
+--       TEC+8 (transmitter) / REC+8 (receiver), and a new error flag starts;
+--     - 8 consecutive dominant bits after an error/overload flag (= the 14th
+--       dominant bit after an active/overload flag) and every further 8:
+--       TEC+8 / REC+8;
+--     - dominant bit in an error/overload delimiter: form error, except at
+--       its last bit, where it is an overload condition.
+-- * Bus-off drops the pending TX request (tx_busy falls) and tx_req is
+--   ignored (with a tx_err pulse) while bus-off; firmware re-requests after
+--   recovery.
+-- * Reset: rst synchronous, active high (unified style for ASIC/FPGA).
 -- '1' = recesivo, '0' = dominante.
 -- ============================================================================
 library ieee;
@@ -22,7 +42,7 @@ use ieee.numeric_std.all;
 entity can_engine is
   port (
     clk         : in  std_logic;
-    rstn        : in  std_logic;
+    rst         : in  std_logic;   -- synchronous, active high
     -- temporizacion de bit
     brp         : in  std_logic_vector(7 downto 0);
     tseg1       : in  std_logic_vector(3 downto 0);
@@ -76,6 +96,15 @@ architecture rtl of can_engine is
          | S_DLC | S_DATA | S_CRC => return true;
       when others => return false;
     end case;
+  end function;
+
+  -- positions where a pending stuff bit (run = 5) must be expected/sent:
+  -- the stuffed fields plus the CRC delimiter slot, because stuffing covers
+  -- the CRC sequence inclusive and the state has already advanced to
+  -- S_CRCDEL when the last CRC bit completes a run of 5.
+  function stuffpend(s : st_t) return boolean is
+  begin
+    return stuffed(s) or s = S_CRCDEL;
   end function;
 
   -- campos que alimentan el CRC (SOF se alimenta aparte)
@@ -144,7 +173,6 @@ begin
     variable crcr     : std_logic_vector(14 downto 0) := (others => '0');
     variable crcok    : boolean := false;
     variable ackdrv   : std_logic := '0';
-    variable gotack   : boolean := false;
     variable wastx    : boolean := false;
     variable pcl      : std_logic := '1';
     variable pcn      : integer range 0 to 7 := 0;
@@ -165,6 +193,11 @@ begin
     variable passv    : boolean := false;
     variable b11      : integer range 0 to 15 := 0;
     variable bseq     : integer range 0 to 255 := 0;
+    variable errtx    : boolean := false; -- role (TX) when the error/overload frame began
+    variable dcnt     : integer range 0 to 7 := 0; -- dominant bits after a flag (mod 8)
+    variable fst      : boolean := false; -- next sample is the 1st bit after an error flag
+    variable ackexc   : boolean := false; -- passive ACK-error exception pending
+    variable lastarb  : boolean := false; -- last data bit belonged to arbitration
     -- pulsos
     variable p_done, p_arb, p_txe, p_err_v, p_rxv : std_logic;
     variable skip     : boolean;
@@ -188,17 +221,64 @@ begin
     procedure attempt_init is
     begin
       tds    := ldat;
-      gotack := false;
       wastx  := true;
     end procedure;
 
+    -- bus-off entry: the pending request is dropped (tx_busy falls)
+    procedure p_busoff is
+    begin
+      st   := S_BUSOFF;
+      b11  := 0;
+      bseq := 0;
+      pend := '0';
+    end procedure;
+
+    -- start (or restart) an error flag according to the current state
+    procedure p_flag is
+    begin
+      upd_state;
+      if tecv > 255 then
+        p_busoff;
+      elsif passv then
+        st  := S_EFLAGP;
+        pcn := 0;
+      else
+        st  := S_EFLAGA;
+        cnt := 0;
+      end if;
+    end procedure;
+
+    -- +8 to the counter of the node's role in the current error/overload frame
+    procedure p_inc8 is
+    begin
+      if errtx then
+        tecv := tecv + 8;
+        if tecv > 256 then
+          tecv := 256;
+        end if;
+      else
+        if recv > 247 then
+          recv := 255;
+        else
+          recv := recv + 8;
+        end if;
+      end if;
+      upd_state;
+    end procedure;
+
     -- error detectado en el bit muestreado; el flag arranca en el bit siguiente
-    procedure p_err(txe : boolean; acke : boolean) is
+    -- noinc: stuff error during arbitration exception (no TEC change)
+    procedure p_err(txe : boolean; acke : boolean; noinc : boolean := false) is
     begin
       p_err_v := '1';
+      errtx   := txe;
+      ackexc  := false;
+      fst     := false;
       if txe then
         p_txe := '1';
-        if not (acke and passv) then
+        if acke and passv then
+          ackexc := true;   -- decided while sending the passive flag
+        elsif not noinc then
           tecv := tecv + 8;
           if tecv > 256 then
             tecv := 256;
@@ -210,17 +290,32 @@ begin
           recv := recv + 1;
         end if;
       end if;
-      upd_state;
-      if tecv > 255 then
-        st   := S_BUSOFF;
-        b11  := 0;
-        bseq := 0;
-      elsif passv then
-        st  := S_EFLAGP;
-        pcn := 0;
+      p_flag;
+    end procedure;
+
+    -- bit error while sending an active error flag or an overload flag:
+    -- TEC/REC + 8 and a new error flag starts
+    procedure p_flagbiterr is
+    begin
+      p_err_v := '1';
+      ackexc  := false;
+      fst     := false;
+      p_inc8;
+      p_flag;
+    end procedure;
+
+    -- dominant bit after a flag (S_EWAIT / S_OWAIT): every 8 consecutive
+    -- dominant bits (the 14th after an active/overload flag) -> +8
+    procedure p_domafter is
+    begin
+      if dcnt = 7 then
+        dcnt := 0;
+        p_inc8;
+        if tecv > 255 then
+          p_busoff;
+        end if;
       else
-        st  := S_EFLAGA;
-        cnt := 0;
+        dcnt := dcnt + 1;
       end if;
     end procedure;
 
@@ -240,15 +335,18 @@ begin
         attempt_init;
       else
         v_istx := '0';
+        wastx  := false;  -- receiving this frame: no suspend after it
       end if;
     end procedure;
 
     procedure p_ovl is
     begin
       if ovln < 2 then
-        ovln := ovln + 1;
-        st   := S_OFLAG;
-        cnt  := 0;
+        ovln  := ovln + 1;
+        st    := S_OFLAG;
+        cnt   := 0;
+        errtx := wastx;   -- role for the overload-flag counter rules
+        fst   := false;
       else
         p_err(false, false);
       end if;
@@ -268,7 +366,7 @@ begin
         when S_IDA | S_SRTR | S_IDE | S_IDB | S_ERTR | S_R1 | S_R0
            | S_DLC | S_DATA | S_CRC | S_CRCDEL =>
           if v_istx = '1' then
-            if run = 5 and stuffed(st) then
+            if run = 5 and stuffpend(st) then
               txn := not lastb;
             else
               case st is
@@ -302,13 +400,15 @@ begin
 
   begin
     if rising_edge(clk) then
-      if rstn = '0' then
+      if rst = '1' then
         v_q := 0; v_sc := 0; v_resd := false; v_rxp := '1';
         v_ts1e := 13; v_ntqe := 20;
         st := S_IDLE; v_istx := '0'; cnt := 0; run := 0; lastb := '1';
         pend := '0'; txn := '1'; txr := '1';
         tecv := 0; recv := 0; passv := false; b11 := 0; bseq := 0;
-        ackdrv := '0'; wastx := false; ovln := 0; gotack := false;
+        ackdrv := '0'; wastx := false; ovln := 0;
+        errtx := false; dcnt := 0; fst := false; ackexc := false;
+        lastarb := false; pcn := 0; pcl := '1'; crcok := false;
         can_tx <= '1'; tx_busy <= '0'; tx_done <= '0'; tx_arb_lost <= '0';
         tx_err <= '0'; rx_valid <= '0'; err_pulse <= '0';
         rx_id <= (others => '0'); rx_ide <= '0'; rx_rtr <= '0';
@@ -323,8 +423,10 @@ begin
         p_done := '0'; p_arb := '0'; p_txe := '0'; p_err_v := '0'; p_rxv := '0';
         v_sample := false; v_bstart := false;
 
-        -- latch de peticion
-        if tx_req = '1' and pend = '0' then
+        -- latch de peticion (rejected while bus-off: tx_err pulse instead)
+        if tx_req = '1' and st = S_BUSOFF then
+          p_txe := '1';
+        elsif tx_req = '1' and pend = '0' then
           pend := '1';
           lid  := tx_id; lide := tx_ide; lrtr := tx_rtr;
           ldlc := tx_dlc; ldat := tx_data;
@@ -337,24 +439,33 @@ begin
         fedge := (v_rxp = '1') and (rxq2 = '0');
         v_rxp := rxq2;
 
-        -- hard sync (IDLE / SUSPEND) sobre flanco ajeno
+        -- hard sync sobre flanco ajeno: IDLE, SUSPEND, and the 3rd bit of
+        -- INTERMISSION (cnt >= 2 recessive bits already sampled), where a
+        -- dominant edge is the SOF of a node that ended intermission early.
+        -- Edges in intermission bits 1-2 (overload condition) only resync.
         hsync := false;
-        if fedge and txr = '1' and (st = S_IDLE or st = S_SUSP) then
+        if fedge and txr = '1' and (st = S_IDLE or st = S_SUSP
+                                    or (st = S_INTER and cnt >= 2)) then
           hsync := true;
           v_q := 0; v_sc := 0; v_resd := false;
           v_ts1e := v_ts1n; v_ntqe := v_ntqn;
-          if st = S_IDLE then
-            st := S_SOF;
-            if pend = '1' then
+          if st = S_IDLE or st = S_INTER then
+            -- a passive node that transmitted the previous frame must not
+            -- join this one (suspend transmission)
+            if pend = '1' and not (st = S_INTER and passv and wastx) then
+              st := S_SOF;
               v_istx := '1';
               attempt_init;
               txr := '0'; -- conducir el resto del SOF
             else
+              st := S_SOF;
               v_istx := '0';
+              wastx  := false;
             end if;
           else
             st := S_SOF;
             v_istx := '0';
+            wastx  := false;
           end if;
         elsif fedge and txr = '1' and (not v_resd)
               and st /= S_BUSOFF and st /= S_IDLE and st /= S_SUSP then
@@ -444,18 +555,31 @@ begin
                 cnt := cnt + 1;
                 if cnt = 6 then
                   st := S_EWAIT;
+                  dcnt := 0;
+                  fst := true;
                 end if;
               else
-                cnt := 0; -- flag corrompido: reiniciar
+                p_flagbiterr; -- bit error in own active flag: +8, new flag
               end if;
 
             when S_EFLAGP =>
-              if pcn = 0 then
+              if rxb = '0' and ackexc then
+                -- passive ACK-error exception void: dominant seen during
+                -- the passive flag -> the deferred TEC+8 applies
+                ackexc := false;
+                p_inc8;
+              end if;
+              if tecv > 255 then
+                p_busoff;
+              elsif pcn = 0 then
                 pcl := rxb; pcn := 1;
               elsif rxb = pcl then
                 pcn := pcn + 1;
                 if pcn = 6 then
                   st := S_EWAIT;
+                  dcnt := 0;
+                  fst := true;
+                  ackexc := false;
                 end if;
               else
                 pcl := rxb; pcn := 1;
@@ -465,11 +589,22 @@ begin
               if rxb = '1' then
                 cnt := 7;
                 st := S_EDEL;
+                fst := false;
+              else
+                if fst and not errtx then
+                  p_inc8;     -- receiver: dominant 1st bit after its flag
+                end if;
+                fst := false;
+                p_domafter;
               end if;
 
             when S_EDEL =>
               if rxb = '0' then
-                st := S_EWAIT;
+                if cnt = 1 then
+                  p_ovl;      -- dominant at the last delimiter bit: overload
+                else
+                  p_err(errtx, false); -- form error in the error delimiter
+                end if;
               else
                 cnt := cnt - 1;
                 if cnt = 0 then
@@ -482,20 +617,27 @@ begin
                 cnt := cnt + 1;
                 if cnt = 6 then
                   st := S_OWAIT;
+                  dcnt := 0;
                 end if;
               else
-                cnt := 0;
+                p_flagbiterr; -- bit error in own overload flag: +8, error flag
               end if;
 
             when S_OWAIT =>
               if rxb = '1' then
                 cnt := 7;
                 st := S_ODEL;
+              else
+                p_domafter;
               end if;
 
             when S_ODEL =>
               if rxb = '0' then
-                st := S_OWAIT;
+                if cnt = 1 then
+                  p_ovl;
+                else
+                  p_err(errtx, false); -- form error in the overload delimiter
+                end if;
               else
                 cnt := cnt - 1;
                 if cnt = 0 then
@@ -537,12 +679,14 @@ begin
               -- campos de trama: S_IDA .. S_EOF
               skip := false;
 
-              -- 1) bit de stuff esperado
-              if stuffed(st) and run = 5 then
+              -- 1) bit de stuff esperado (also in the CRC delimiter slot)
+              if stuffpend(st) and run = 5 then
                 skip := true;
                 if rxb = lastb then
                   if v_istx = '1' then
-                    p_err(true, false);
+                    -- exception: stuff bit during arbitration that should be
+                    -- recessive (sent recessive, monitored dominant)
+                    p_err(true, false, lastarb and lastb = '0');
                   else
                     p_err(false, false);
                   end if;
@@ -557,13 +701,11 @@ begin
                 if st = S_ACK then
                   if rxb = '1' then
                     if ack_free = '1' then
-                      gotack := true; -- self-ack (no conforme, solo debug)
+                      null; -- self-ack (no conforme, solo debug)
                     else
                       p_err(true, true); -- error de ACK
                       skip := true;
                     end if;
-                  else
-                    gotack := true;
                   end if;
                 elsif txr /= rxb then
                   if txr = '1' and rxb = '0' and arbst(st) then
@@ -578,6 +720,7 @@ begin
 
               if not skip then
                 -- 3) seguimiento de stuffing
+                lastarb := arbst(st);
                 if stuffed(st) then
                   if rxb = lastb then
                     run := run + 1;

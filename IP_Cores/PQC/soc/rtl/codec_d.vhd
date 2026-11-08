@@ -80,10 +80,10 @@ architecture rtl of codec_d is
     S_U_RD, S_U_RDW, S_U_ACC, S_U_EMIT, S_U_NEXT,
     -- hint encode: walk rows, emit set positions, then the running totals
     S_HE_CLR, S_HE_RD, S_HE_RDW, S_HE_TEST, S_HE_WR, S_HE_NEXT,
-    S_HE_ROW, S_HE_CNT, S_HE_CNTW,
+    S_HE_CNT, S_HE_CNTW,
     -- hint decode: clear, read counts, walk positions with validation
     S_HD_CLR, S_HD_CNT, S_HD_CNTW, S_HD_CHK, S_HD_POS, S_HD_POSW,
-    S_HD_MONO, S_HD_SET, S_HD_NEXT, S_HD_ROW, S_HD_TAIL, S_HD_TAILW,
+    S_HD_MONO, S_HD_SET, S_HD_ROW, S_HD_TAIL, S_HD_TAILW,
     S_HD_TNEXT,
     S_DONE, S_FAIL);
 
@@ -105,6 +105,12 @@ architecture rtl of codec_d is
   signal first : integer range 0 to 63 := 0;
   signal yi    : integer range 0 to 255 := 0;
   signal prev  : integer range 0 to 255 := 0;
+  -- Row presented on p_row. It is REGISTERED together with p_raddr, p_waddr
+  -- and p_we, so the slot offset and the strobe always refer to the same
+  -- access. (Before the 2026-11 audit p_row was combinational from row while
+  -- the strobes were registered: the last clear write of each row landed in
+  -- the next row, and only the wraparound of row 5 into row 0 hid it.)
+  signal prow_r : integer range 0 to 5 := 0;
 
   constant C_KK_D : integer := 6;
 
@@ -113,7 +119,7 @@ begin
   busy  <= busy_r;
   done  <= done_r;
   valid <= valid_r;
-  p_row <= row when row < C_KK_D else 0;
+  p_row <= prow_r;
 
   process (clk)
     variable fld : unsigned(19 downto 0);
@@ -142,6 +148,7 @@ begin
         first   <= 0;
         yi      <= 0;
         prev    <= 0;
+        prow_r  <= 0;
       else
         done_r <= '0';
         p_we   <= '0';
@@ -159,6 +166,7 @@ begin
               acc     <= (others => '0');
               nbit    <= 0;
               row     <= 0;
+              prow_r  <= 0;
               idx     <= 0;
               first   <= 0;
               prev    <= 0;
@@ -325,6 +333,7 @@ begin
 
           when S_HE_RD =>
             p_raddr <= std_logic_vector(to_unsigned(nacc, 8));
+            prow_r  <= row;
             fsm     <= S_HE_RDW;
 
           when S_HE_RDW =>
@@ -370,9 +379,6 @@ begin
               fsm <= S_HE_RD;
             end if;
 
-          when S_HE_ROW =>
-            fsm <= S_HE_RD;
-
           ----------------------------------------------------------------
           -- Hint decode with validation.
           ----------------------------------------------------------------
@@ -380,6 +386,7 @@ begin
             p_waddr <= std_logic_vector(to_unsigned(nacc, 8));
             p_wdata <= (others => '0');
             p_we    <= '1';
+            prow_r  <= row;
             if nacc = 255 then
               nacc <= 0;
               if row = C_KK_D - 1 then
@@ -444,11 +451,9 @@ begin
             p_waddr <= std_logic_vector(to_unsigned(prev, 8));
             p_wdata <= std_logic_vector(to_signed(1, C_CW));
             p_we    <= '1';
+            prow_r  <= row;
             idx     <= idx + 1;
             fsm     <= S_HD_POS;
-
-          when S_HD_NEXT =>
-            fsm <= S_HD_POS;
 
           when S_HD_ROW =>
             -- prev is per-row: the monotonicity rule applies within a row,

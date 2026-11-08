@@ -93,6 +93,11 @@ entity soc_top_eth is
     eth_irq_out : out std_logic;
 
     -- ---- pads MII (LOOP_INT v1: inertes; PHY RGMII es roadmap v1.1) ----
+    -- PHY clocks (audit 2026-11): real MII needs RX_CLK/TX_CLK from the PHY.
+    -- Defaults '0' keep the existing Verilog wrapper / XDC (LOOP_INT bring-up)
+    -- unchanged; route them to pins before using LOOP_INT=0.
+    mii_rx_clk : in std_logic := '0';
+    mii_tx_clk : in std_logic := '0';
     mii_txd   : out std_logic_vector(3 downto 0);
     mii_tx_en : out std_logic;
     mii_rxd   : in  std_logic_vector(3 downto 0);
@@ -187,6 +192,7 @@ begin
       sel => eth_sel_req, we => eth_we, addr => eth_addr,
       wdata => dmem_wdata, rdata => eth_rdata,
       irq => eth_irq,
+      mii_rx_clk => mii_rx_clk, mii_tx_clk => mii_tx_clk,
       mii_txd => mii_txd, mii_tx_en => mii_tx_en,
       mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv
     );

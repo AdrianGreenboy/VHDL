@@ -10,6 +10,19 @@
 --     RCW) y LUEGO arranca el barrido (start retenido en start_pending).
 --   El escenario no solapa inyeccion y barrido, asi que el arbitraje de la BRAM
 --   es trivial: el inyector la controla mientras inj_busy=1; la FSM el resto.
+--
+-- Audit 2026-11 (see AUDIT_FIXES.md):
+--   * REGION_BASE / REGION_LEN / PERIOD now drive the scrub FSM (region sweep
+--     with wrap, periodic re-trigger). CONTROL: bit0 start, bit1 oneshot,
+--     bit2 clr_cnt, bit3 clr_sticky (as in the frozen map of mmio_oracle.py).
+--   * STATUS bit2 (ded) / bit3 (ce) are sticky flags, W1C: write 1 to clear.
+--     STATUS bit4 = periodic trigger armed (RO).
+--   * BRAM read-port arbitration is now enforced in hardware (no longer relies
+--     on the firmware never overlapping): injector, data window and sweep FSM
+--     each wait for the others (scrub_fsm.hold, inj_req, win_start).
+--   * Data window LO/HI: the LO access captures the full 39-bit word; a HI
+--     access to the same index is served from that snapshot, so a scrub
+--     write-back between the two accesses can no longer produce a torn value.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -81,6 +94,16 @@ architecture rtl of ecc_regbank is
   signal f_ce, f_ded : std_logic_vector(31 downto 0);
   signal f_first_addr, f_last_addr : std_logic_vector(31 downto 0);
   signal f_first_syn, f_last_syn   : std_logic_vector(9 downto 0);
+  signal f_oneshot    : std_logic := '1';
+  signal f_hold       : std_logic;
+  signal f_clr_cnt    : std_logic := '0';
+  signal f_clr_sticky : std_logic := '0';
+  signal f_w1c        : std_logic_vector(1 downto 0) := "00";
+  signal f_ce_flag, f_ded_flag, f_periodic : std_logic;
+  signal inj_req      : std_logic := '0';   -- latched injection request
+  signal win_start    : std_logic;          -- window takes the BRAM port this cycle
+  signal win_snap_vld : std_logic := '0';   -- LO/HI snapshot valid
+  signal win_snap_idx : std_logic_vector(8 downto 0) := (others => '0');
 
   type inj_state_t is (INJ_IDLE, INJ_READ, INJ_WAIT, INJ_WRITE);
   signal inj_state     : inj_state_t := INJ_IDLE;
@@ -125,6 +148,13 @@ begin
   fsm : entity work.scrub_fsm
     generic map (DEPTH => DEPTH)
     port map (clk => clk, rst => rst, start => f_start,
+              oneshot => f_oneshot,
+              region_base => std_logic_vector(region_base),
+              region_len  => std_logic_vector(region_len),
+              period      => std_logic_vector(period),
+              hold => f_hold, clr_cnt => f_clr_cnt, clr_sticky => f_clr_sticky,
+              w1c_flags => f_w1c,
+              ce_flag => f_ce_flag, ded_flag => f_ded_flag, periodic => f_periodic,
               we => f_we, waddr => f_waddr, wdata => f_wdata,
               raddr => f_raddr, rdata => b_rdata,
               busy => f_busy, done => f_done,
@@ -134,6 +164,16 @@ begin
 
   win_sel <= '1' when (sel = '1' and addr(12) = '1') else '0';
   win_hi  <= addr(2);
+
+  -- BRAM read-port arbitration (priority: sweep > injector > data window, which
+  -- preserves CPU program order: a window read issued after a CONTROL.start or
+  -- an INJ_CTRL write observes their effect).
+  -- The sweep FSM is held while the injector or the window own the port; the
+  -- injector waits for the sweep and for a window access in flight; the window
+  -- waits for the sweep (incl. a latched start) and for any pending injection.
+  f_hold    <= '1' when inj_busy = '1' or win_wait = '1' else '0';
+  win_start <= '1' when win_state = WS_IDLE and win_sel = '1' and f_busy = '0'
+                        and inj_busy = '0' and inj_req = '0' and inj_go = '0' else '0';
 
   b_we    <= inj_we    when inj_busy = '1' else f_we;
   b_waddr <= inj_waddr when inj_busy = '1' else f_waddr;
@@ -147,6 +187,9 @@ begin
     if rising_edge(clk) then
       inj_go  <= '0';
       f_start <= '0';
+      f_clr_cnt    <= '0';
+      f_clr_sticky <= '0';
+      f_w1c        <= "00";
       if rst = '1' then
         region_base   <= (others => '0');
         region_len    <= to_unsigned(DEPTH, 32);
@@ -158,6 +201,7 @@ begin
         scratch       <= (others => '0');
         pend_valid    <= '0';
         start_pending <= '0';
+        f_oneshot     <= '1';
       else
         if sel = '1' and wr = '1' then
           case addr(7 downto 0) is
@@ -181,8 +225,13 @@ begin
                   pend_mask  <= mask_of(inj_mask_lo, inj_mask_hi);
                 end if;
               end if;
+            when OFF_STATUS =>
+              f_w1c <= wdata(3) & wdata(2);   -- W1C sticky flags (ce, ded)
             when OFF_CONTROL =>
+              f_clr_cnt    <= wdata(2);
+              f_clr_sticky <= wdata(3);
               if wdata(0) = '1' then
+                f_oneshot <= wdata(1);
                 if pend_valid = '1' then
                   inj_go        <= '1';
                   inj_full_mask <= pend_mask;
@@ -215,10 +264,16 @@ begin
       if rst = '1' then
         inj_state <= INJ_IDLE;
         inj_busy  <= '0';
+        inj_req   <= '0';
       else
+        if inj_go = '1' then
+          inj_req <= '1';
+        end if;
         case inj_state is
           when INJ_IDLE =>
-            if inj_go = '1' then
+            -- wait for a free BRAM port (no sweep, no window access)
+            if inj_req = '1' and f_busy = '0' and win_wait = '0' then
+              inj_req   <= '0';
               inj_busy  <= '1';
               inj_raddr <= inj_eff_addr;
               inj_state <= INJ_READ;
@@ -248,17 +303,27 @@ begin
       if rst = '1' then
         win_state <= WS_IDLE;
         win_rdata <= (others => '0');
+        win_snap_vld <= '0';
       else
         case win_state is
           when WS_IDLE =>
-            if win_sel = '1' and f_busy = '0' and inj_busy = '0' then
-              win_raddr <= "0000000" & addr(11 downto 3);
-              win_state <= WS_WAIT;
+            if win_sel = '1' and win_hi = '1' and win_snap_vld = '1' and
+               win_snap_idx = addr(11 downto 3) then
+              -- HI half of the word whose LO half was just read: serve it
+              -- from the snapshot (atomic 39-bit read, no BRAM access)
+              win_snap_vld <= '0';
+              win_state    <= WS_HOLD;
+            elsif win_start = '1' then
+              win_raddr    <= "0000000" & addr(11 downto 3);
+              win_snap_idx <= addr(11 downto 3);
+              win_snap_vld <= '0';
+              win_state    <= WS_WAIT;
             end if;
           when WS_WAIT =>
             win_state <= WS_CAP;      -- la BRAM entregara mem(win_raddr) ahora
           when WS_CAP =>
-            win_rdata <= b_rdata;      -- dato valido
+            win_rdata <= b_rdata;      -- dato valido (palabra completa de 39 bits)
+            win_snap_vld <= not win_hi; -- a LO access arms the snapshot for HI
             win_state <= WS_HOLD;
           when WS_HOLD =>
             -- espera a que el CPU retire el acceso antes de rearmar
@@ -275,7 +340,7 @@ begin
   rd_proc : process(addr, region_base, region_len, period, inj_addr, inj_mask_lo,
                     inj_mask_hi, inj_ctrl, scratch, f_busy, f_done, f_ce, f_ded,
                     f_first_addr, f_first_syn, f_last_addr, f_last_syn,
-                    win_sel, win_hi, win_rdata)
+                    win_sel, win_hi, win_rdata, f_ded_flag, f_ce_flag, f_periodic)
     variable v : std_logic_vector(31 downto 0);
   begin
     v := (others => '0');
@@ -284,8 +349,9 @@ begin
       when OFF_STATUS =>
         v(0) := f_busy;
         v(1) := f_done;
-        if unsigned(f_ded) /= 0 then v(2) := '1'; end if;
-        if unsigned(f_ce)  /= 0 then v(3) := '1'; end if;
+        v(2) := f_ded_flag;   -- sticky, W1C
+        v(3) := f_ce_flag;    -- sticky, W1C
+        v(4) := f_periodic;
       when OFF_REGION_BASE => v := std_logic_vector(region_base);
       when OFF_REGION_LEN  => v := std_logic_vector(region_len);
       when OFF_PERIOD      => v := std_logic_vector(period);

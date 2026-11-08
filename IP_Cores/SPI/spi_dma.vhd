@@ -17,6 +17,19 @@
 --
 --  Direccion de bytes little-endian: el byte 0 de cada palabra es el primero
 --  que sale por MOSI, consistente con la memoria del RV32.
+--
+--  Audit 2026-11 changes (English):
+--    * abort : 1-cycle pulse accepted in ANY state, latched (abort_q) and
+--              honoured at the next S_DECIDE (burst boundary): the FSM
+--              returns to idle and pulses `aborted`. An AXI burst in flight
+--              is always completed. This is the escape for a transfer that
+--              can no longer finish (engine disabled, RX bytes never come).
+--    * tx_pend : '1' while TX bytes are still owed by the DMA (tx_left/=0);
+--              used by spi_axi_top to classify an engine stall as a TX
+--              underrun.
+--    * axi_err : pulse on RRESP/=OKAY, BRESP/=OKAY or an RLAST that does
+--              not match the beat count (the beat count stays authoritative).
+--    * DDR offsets use all 32 bits of tx_addr / rx_addr (were 31).
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -40,7 +53,11 @@ entity spi_dma is
     rx_en   : in  std_logic;   -- '0': descarta lo recibido (no escribe DDR)
     dummy   : in  std_logic_vector(7 downto 0);
     start   : in  std_logic;   -- pulso
+    abort   : in  std_logic := '0';  -- pulse, latched (audit 2026-11)
     busy    : out std_logic;
+    aborted : out std_logic;   -- pulse when the transfer ended by abort
+    tx_pend : out std_logic;   -- TX bytes still owed (tx_left /= 0)
+    axi_err : out std_logic;   -- pulse: bad RRESP/BRESP or RLAST mismatch
 
     -- FIFO TX (push)
     txf_wr    : out std_logic;
@@ -103,6 +120,7 @@ architecture rtl of spi_dma is
   signal chunk_cnt : unsigned(4 downto 0) := (others => '0');
 
   signal txf_byte : std_logic_vector(7 downto 0);
+  signal abort_q  : std_logic := '0';
 
   function fmin(a, b : natural) return natural is
   begin
@@ -128,7 +146,8 @@ begin
   m_axi_arvalid <= '1' when state = R_AR   else '0';
   m_axi_rready  <= '1' when state = R_BEAT else '0';
 
-  busy <= '0' when state = S_IDLE else '1';
+  busy    <= '0' when state = S_IDLE else '1';
+  tx_pend <= '0' when (state = S_IDLE or tx_left = 0) else '1';
 
   -- pushes / pops (un byte por ciclo en los estados correspondientes)
   txf_byte <= wordbuf(7 downto 0)   when bidx = 0 else
@@ -144,16 +163,37 @@ begin
     variable v_bb, v_beats, v_cap, v_w, v_chunk : natural;
   begin
     if rising_edge(clk) then
+      aborted <= '0';
+      axi_err <= '0';
       if aresetn = '0' then
-        state <= S_IDLE;
+        state       <= S_IDLE;
+        abort_q     <= '0';
+        tx_left     <= (others => '0');
+        rx_left     <= (others => '0');
+        txa_c       <= (others => '0');
+        rxa_c       <= (others => '0');
+        burst_beats <= (others => '0');
+        burst_bytes <= (others => '0');
+        beat_bytes  <= (others => '0');
+        col_cnt     <= (others => '0');
+        arlen_r     <= (others => '0');
+        awlen_r     <= (others => '0');
+        wordbuf     <= (others => '0');
+        wstrb_r     <= "0000";
+        bidx        <= "00";
+        chunk_cnt   <= (others => '0');
       else
+        if abort = '1' and state /= S_IDLE then
+          abort_q <= '1';                -- sticky until acted upon
+        end if;
         case state is
           when S_IDLE =>
+            abort_q <= '0';
             if start = '1' then
               tx_left <= nbytes;
               rx_left <= nbytes;
-              txa_c <= unsigned(ddr_base) + resize(unsigned(tx_addr(30 downto 0)), ADDR_W);
-              rxa_c <= unsigned(ddr_base) + resize(unsigned(rx_addr(30 downto 0)), ADDR_W);
+              txa_c <= unsigned(ddr_base) + resize(unsigned(tx_addr), ADDR_W);
+              rxa_c <= unsigned(ddr_base) + resize(unsigned(rx_addr), ADDR_W);
               state <= S_DECIDE;
             end if;
 
@@ -161,6 +201,9 @@ begin
           when S_DECIDE =>
             if tx_left = 0 and rx_left = 0 then
               state <= S_IDLE;
+            elsif abort_q = '1' or abort = '1' then
+              aborted <= '1';            -- burst boundary: stop here
+              state   <= S_IDLE;
             else
               v_lvl  := to_integer(rxf_lvl);
               v_left := to_integer(rx_left);
@@ -230,6 +273,10 @@ begin
             if m_axi_arready = '1' then state <= R_BEAT; end if;
           when R_BEAT =>
             if m_axi_rvalid = '1' then
+              if m_axi_rresp /= "00" or
+                 ((m_axi_rlast = '1') /= (burst_beats = 1)) then
+                axi_err <= '1';
+              end if;
               wordbuf     <= m_axi_rdata;
               txa_c       <= txa_c + 4;
               burst_beats <= burst_beats - 1;
@@ -288,7 +335,10 @@ begin
               end if;
             end if;
           when W_RESP =>
-            if m_axi_bvalid = '1' then state <= S_DECIDE; end if;
+            if m_axi_bvalid = '1' then
+              if m_axi_bresp /= "00" then axi_err <= '1'; end if;
+              state <= S_DECIDE;
+            end if;
         end case;
       end if;
     end if;

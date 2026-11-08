@@ -22,10 +22,13 @@ $G -a --std=08 $R/rv64_pkg.vhd $R/rv64_mmu_pkg.vhd $R/rv64_tlb.vhd $R/rv64_ptw.v
   $R/sram_1rw.vhd $R/rv64_axi_master.vhd $R/rv64_dcache.vhd $R/rv64_icache.vhd $R/rv64_cpu.vhd \
   $R/rv64_bootrom_pkg.vhd $R/rv64_clint.vhd $R/rv64_plic.vhd $R/rv64_uart.vhd $R/rv64_periph.vhd \
   $R/rv64_soc.vhd
-$G -a --std=08 ../tb/tb_rvc.vhd ../tb/tb_muldiv.vhd ../tb/tb_core.vhd ../tb/tb_cpu.vhd
-TBS="tb_rvc tb_muldiv tb_core tb_cpu"
+$G -a --std=08 ../tb/tb_rvc.vhd ../tb/tb_muldiv.vhd ../tb/tb_core.vhd ../tb/tb_cpu.vhd ../tb/tb_uart.vhd
+TBS="tb_rvc tb_muldiv tb_core tb_cpu tb_uart"
 if [ -d "$IPC/USART" ]; then
-  $G -a --std=08 $IPC/SPI/byte_fifo.vhd $IPC/USART/usart_engine.vhd $IPC/USART/usart_mmio.vhd \
+  # USART audit-2026-11 moved to a private FIFO (usart_byte_fifo); older trees use SPI/byte_fifo
+  UFIFO=$IPC/SPI/byte_fifo.vhd
+  [ -f $IPC/USART/usart_byte_fifo.vhd ] && UFIFO="$UFIFO $IPC/USART/usart_byte_fifo.vhd"
+  $G -a --std=08 $UFIFO $IPC/USART/usart_engine.vhd $IPC/USART/usart_mmio.vhd \
     $IPC/USART/usart_dma.vhd $IPC/USART/usart_axi_top.vhd ../tb/tb_soc.vhd
   TBS="$TBS tb_soc"
 else

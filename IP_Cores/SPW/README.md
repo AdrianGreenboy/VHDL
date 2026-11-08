@@ -95,14 +95,87 @@ Project dependencies (paths as used in the scripts):
 - **Rates**: `DIV` = clock cycles per bit, minimum 2. At 100 MHz:
   DIV 10/5/4/2 → 10/20/25/50 Mbit/s. Each direction of a link may run at
   its own rate (validated in layer 1c with a 50/10 asymmetric link).
-  50 Mbit/s is the reliable RX ceiling for a 100 MHz synchronous receiver.
-- **FIFOs**: two 64-deep × 9-bit FWFT FIFOs (`spw_fifo`, byte_fifo-pattern
-  interface: `LOG2_DEPTH` generic, `level` of LOG2_DEPTH+1 bits, async
-  active-low reset) with flush commands and TXOVF/RXOVF stickies.
+  50 Mbit/s is the reliable RX ceiling of the *oversampling* receiver.
+  **Audit 2026-11: up to 400 Mbit/s** with the Data-Strobe clock-recovery
+  receiver (`spw_rx_dsr`, codec generic `G_RX_MODE = 1`, the IP default) and
+  the transmitter on a dedicated bit clock (`spw_tx_cdc`, `G_TX_CLK = 1`,
+  `tx_clk` = bit rate x DIV, DIV >= 1). See section 3.1.
+- **FIFOs**: two 64-deep × 9-bit FWFT FIFOs (`spw_fifo`: `LOG2_DEPTH`
+  generic, `level` of LOG2_DEPTH+1 bits; audit 2026-11: registered-read RAM
+  with a 1-deep FWFT prefetch and **synchronous active-high `rst`**) with
+  flush commands and TXOVF/RXOVF stickies. The whole IP now uses
+  synchronous active-high reset (`rst`), except the recovered-clock domain
+  of `spw_rx_dsr` (no clock while the line is quiet; see 3.1).
 - **`LOOP_INT` self-test**: CTRL[4] loops Dout→Din and Sout→Sin inside the
   IP; a single codec negotiates the link with itself (its NULLs/FCTs come
   back to its own RX) and carries real traffic. This is the whole silicon
   self-test — no pads involved.
+
+### 3.1 High-rate architecture (audit 2026-11) and timing constraints
+
+**Receiver (`spw_rx_dsr`, `G_RX_MODE = 1`).** `rclk = D xor S` toggles once
+per bit. Even bits (from the transmitter reset, D = S = 0) are captured on
+the rising edge of `rclk`, odd bits on the falling edge (bit value = D after
+the transition). Four bit pairs form an 8-bit word written into a 16-word
+asynchronous FIFO with gray pointers (2-FF synchronizers both ways). The
+system domain reads one word per cycle and decodes 8 bits per cycle (800
+Mbit/s capacity at 100 MHz, 2x margin at 400). Up to 2 characters can end in
+one word; a 4-entry event queue keeps the 1-event-per-cycle interface of
+`spw_rx`. Disconnect: any FIFO write or a change of an activity toggle
+(flipped every 2 bits in the `rclk` domain) restarts the 850 ns timer.
+The `rclk` domain reset is asserted **and released** asynchronously from the
+registered `rx_rst` (a release synchronized to `rclk` swallows the first
+bits, i.e. the single NULL a remote sends before its FCT burst).
+*Not detectable* in this receiver: simultaneous D/S transitions (no `rclk`
+edge; they appear as parity/escape errors or a disconnect). The oversampling
+receiver (`G_RX_MODE = 0`, `spw_rx`, <= 50 Mbit/s at 100 MHz) flags them as
+a parity error (except a drop to D = S = 0, which is a transmitter reset and
+is left to the disconnect detection). The FPGA SoC (`soc_top_spw`) keeps
+`G_RX_MODE = 0`, as validated in silicon.
+
+**Transmitter (`spw_tx_cdc`, `G_TX_CLK = 1`).** `spw_tx` runs on `tx_clk`
+(`MIN_DIV = 1`). Crossings: 2-FF level synchronizers (en, txen,
+allow_fct/nchar); `div` via a change toggle; FCT/Time-Code requests via
+toggle handshakes with a one-cycle cooldown (the link drops `fct_req` one
+cycle after the ack); N-Chars via an 8-deep gray-pointer async FIFO.
+`d_ack` means "committed to the transmitter" (credit is counted there); the
+FIFO is flushed in both domains while `txen` is low. 400 Mbit/s needs
+`tx_clk` = 400 MHz with DIV = 1 (start the link at 10 Mbit/s: DIV = 40).
+
+**Constraints an ASIC/FPGA flow must apply** (names relative to the
+`spw_rx_dsr` / `spw_tx_cdc` instances):
+
+1. `create_clock -name spw_rclk -period 5.0 [get_pins <xor>/Y]` on the
+   recovered clock `rclk` (max 400 Mbit/s → 200 MHz, both edges used). Mark
+   it a *generated/ideal* clock source of the D/S pads. Allow 50 % duty-cycle
+   loss for D/S skew plus jitter, i.e. derate the half-period paths
+   (rising-edge `rbit` → falling-edge pair register) to
+   `T/2 - skew - jitter`.
+2. **D/S capture.** The `din` flops in the `rclk` domain sample D at the
+   edge that D itself may have caused. The data path D → flop must be
+   *shorter* than the clock path D → XOR → `rclk` tree by at least the setup
+   time. Either constrain `set_max_delay` / `set_min_delay` from the D pad to
+   the flops, relative to `rclk`, or insert a matched delay. In the
+   zero-delay RTL model the ordering is exact by construction.
+3. Match the D and S pad-to-XOR delays (`set_max_delay -datapath_only`
+   between both pads and the XOR inputs, plus a skew budget). The
+   testbench tolerates ±0.4 ns skew and ±0.3 ns jitter at 2.5 ns per bit.
+4. `create_clock -name spw_txclk` on `tx_clk` (400 MHz for 400 Mbit/s).
+5. Declare `clk`, `spw_rclk` and `spw_txclk` **asynchronous**
+   (`set_clock_groups -asynchronous`). Constrain each gray-pointer bus and
+   toggle with `set_max_delay -datapath_only <period of destination>` and
+   `set_bus_skew`. Mark the first synchronizer flops
+   `ASYNC_REG` / don't-touch.
+6. The FIFO RAMs written in `spw_rclk` / `clk` and read in the other domain
+   are dual-clock arrays: read data is only consumed after the pointer
+   handshake (no direct timing path is required; constrain as false path
+   only *together with* item 5).
+7. `rx_rst` → `rclk`-domain flops: asynchronous assert and release. Waive
+   recovery/removal on these endpoints (false path); the protocol tolerates
+   corrupted bits at the release instant.
+8. FPGA: route `rclk` on a global/regional clock buffer; a LUT-generated
+   clock needs explicit `CLOCK_DEDICATED_ROUTE` handling and IO placement on
+   clock-capable pins. Where this is impractical use `G_RX_MODE = 0`.
 
 ## 4. SoC memory map
 
@@ -128,8 +201,8 @@ These are *internal* RV32 addresses. From the A72/PS side:
 | 0x00 | CTRL | RW | b0 **EN** (core + FIFOs in synchronous reset while 0), b1 **START**, b2 **AUTOSTART**, b3 **DISABLE**, b4 **LOOP_INT** |
 | 0x04 | DIV | RW | b7:0 clock cycles per bit (min 2; resets to 0x0A = 10 Mbit/s). Own register so bring-up patches it with a single `addi` |
 | 0x08 | CMD | W1P | Write-triggered: b0 TX_FLUSH, b1 RX_FLUSH |
-| 0x0C | TIME | W / R | Write: b7:0 value → latched + tick (Time-Code sent in Run). Read: b7:0 last received time, b15:8 wrap-around tick counter |
-| 0x10 | STAT | R / W-clear | Live: b2:0 link state, b3 RUN, b4 TX_SPACE, b5 RX_AVAIL, b6 TX_EMPTY, b7 RX_FULL, b14:8 rx_level. Sticky: b16 PAR, b17 ESC, b18 DISC, b19 CRED, b20 TICK, b21 LINKDOWN, b22 RUNOK, b23 TXOVF, b24 RXOVF. **Any write clears all stickies; same-cycle sets win over the clear** |
+| 0x0C | TIME | W / R | Write: b7:0 value → latched + tick (Time-Code sent in Run; **a write while not in Run is discarded**). Read: b7:0 last received time, b15:8 wrap-around tick counter. ECSS-E-ST-50-12C 8.12: a received code is a TICK (b20, counter) only if its 6-bit time = previous + 1 mod 64; otherwise only b7:0 is updated |
+| 0x10 | STAT | R / W1C | Live: b2:0 link state, b3 RUN, b4 TX_SPACE, b5 RX_AVAIL, b6 TX_EMPTY, b7 RX_FULL, b14:8 rx_level. Sticky: b16 PAR, b17 ESC, b18 DISC, b19 CRED, b20 TICK, b21 LINKDOWN, b22 RUNOK, b23 TXOVF, b24 RXOVF. **Write-1-to-clear per bit (audit 2026-11); same-cycle sets win** |
 | 0x14 | TXD | W / R | Write: b8:0 N-Char into the TX FIFO (b8=1: b0=0 → EOP, b0=1 → EEP). Read: b6:0 tx_level, b8 tx_full |
 | 0x18 | RXD | R | **Pop-on-read**: b8:0 character, b31 VALID. Reading with VALID=0 pops nothing, so polling RXD directly is safe |
 | 0x1C | IRQEN | RW | Bitwise mask over the STAT view; `irq = or(STAT and IRQEN)`. Level-sensitive, no ack |
@@ -186,10 +259,14 @@ signature. GHDL `--std=08`; failure messages are plain ASCII.
 | Layer | Bench / run | Signature | What it proves |
 |---|---|---|---|
 | 1a | `tb_spw_1a.vhd` / `run_1a.sh` | `29756ns` | TX vs an **independent event-driven receiver model** (zero shared code): absolute-time bit periods, never-simultaneous D/S transitions, first-NULL pattern sync, its own parity chain. NULLs, FCTs, data/EOP/EEP, Time-Codes with an explicit TIME > FCT > DATA priority test, N-Char gating, 50 Mbit/s restart, mid-character disable + 2 µs silence |
-| 1b | `tb_spw_1b.vhd` / `run_1b.sh` | `21226ns` | RX vs a **procedural bit-bang transmitter** with corruptions: flipped parity, ESC+ESC, ESC+EOP, >850 ns disconnect (time-window checked), rxen drop mid-character; exact-order valid traffic at 100 ns and 20 ns bit periods; HALT-until-rearm after any error |
-| 1c | `tb_spw_1c.vhd` / `run_1c.sh` | `362076ns` | **RTL vs RTL**: two codecs cross-wired full-duplex. Phase 0: with the partner off, Started must time out and never reach Connecting. Then dual bring-up (START + AUTOSTART), 130 concurrent characters both ways, Time-Codes, real credit starvation and resume, line-corruption injection with automatic recovery, partner power-off recovery, asymmetric 50/10 Mbit/s link. Independent wire watchers assert the first character after any long silence is a NULL |
-| 2 | `tb_spw_2.vhd` / `run_2.sh` | `89476ns` | MMIO vs a **dmem-bus BFM** enforcing the RV32 contract. Reset values, RW registers, FIFO accounting/flushes, LOOP_INT bring-up, pop-on-read isolation, Time-Codes, level IRQs, DIV patching, and a 90-write TX avalanche (TXOVF sticky + end-to-end credit backpressure through the MMIO) |
-| 4 | `tb_spw_soc.vhd` / `run_soc.sh` | `68055ns` | **Full SoC**: the RV32 runs `spw_test.s`, drives the IP over MMIO, reports 16 words to DDR via `dma_burst` with the doorbell inside the burst; the TB checks the 10 result words |
+| 1b | `tb_spw_1b.vhd` / `run_1b.sh` | `26486ns` | RX vs a **procedural bit-bang transmitter** with corruptions: flipped parity, ESC+ESC, ESC+EOP, >850 ns disconnect (time-window checked), rxen drop mid-character; exact-order valid traffic at 100 ns and 20 ns bit periods; HALT-until-rearm after any error |
+| 1c | `tb_spw_1c.vhd` / `run_1c.sh` | `365076ns` (DSR RX) / `362076ns` (`-gG_RX_MODE=0`) | **RTL vs RTL**: two codecs cross-wired full-duplex. Phase 0: with the partner off, Started must time out and never reach Connecting. Then dual bring-up (START + AUTOSTART), 130 concurrent characters both ways, Time-Codes, real credit starvation and resume, line-corruption injection with automatic recovery, partner power-off recovery, asymmetric 50/10 Mbit/s link. Independent wire watchers assert the first character after any long silence is a NULL |
+| 1b+ | `tb_spw_1b.vhd` | `26486ns` | (audit) FASE H: simultaneous D/S transition → err_par |
+| 3 | `tb_spw_3.vhd` / `run_3.sh` | `46051813ps` | (audit) `spw_rx_dsr` vs an **independent DS transmitter model** at 10 and 400 Mbit/s, ±0.3 ns jitter, ±0.4 ns D/S skew, asynchronous 100 MHz system clock, rate steps, parity error, re-arm, disconnect |
+| 4s | `tb_spw_4.vhd` / `run_4.sh` | `83265ns` | (audit) codec ↔ codec at 400 Mbit/s: `tx_clk` TX + recovered-clock RX, 4 asynchronous clocks, skewed wire, 600 N-Chars each way + Time-Code |
+| — | `run_audit_mut.sh` | — | (audit) 7 single-fix reverts + the oversampling RX at 400 Mbit/s must all FAIL |
+| 2 | `tb_spw_2.vhd` / `run_2.sh` | `200916ns` | MMIO vs a **dmem-bus BFM** enforcing the RV32 contract. Reset values, RW registers, FIFO accounting/flushes, LOOP_INT bring-up, pop-on-read isolation, Time-Codes, level IRQs, DIV patching, and a 90-write TX avalanche (TXOVF sticky + end-to-end credit backpressure through the MMIO) |
+| 4 | `tb_spw_soc.vhd` / `run_soc.sh` | `70055ns` | **Full SoC**: the RV32 runs `spw_test.s`, drives the IP over MMIO, reports 16 words to DDR via `dma_burst` with the doorbell inside the burst; the TB checks the 10 result words |
 
 Every bench was armed against itself by **RTL mutation**: broken parity,
 wrong bit period, simultaneous D/S, disabled parity check, premature
@@ -250,7 +327,7 @@ remove_files [get_files -quiet {*byte_fifo.vhd *can_engine.vhd *can_mmio.vhd \
   *mem_subsys_can.vhd *soc_top_can.vhd *soc_top_can_wrap.v}]
 remove_files -fileset constrs_1 [get_files -quiet *can_pins.xdc]
 add_files -norecurse [list $env(HOME)/spw_ip/spw_fifo.vhd $env(HOME)/spw_ip/spw_tx.vhd \
-  $env(HOME)/spw_ip/spw_rx.vhd $env(HOME)/spw_ip/spw_link.vhd $env(HOME)/spw_ip/spw_codec.vhd \
+  $env(HOME)/spw_ip/spw_rx.vhd $env(HOME)/spw_ip/spw_rx_dsr.vhd $env(HOME)/spw_ip/spw_tx_cdc.vhd $env(HOME)/spw_ip/spw_link.vhd $env(HOME)/spw_ip/spw_codec.vhd \
   $env(HOME)/spw_ip/spw_mmio.vhd $env(HOME)/spw_ip/mem_subsys_spw.vhd \
   $env(HOME)/spw_ip/soc_top_spw.vhd $env(HOME)/spw_ip/soc_top_spw_wrap.v]
 set_property file_type {VHDL 2008} [get_files $env(HOME)/spw_ip/*.vhd]
@@ -416,7 +493,9 @@ methodology is designed to surface; two were real verification gaps.
 | File | Role |
 |---|---|
 | `spw_tx.vhd` | TX engine: DS encoding, chained odd parity, TIME > FCT > N-Char > NULL priority |
-| `spw_rx.vhd` | RX engine: 2-FF sync, bit recovery, first-NULL hunt, decode, error detection, HALT-until-rearm |
+| `spw_rx.vhd` | Oversampling RX engine (`G_RX_MODE = 0`): 2-FF sync, bit recovery, first-NULL hunt, decode, error detection (incl. simultaneous D/S), HALT-until-rearm |
+| `spw_rx_dsr.vhd` | Recovered-clock RX (`G_RX_MODE = 1`, default): DDR capture on `D xor S`, gray async FIFO, 8-bit/cycle decoder |
+| `spw_tx_cdc.vhd` | TX on `tx_clk` (`G_TX_CLK = 1`): CDC wrapper around `spw_tx` |
 | `spw_link.vhd` | ECSS link FSM, timers, credit accounting, FCT request generation |
 | `spw_codec.vhd` | Codec top: TX + RX + link + Time-Code latch + credit gating |
 | `spw_fifo.vhd` | 9-bit FWFT FIFO (byte_fifo interface pattern + sync clear) |

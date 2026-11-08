@@ -16,6 +16,7 @@ DBG_IN = 0x1234ABCD
 CTRL_START = 0
 CTRL_SRESET = 1
 CTRL_IRQEN = 2
+D = 70          # decision-variable size (adcs_pkg.D): NDIM upper bound
 
 
 class Model:
@@ -34,8 +35,15 @@ class Model:
             self.r['CTRL'] = data & 0xFF
             if data & (1 << CTRL_START):
                 start = 1
-        elif name in ('MODE', 'NDIM', 'MAXITER', 'STEP', 'UMAX',
-                      'HBASE', 'GBASE', 'UBASE'):
+        elif name == 'NDIM':
+            # audit 2026-11 (spec): NDIM clamped to 1..D
+            d = data & 0xFFFFFFFF
+            self.r[name] = 1 if d == 0 else min(d, D)
+        elif name == 'MAXITER':
+            # audit 2026-11 (spec): MAXITER >= 1, saturates at 16 bits
+            d = data & 0xFFFFFFFF
+            self.r[name] = 1 if d == 0 else min(d, 0xFFFF)
+        elif name in ('MODE', 'STEP', 'UMAX', 'HBASE', 'GBASE', 'UBASE'):
             self.r[name] = data & 0xFFFFFFFF
         # sticky clear por soft_reset o start
         if (self.r['CTRL'] >> CTRL_SRESET) & 1 or start:
@@ -113,6 +121,15 @@ def main():
     lines.append("PULSE_DONE"); m.set_done(); R(REG['STATUS'])
     W(REG['CTRL'], (1 << CTRL_SRESET)); R(REG['STATUS'])
     W(REG['CTRL'], 0)                     # quitar soft_reset
+
+    # 7) audit 2026-11: NDIM / MAXITER clamps
+    W(REG['NDIM'], 0);        R(REG['NDIM'])
+    W(REG['NDIM'], 71);       R(REG['NDIM'])
+    W(REG['NDIM'], 0x12345);  R(REG['NDIM'])
+    W(REG['NDIM'], 70);       R(REG['NDIM'])
+    W(REG['MAXITER'], 0);     R(REG['MAXITER'])
+    W(REG['MAXITER'], 0x10000); R(REG['MAXITER'])
+    W(REG['MAXITER'], 30);    R(REG['MAXITER'])
 
     with open(out, "w") as f:
         f.write("\n".join(lines) + "\n")

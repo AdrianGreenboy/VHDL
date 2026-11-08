@@ -15,6 +15,19 @@
 -- Resultado (mantenido hasta el siguiente done): r_ok, r_tout, r_serr
 -- (status/secuencia invalida), r_me (bit Message Error en algun status),
 -- stat1/stat2 capturados.
+--
+-- Audit 2026-11:
+--  * Dual-redundant bus: f_bus selects A ('0') or B ('1') per message; the
+--    BC transmits and listens on that bus only (latched at go). The idle
+--    gap counter restarts when the bus changes.
+--  * A word error (sync/Manchester/parity) while waiting for a status word
+--    (S_WST1/S_WST2) is a status error (r_serr), not a timeout.
+--  * The response timeout is deferred while a word is being received, but
+--    only by one word time: continuous garbage cannot hold it off.
+--  * TX underflow: a message that needs data words from an empty TX FIFO is
+--    not started; an underflow during the data words stops the message
+--    after the word in flight. Both end with r_uflow (and no OK).
+--  * Fail-safe transmitter timer in the word TX (fs_fault).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -24,7 +37,8 @@ entity m1553_bc_core is
   generic (
     TOUT_CYCLES : integer := 1350;  -- desde caida de tx_en (~14 us mid-parity)
     DATA_TOUT   : integer := 2500;  -- espera de data word contigua
-    GAP_CYCLES  : integer := 400    -- hueco intermensaje minimo (~4 us)
+    GAP_CYCLES  : integer := 400;   -- hueco intermensaje minimo (~4 us)
+    FS_TIMEOUT  : integer := 80000  -- fail-safe transmitter timer (cycles)
   );
   port (
     clk      : in  std_logic;
@@ -39,24 +53,31 @@ entity m1553_bc_core is
     f_wc     : in  std_logic_vector(4 downto 0);
     f2_rt    : in  std_logic_vector(4 downto 0);
     f2_sa    : in  std_logic_vector(4 downto 0);
+    f_bus    : in  std_logic := '0';                -- '0' bus A, '1' bus B
     busy     : out std_logic;
     done     : out std_logic;                       -- pulso
     r_ok     : out std_logic;
     r_tout   : out std_logic;
     r_serr   : out std_logic;
     r_me     : out std_logic;
+    r_uflow  : out std_logic;                       -- TX FIFO underflow
+    m_bus_o  : out std_logic;                       -- bus of current/last message
+    fs_fault : out std_logic;
     stat1    : out std_logic_vector(15 downto 0);
     stat2    : out std_logic_vector(15 downto 0);
     -- fuente de datos TX (FWFT)
     tx_rd    : out std_logic;
     tx_wdat  : in  std_logic_vector(15 downto 0);
+    tx_empty : in  std_logic;
     -- sumidero de datos RX
     rx_we    : out std_logic;
     rx_wdat  : out std_logic_vector(15 downto 0);
-    -- bus
-    bus_rx   : in  std_logic;
-    bus_tx   : out std_logic;
-    bus_txen : out std_logic
+    -- dual-redundant bus
+    bus_rx_a   : in  std_logic;
+    bus_rx_b   : in  std_logic;
+    bus_tx     : out std_logic;
+    bus_txen_a : out std_logic;
+    bus_txen_b : out std_logic
   );
 end entity m1553_bc_core;
 
@@ -81,6 +102,9 @@ architecture rtl of m1553_bc_core is
   signal m_rt, m_sa, m_wc, m2_rt, m2_sa : std_logic_vector(4 downto 0);
   signal m_tr   : std_logic;
   signal m_mode, m_bcast : std_logic;
+  signal m_bus  : std_logic := '0';
+  signal rx_sel : std_logic;
+  signal uf_r   : std_logic := '0';
 
   signal n_send  : integer range 0 to 34 := 0;      -- palabras pendientes de emitir
   signal n_exp   : integer range 0 to 32 := 0;      -- datos esperados en RX
@@ -104,7 +128,8 @@ architecture rtl of m1553_bc_core is
 begin
 
   rstc <= rst or (not en);
-  rx_g <= bus_rx and (not txen_i);
+  rx_sel <= bus_rx_a when m_bus = '0' else bus_rx_b;
+  rx_g   <= rx_sel and (not txen_i);
 
   u_wrx : entity work.m1553_word_rx
     port map (
@@ -114,13 +139,18 @@ begin
       busy => wrx_busy);
 
   u_wtx : entity work.m1553_word_tx
+    generic map (FS_TIMEOUT => FS_TIMEOUT)
     port map (
       clk => clk, rst => rstc,
       start => wtx_start, word_type => wtx_wt, data => wtx_data,
       busy => wtx_busy, loaded => wtx_loaded,
+      fs_fault => fs_fault,
       tx_en => txen_i, tx_data => bus_tx);
 
-  bus_txen <= txen_i;
+  bus_txen_a <= txen_i and not m_bus;
+  bus_txen_b <= txen_i and m_bus;
+  m_bus_o    <= m_bus;
+  r_uflow    <= uf_r;
   busy  <= '0' when st = S_IDLE else '1';
   r_ok   <= ok_r;
   r_tout <= tout_r;
@@ -139,6 +169,7 @@ begin
         wtx_start <= '0'; tx_rd <= '0'; rx_we <= '0'; done <= '0';
         ok_r <= '0'; tout_r <= '0'; serr_r <= '0'; me_r <= '0';
         idle_c <= 0; tmo <= 0; txen_d <= '0';
+        m_bus <= '0'; uf_r <= '0';
       else
         wtx_start <= '0';
         tx_rd     <= '0';
@@ -165,6 +196,10 @@ begin
               m_rt   <= f_rt;  m_tr <= f_tr;
               m_sa   <= f_sa;  m_wc <= f_wc;
               m2_rt  <= f2_rt; m2_sa <= f2_sa;
+              m_bus  <= f_bus;
+              if f_bus /= m_bus then
+                idle_c <= 0;                          -- gap measured on the new bus
+              end if;
               if f_sa = "00000" or f_sa = "11111" then
                 m_mode <= '1';
               else
@@ -203,16 +238,23 @@ begin
               else
                 n_exp <= 0;
               end if;
-              -- emitir cmd1
-              wtx_start <= '1';
-              wtx_wt    <= '1';
-              if m_rtrt = '1' then
-                wtx_data <= m_rt & '0' & m_sa & m_wc; -- cmd de recepcion (RTA)
-              else
-                wtx_data <= m_rt & m_tr & m_sa & m_wc;
-              end if;
               ok_r <= '0'; tout_r <= '0'; serr_r <= '0'; me_r <= '0';
-              st <= S_SEND;
+              uf_r <= '0';
+              if m_rtrt = '0' and v_ns > 1 and tx_empty = '1' then
+                -- data words needed but the TX FIFO is empty: do not start
+                uf_r <= '1';
+                st   <= S_FIN;
+              else
+                -- emitir cmd1
+                wtx_start <= '1';
+                wtx_wt    <= '1';
+                if m_rtrt = '1' then
+                  wtx_data <= m_rt & '0' & m_sa & m_wc; -- cmd de recepcion (RTA)
+                else
+                  wtx_data <= m_rt & m_tr & m_sa & m_wc;
+                end if;
+                st <= S_SEND;
+              end if;
             end if;
 
           when S_SEND =>
@@ -221,18 +263,26 @@ begin
               if m_rtrt = '1' and sendsel = 1 then
                 wtx_wt   <= '1';
                 wtx_data <= m2_rt & '1' & m2_sa & m_wc;  -- cmd de transmision (RTB)
+                sendsel <= sendsel + 1;
+                n_send  <= n_send - 1;
+              elsif tx_empty = '1' then
+                -- underflow: stop after the word in flight
+                uf_r   <= '1';
+                n_send <= 0;
               else
                 wtx_wt   <= '0';
                 wtx_data <= tx_wdat;
                 tx_rd    <= '1';
+                sendsel <= sendsel + 1;
+                n_send  <= n_send - 1;
               end if;
-              sendsel <= sendsel + 1;
-              n_send  <= n_send - 1;
             end if;
             -- fin de emision: caida de tx_en sin nada pendiente
             if txen_d = '1' and txen_i = '0' and n_send = 0
                and wtx_busy = '0' then
-              if m_bcast = '1' then
+              if uf_r = '1' then
+                st <= S_FIN;                          -- aborted: no OK, no wait
+              elsif m_bcast = '1' then
                 ok_r <= '1';
                 st   <= S_FIN;
               else
@@ -243,9 +293,8 @@ begin
             end if;
 
           when S_WST1 =>
-            if wrx_busy = '1' then
-              tmo <= 0;                               -- la respuesta ya empezo
-            else
+            -- timeout deferred by a word in reception, at most one word time
+            if tmo < 4095 then
               tmo <= tmo + 1;
             end if;
             if m_rtrt = '1' then
@@ -271,10 +320,11 @@ begin
                   st   <= S_FIN;
                 end if;
               end if;
-            elsif v_dat then
-              serr_r <= '1';
+            elsif v_dat or v_err then
+              serr_r <= '1';                          -- word error on the status
               st     <= S_FIN;
-            elsif tmo >= TOUT_CYCLES then
+            elsif (tmo >= TOUT_CYCLES and wrx_busy = '0') or
+                  tmo >= TOUT_CYCLES + 2100 then
               tout_r <= '1';
               st     <= S_FIN;
             end if;
@@ -308,9 +358,7 @@ begin
             end if;
 
           when S_WST2 =>                              -- status del RT receptor
-            if wrx_busy = '1' then
-              tmo <= 0;
-            else
+            if tmo < 4095 then
               tmo <= tmo + 1;
             end if;
             if v_cmd then
@@ -324,10 +372,11 @@ begin
                 ok_r <= '1';
               end if;
               st <= S_FIN;
-            elsif v_dat then
+            elsif v_dat or v_err then
               serr_r <= '1';
               st     <= S_FIN;
-            elsif tmo >= TOUT_CYCLES then
+            elsif (tmo >= TOUT_CYCLES and wrx_busy = '0') or
+                  tmo >= TOUT_CYCLES + 2100 then
               tout_r <= '1';
               st     <= S_FIN;
             end if;

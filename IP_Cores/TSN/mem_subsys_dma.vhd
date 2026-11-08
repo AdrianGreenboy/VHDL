@@ -12,6 +12,15 @@
 --    0x0C CTRL  (w)   bit0=start, bit1=dir (0=DDR->local, 1=local->DDR)
 --    0x10 STATUS(r)   bit0=busy   (busy PEGAJOSO: alto desde el start hasta que
 --                                  el DMA de verdad termina, sin ventana falsa)
+--
+--  Audit 2026-11 (TSN-local copy):
+--    * every register write (DMA regs and TSN switch) is qualified by
+--      dmem_req (v1 decoded dmem_wstrb/dmem_addr even when no request was
+--      issued: a stale address/strobe could start a DMA or write a register);
+--    * DMA registers honour dmem_wstrb byte lanes (sb/sh update only the
+--      addressed bytes; CTRL.start needs byte lane 0);
+--    * TSN switch registers are 32-bit only: a partial store (wstrb not
+--      "1111") is ignored instead of writing a word with garbage lanes.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -89,14 +98,29 @@ architecture rtl of mem_subsys_dma is
   signal dloc_we    : std_logic;
   signal dloc_rdata : word_t;
   signal dloc_wstrb : std_logic_vector(3 downto 0);
+  signal wr_req     : std_logic;                     -- qualified store
+  signal tsn_we     : std_logic;
+
+  -- byte-lane merge for the DMA registers
+  function merge(old, new_v : std_logic_vector(31 downto 0);
+                 st : std_logic_vector(3 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(31 downto 0) := old;
+  begin
+    for b in 0 to 3 loop
+      if st(b) = '1' then r(b*8+7 downto b*8) := new_v(b*8+7 downto b*8); end if;
+    end loop;
+    return r;
+  end function;
 begin
+  wr_req <= '1' when dmem_req = '1' and dmem_wstrb /= "0000" else '0';
+  tsn_we <= '1' when dmem_req = '1' and dmem_wstrb = "1111" else '0';
 
   is_local  <= '1' when dmem_addr(31 downto 30) = "00"   else '0';
   is_dmareg <= '1' when dmem_addr(31 downto 28) = "0100" else '0';
   is_tsn    <= '1' when dmem_addr(31 downto 28) = "0110" else '0';   -- 0x6000_0000
 
   -- deteccion combinacional del "start" (sw a CTRL con bit0=1)
-  dma_go <= '1' when (is_dmareg = '1' and dmem_wstrb /= "0000"
+  dma_go <= '1' when (is_dmareg = '1' and wr_req = '1' and dmem_wstrb(0) = '1'
                       and dmem_addr(7 downto 0) = x"0C" and dmem_wdata(0) = '1')
             else '0';
 
@@ -142,8 +166,7 @@ begin
       clk   => clk,
       rst   => not aresetn,
       sel   => (dmem_req and is_tsn),
-      we    => (is_tsn and (dmem_wstrb(0) or dmem_wstrb(1) or
-                            dmem_wstrb(2) or dmem_wstrb(3))),
+      we    => (is_tsn and tsn_we),
       addr  => dmem_addr(8 downto 0),
       wdata => dmem_wdata,
       rdata => tsn_rdata,
@@ -161,13 +184,18 @@ begin
         busy_sticky <= '0'; dma_started <= '0';
       else
         dma_start <= '0';
-        if is_dmareg = '1' and dmem_wstrb /= "0000" then
+        if is_dmareg = '1' and wr_req = '1' then
           case dmem_addr(7 downto 0) is
-            when x"00" => dma_src <= dmem_wdata;
-            when x"04" => dma_dst <= dmem_wdata;
-            when x"08" => dma_len <= dmem_wdata(8 downto 0);
-            when x"0C" => dma_dir <= dmem_wdata(1);
-                          if dmem_wdata(0) = '1' then dma_start <= '1'; end if;
+            when x"00" => dma_src <= merge(dma_src, dmem_wdata, dmem_wstrb);
+            when x"04" => dma_dst <= merge(dma_dst, dmem_wdata, dmem_wstrb);
+            when x"08" =>
+              if dmem_wstrb(0) = '1' then dma_len(7 downto 0) <= dmem_wdata(7 downto 0); end if;
+              if dmem_wstrb(1) = '1' then dma_len(8) <= dmem_wdata(8); end if;
+            when x"0C" =>
+              if dmem_wstrb(0) = '1' then
+                dma_dir <= dmem_wdata(1);
+                if dmem_wdata(0) = '1' then dma_start <= '1'; end if;
+              end if;
             when others => null;
           end case;
         end if;

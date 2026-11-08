@@ -139,7 +139,9 @@ begin
             ns  <= unsigned(std_logic_vector(new_ns(NS_W-1 downto 0)));
             offset_applied <= '1';
 
-          elsif offset_applied = '1' then
+          elsif offset_applied = '1' and clr_servo = '0' then
+            -- (audit 2026-11: clr_servo has priority over a same-cycle PI
+            --  update; v1 let the PI branch overwrite the clear of acc/rate)
             -- LAZO PI (de libro, punto fijo):
             --   El integral ACUMULA en alta resolucion (sin truncar antes),
             --   asi no muere con errores pequenos. Se trunca solo AL LEER.

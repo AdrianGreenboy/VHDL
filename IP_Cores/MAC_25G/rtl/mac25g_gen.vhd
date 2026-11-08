@@ -14,6 +14,9 @@
 --
 -- start (pulso) reinicia seq=0 y la longitud; count tramas; 'cont'=1 ignora
 -- count. busy alto mientras genera; done sticky hasta start.
+-- count = 0 with cont = 0 is an empty burst (audit 2026-11, fix M4, same as
+-- eth21_udp_gen): done at once, no frame. Before, 'left' underflowed at the
+-- first frame boundary and the burst ran for ~2^32 frames.
 -- stop (pulso) termina la rafaga en la FRONTERA de trama: la trama en curso se
 -- completa (tvalid no cae nunca a mitad de trama, lo que el MAC trataria como
 -- underrun y cerraria con /E/) y despues busy=0, done=1.
@@ -127,7 +130,12 @@ begin
         w     <= (others => '0');
         o_data <= w0_of(dst, src);
         o_keep <= x"FF"; o_last <= '0';
-        r_busy <= '1'; r_done <= '0'; stop_req <= '0';
+        stop_req <= '0';
+        if count = 0 and cont = '0' then
+          r_busy <= '0'; r_done <= '1';          -- empty burst
+        else
+          r_busy <= '1'; r_done <= '0';
+        end if;
       else
         if stop = '1' and r_busy = '1' then stop_req <= '1'; end if;
         if r_busy = '1' and m_tready = '1' then

@@ -1,6 +1,11 @@
 -- ============================================================================
 -- fp32_fma_xil.vhd — Arquitectura de SINTESIS de fp32_fma (IP ADCS).
 --
+-- Audit 2026-11: the entity is now 'fp32_fma_xil' (no longer a second
+-- declaration of fp32_fma). fp32_fma (fp32_fma.vhd) instantiates it when
+-- IMPL = FMA_IMPL_XIL, i.e. when the FPGA flow compiles fp32_cfg_pkg_xil.vhd.
+-- The text below describes the original swap-by-file scheme, kept for history.
+--
 -- MISMA entidad que fp32_fma.vhd (arch behav): swap directo por librería. En
 -- simulacion de capas 1-4 se usa 'behav' (fma_fp32 entero bit-exacto en GHDL);
 -- en Vivado se compila esta arquitectura 'xil', que instancia el core
@@ -39,7 +44,7 @@ use ieee.numeric_std.all;
 -- behav con acumulador de 480 bits, no sintetizable) e incluir SOLO este
 -- archivo. En simulacion se usa fp32_fma.vhd (entidad + arch behav); nunca se
 -- compilan juntos, asi que no hay doble declaracion de la entidad.
-entity fp32_fma is
+entity fp32_fma_xil is
   generic (
     LAT_FMA : natural := 8;
     MUT     : natural := 0            -- ignorado en sintesis (solo verif.)
@@ -54,9 +59,9 @@ entity fp32_fma is
     out_valid : out std_logic;
     result    : out std_logic_vector(31 downto 0)
   );
-end entity fp32_fma;
+end entity fp32_fma_xil;
 
-architecture xil of fp32_fma is
+architecture xil of fp32_fma_xil is
 
   -- Floating-Point Operator (fp_fma) como caja negra. La netlist real la
   -- provee el core generado por Vivado; aqui solo declaramos el componente.

@@ -17,7 +17,8 @@ architecture sim of tb_layer3 is
   signal clk : std_logic := '0';
   signal rst : std_logic := '1';
   signal sel, wr : std_logic := '0';
-  signal addr  : std_logic_vector(7 downto 0) := (others => '0');
+  -- 16-bit to match ecc_regbank (port widened for the data window, 0x1000+)
+  signal addr  : std_logic_vector(15 downto 0) := (others => '0');
   signal wdata : std_logic_vector(31 downto 0) := (others => '0');
   signal rdata : std_logic_vector(31 downto 0);
   signal ready : std_logic;
@@ -94,14 +95,14 @@ begin
         is_scrub_ctrl := (uoff(7 downto 0) = x"08") and (uval(0) = '1');
         -- realizar escritura (1 ciclo)
         wait until rising_edge(clk);
-        addr  <= std_logic_vector(uoff(7 downto 0));
+        addr  <= x"00" & std_logic_vector(uoff(7 downto 0));
         wdata <= std_logic_vector(uval);
         sel <= '1'; wr <= '1';
         wait until rising_edge(clk);
         sel <= '0'; wr <= '0';
         -- si arranco un scrub, esperar a que termine (done via STATUS)
         if is_scrub_ctrl then
-          addr <= x"04";   -- STATUS
+          addr <= x"0004"; -- STATUS
           for i in 0 to 5000 loop
             wait until rising_edge(clk);
             sel <= '1'; wr <= '0';
@@ -115,7 +116,7 @@ begin
         rd_hex32(L, uoff);
         rd_hex32(L, uval);
         wait until rising_edge(clk);
-        addr <= std_logic_vector(uoff(7 downto 0));
+        addr <= x"00" & std_logic_vector(uoff(7 downto 0));
         sel <= '1'; wr <= '0';
         wait for 1 ns;                  -- rdata combinacional
         if rdata /= std_logic_vector(uval) then

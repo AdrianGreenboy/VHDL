@@ -26,6 +26,7 @@ entity adc_soc is
     irq     : out std_logic;
     -- hook B hacia pines (v2): comparador LVDS + realimentacion RC
     pdm_ext_i : in  std_logic;
+    pdm_clk_i : in  std_logic := '0';   -- AUDIT 2026-11: modulator bit clock
     pdm_fb_o  : out std_logic
   );
 end entity adc_soc;
@@ -41,9 +42,25 @@ architecture rtl of adc_soc is
   signal smp_v     : std_logic;
   signal push_word : std_logic_vector(31 downto 0);
   signal dbg_w     : std_logic_vector(31 downto 0);
+  signal rst_m, rst_s : std_logic := '1';           -- AUDIT: reset synchronizer
+  attribute ASYNC_REG : string;
+  attribute ASYNC_REG of rst_m, rst_s : signal is "TRUE";
+  signal extclk_w, extovr_w, ready_w : std_logic;
 begin
 
-  aresetn <= not rst;
+  -- AUDIT 2026-11: 2-flop reset synchronizer at the ADC top (assert and
+  -- release synchronous to clk, 2 cycles), feeding both the synchronous
+  -- active-high reset of the MMIO side and the async active-low reset of the
+  -- datapath (which is therefore released synchronously as well).
+  proc_rst : process (clk)
+  begin
+    if rising_edge(clk) then
+      rst_m <= rst;
+      rst_s <= rst_m;
+    end if;
+  end process proc_rst;
+
+  aresetn <= not rst_s;
 
   u_core : entity work.adc_core
     port map (
@@ -54,6 +71,9 @@ begin
       finc_i         => finc_w,
       osr_sel_i      => osr_w,
       pdm_ext_i      => pdm_ext_i,
+      pdm_clk_i      => pdm_clk_i,
+      ext_clk_i      => extclk_w,
+      ext_ovr_o      => extovr_w,
       pdm_fb_o       => pdm_fb_o,
       ext_timeout_o  => tout_w,
       sample_o       => smp_w,
@@ -66,7 +86,7 @@ begin
   u_mmio : entity work.adc_mmio
     port map (
       clk           => clk,
-      rst           => rst,
+      rst           => rst_s,
       sel           => sel,
       we            => we,
       addr          => addr,
@@ -88,13 +108,16 @@ begin
       dma_fifo_rd_i => '0',
       fifo_rdata_o  => open,
       fifo_empty_o  => open,
-      dbg_i         => dbg_w
+      dbg_i         => dbg_w,
+      ready         => ready_w,
+      ext_ovr_i     => extovr_w,
+      ext_clk       => extclk_w
     );
 
   -- DBG_STATE: firma 0xAD + timeout en bit 16; [15:0] reservado 0 en v1
   -- (solo diagnostico en silicio; no forma parte del vector del oraculo)
   dbg_w <= x"AD" & "0000000" & tout_w & x"0000";
 
-  ready <= '1';
+  ready <= ready_w;
 
 end architecture rtl;

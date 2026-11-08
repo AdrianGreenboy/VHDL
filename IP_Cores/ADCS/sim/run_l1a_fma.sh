@@ -16,7 +16,7 @@ python3 $MODEL/fp32_oracle.py $WORK/vectors_fma.txt | tee $WORK/oracle.log
 SIG_ORA=$(grep -o 'FIRMA_ORACULO=0x[0-9A-F]*' $WORK/oracle.log | cut -d= -f2)
 
 echo "== Analisis GHDL =="
-ghdl -a --std=08 --workdir=$WORK $RTL/fp32_pkg.vhd $RTL/fp32_fma.vhd tb_fp32_fma.vhd || exit 1
+ghdl -a --std=08 --workdir=$WORK $RTL/fp32_pkg.vhd $RTL/fp32_cfg_pkg.vhd $RTL/fp32_fma_rtl.vhd $RTL/fp32_fma.vhd tb_fp32_fma.vhd || exit 1
 ghdl -e --std=08 --workdir=$WORK tb_fp32_fma || exit 1
 
 echo "== Corrida genuina (MUT=0) =="

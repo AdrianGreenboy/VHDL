@@ -7,6 +7,12 @@
 -- Interfaz interna: se le pide un bloque (direccion + numero de bytes) y
 -- entrega los bytes de uno en uno por out_data/out_we con out_idx creciente.
 -- Asi el consumidor no necesita saber nada de AXI.
+--
+-- Audit 2026-11: err_rd/errcode_rd y err_wr/errcode_wr se ponen a cero en
+-- reset y al ARRANCAR cada peticion (rd_start / wr_start): err_out y errcode
+-- describen solo la ultima peticion (antes un error quedaba pegado para
+-- siempre). Una peticion de 0 bytes termina de inmediato (done sin trafico
+-- AXI); antes burst_len(0)-1 = -1 desbordaba ARLEN/AWLEN.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -191,6 +197,7 @@ begin
       if rst_n = '0' then
         rstate <= R_IDLE; arvalid_r <= '0'; rready_r <= '0';
         rd_busy_r <= '0'; rd_done_r <= '0'; out_we_r <= '0';
+        err_rd <= '0'; errcode_rd <= C_RESP_OKAY;
       else
         rd_done_r <= '0';
         out_we_r  <= '0';
@@ -203,7 +210,13 @@ begin
               r_total   <= rd_bytes;
               r_sent    <= 0;
               rd_busy_r <= '1';
-              rstate    <= R_ADDR;
+              err_rd    <= '0';                 -- error de ESTA peticion
+              errcode_rd <= C_RESP_OKAY;
+              if rd_bytes = 0 then
+                rstate <= R_DONE;               -- nada que leer
+              else
+                rstate <= R_ADDR;
+              end if;
             end if;
 
           when R_ADDR =>
@@ -283,6 +296,7 @@ begin
       if rst_n = '0' then
         wstate <= W_IDLE; awvalid_r <= '0'; wvalid_r <= '0'; bready_r <= '0';
         wr_busy_r <= '0'; wr_done_r <= '0';
+        err_wr <= '0'; errcode_wr <= C_RESP_OKAY;
       else
         wr_done_r <= '0';
 
@@ -296,7 +310,13 @@ begin
               in_idx_r  <= 0;
               wr_busy_r <= '1';
               wnext_i   <= 0;
-              wstate    <= W_ADDR;
+              err_wr    <= '0';                 -- error de ESTA peticion
+              errcode_wr <= C_RESP_OKAY;
+              if wr_bytes = 0 then
+                wstate <= W_DONE;               -- nada que escribir
+              else
+                wstate <= W_ADDR;
+              end if;
             end if;
 
           when W_ADDR =>

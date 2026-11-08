@@ -24,7 +24,9 @@ entity ptp_top is
     wdata     : in  std_logic_vector(31 downto 0);
     rdata     : out std_logic_vector(31 downto 0);
     irq       : out std_logic;
-    -- pines MII
+    -- pines MII (real MII with PHY clocks when CONTROL.loopback = 0)
+    mii_rx_clk : in std_logic := '0';
+    mii_tx_clk : in std_logic := '0';
     mii_txd   : out std_logic_vector(3 downto 0);
     mii_tx_en : out std_logic;
     mii_rxd   : in  std_logic_vector(3 downto 0);
@@ -54,6 +56,10 @@ architecture rtl of ptp_top is
   signal dbg_rxinfo_sig : std_logic_vector(31 downto 0);
   signal dbg_fptr_sig : std_logic_vector(31 downto 0);
   signal dbg_ftx_sig : std_logic_vector(31 downto 0);
+  signal tmo_cycles : unsigned(31 downto 0);
+  signal allowed_lost, pd_lost_cnt : unsigned(7 downto 0);
+  signal chk_resp, pd_as_capable : std_logic;
+  signal ev_pd_tmo, ev_ts_tmo, ev_lost, ev_mism, ev_ovs, ev_phy : std_logic;
 begin
 
   u_regs : entity work.ptp_regs
@@ -63,22 +69,33 @@ begin
               kp => kp, ki => ki, tx_lat => tx_lat, rx_lat => rx_lat,
               clock_id => clock_id, port_num => port_num, src_mac => src_mac,
               send_sync => send_sync, start_pdelay => start_pdelay,
+              tmo_cycles => tmo_cycles, allowed_lost => allowed_lost, chk_resp => chk_resp,
+              ev_pd_timeout => ev_pd_tmo, ev_ts_timeout => ev_ts_tmo,
+              ev_resp_lost => ev_lost, ev_resp_mismatch => ev_mism,
+              ev_rx_oversize => ev_ovs, ev_phy_err => ev_phy,
+              pd_lost_cnt => pd_lost_cnt, pd_as_capable => pd_as_capable,
               now_sec => now_sec, now_ns => now_ns, mpd_ns => mpd_ns,
               mpd_valid => mpd_valid, offset_ns => offset_ns, offset_valid => offset_valid,
               rate_adj => rate_adj, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev, dbg_state => dbg_state_sig, dbg_rxdst => dbg_rxdst_sig, dbg_rxinfo => dbg_rxinfo_sig, dbg_fptr => dbg_fptr_sig, dbg_ftx => dbg_ftx_sig);
 
   u_mac : entity work.ptp_mac
     generic map (SHIFT_P => SHIFT_P, SHIFT_I => SHIFT_I)
-    port map (clk => clk, rst => rst, loopback => loopback,
+    port map (clk => clk, rst => rst, enable => enable, loopback => loopback,
               role_slave => role_slave, clock_id => clock_id, port_num => port_num,
               src_mac => src_mac, macaddr => GPTP_MC,
               kp => kp, ki => ki, tx_lat => tx_lat, rx_lat => rx_lat,
               send_sync => send_sync, start_pdelay => start_pdelay,
+              tmo_cycles => tmo_cycles, allowed_lost => allowed_lost, chk_resp => chk_resp,
+              ev_pd_timeout => ev_pd_tmo, ev_ts_timeout => ev_ts_tmo,
+              ev_resp_lost => ev_lost, ev_resp_mismatch => ev_mism,
+              ev_rx_oversize => ev_ovs, ev_phy_err => ev_phy,
+              pd_lost_cnt => pd_lost_cnt, pd_as_capable => pd_as_capable,
               now_sec => now_sec, now_ns => now_ns, mpd_ns => mpd_ns, mpd_valid => mpd_valid,
               offset_ns => offset_ns, rate_adj => rate_adj,
               offset_valid_o => offset_valid, rx_sync_ev => rx_sync_ev, rx_resp_ev => rx_resp_ev,
               dbg_rx_mvalid => open, dbg_rx_mtype => open, dbg_rx_seqid => open,
               dbg_t1_ns => open, dbg_t4_ns => open, dbg_pd_corr => open, dbg_pd_calc => open,
+              mii_rx_clk => mii_rx_clk, mii_tx_clk => mii_tx_clk,
               mii_txd => mii_txd, mii_tx_en => mii_tx_en,
               mii_rxd => mii_rxd, mii_rx_dv => mii_rx_dv, dbg_state => dbg_state_sig, dbg_rxdst => dbg_rxdst_sig, dbg_rxinfo => dbg_rxinfo_sig, dbg_fptr => dbg_fptr_sig, dbg_ftx => dbg_ftx_sig);
 

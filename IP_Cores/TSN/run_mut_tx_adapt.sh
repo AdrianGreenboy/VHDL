@@ -16,7 +16,7 @@ for m in 1 2 3 4 5; do
     5) sed -i "s/mii_last  <= hold_last;/mii_last  <= '0';/" muta.vhd; d="M5 mii_last atado a 0";;
   esac
   if diff -q tsn_tx_adapt.vhd muta.vhd >/dev/null; then echo "$d: SED NO APLICO - ERROR"; continue; fi
-  ghdl -a --std=08 -Wno-hide eth_pkg.vhd eth_rx_mii.vhd eth_tx_mii.vhd muta.vhd tb_tsn_tx_adapt.vhd >/dev/null 2>&1
+  ghdl -a --std=08 -Wno-hide ../ETH/rtl/eth_pkg.vhd ../ETH/rtl/eth_rx_mii.vhd ../ETH/rtl/eth_tx_mii.vhd muta.vhd tb_tsn_tx_adapt.vhd >/dev/null 2>&1
   ghdl -e --std=08 tb_tsn_tx_adapt >/dev/null 2>&1
   out=$(ghdl -r --std=08 tb_tsn_tx_adapt --stop-time=200us 2>&1)
   if echo "$out" | grep -q "TB_TSN_TX_ADAPT PASS"; then

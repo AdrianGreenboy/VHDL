@@ -12,7 +12,8 @@
 --                     [4]=sample_late  [5]=cs_force
 --    0x04 STATUS (r)  [0]=busy [1]=tx_empty [2]=tx_full [3]=rx_empty
 --                     [4]=rx_full [5]=rx_ovf(sticky) [6]=tx_ovf(sticky)
---                (w)  cualquier escritura limpia los stickies
+--                (w)  WRITE-1-TO-CLEAR per bit (audit 2026-11): '1' in bit
+--                     5/6 clears rx_ovf/tx_ovf; a same-cycle set wins
 --    0x08 CLKDIV (rw) medio periodo de SCLK en ciclos (>=1; 1 -> 50 MHz)
 --    0x0C TXDATA (w)  empuja wdata(7:0) al FIFO TX (si esta lleno: tx_ovf)
 --    0x10 RXDATA (r)  cabeza del FIFO RX; el pop ocurre en el flanco
@@ -77,7 +78,10 @@ architecture rtl of spi_mmio is
   signal rxf_lvl   : unsigned(FIFO_LOG2 downto 0);
 
   signal wr_acc, rd_acc : std_logic;
+  signal rst_i          : std_logic;
 begin
+
+  rst_i <= not aresetn;             -- synchronous reset for the private FIFOs
 
   -- un acceso valido por ciclo (dmem_req dura 1 ciclo con dmem_ready = '1')
   wr_acc <= '1' when (sel = '1' and req = '1' and wstrb /= "0000") else '0';
@@ -86,19 +90,19 @@ begin
   txf_wr <= '1' when (wr_acc = '1' and addr = x"0C") else '0';
   rxf_rd <= '1' when (rd_acc = '1' and addr = x"10") else '0';
 
-  u_txf : entity work.byte_fifo
+  u_txf : entity work.spi_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i,
       wr_en => txf_wr, wr_data => wdata(7 downto 0), full => txf_full,
       rd_en => txf_rd, rd_data => txf_rdata, empty => txf_empty,
       level => txf_lvl
     );
 
-  u_rxf : entity work.byte_fifo
+  u_rxf : entity work.spi_byte_fifo
     generic map (LOG2_DEPTH => FIFO_LOG2)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst_i,
       wr_en => rxf_wr, wr_data => eng_rxd, full => rxf_full,
       rd_en => rxf_rd, rd_data => rxf_rdata, empty => rxf_empty,
       level => rxf_lvl
@@ -143,9 +147,9 @@ begin
               lsbf_r  <= wdata(3);
               slate_r <= wdata(4);
               csf_r   <= wdata(5);
-            when x"04" =>                -- limpia los stickies
-              tx_ovf <= '0';
-              rx_ovf <= '0';
+            when x"04" =>                -- W1C per bit (audit 2026-11)
+              if wdata(6) = '1' then tx_ovf <= '0'; end if;
+              if wdata(5) = '1' then rx_ovf <= '0'; end if;
             when x"08" =>
               clkdiv_r <= unsigned(wdata(DIV_W-1 downto 0));
             when others => null;

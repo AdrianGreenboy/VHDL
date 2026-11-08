@@ -24,8 +24,15 @@
 -- Mapa (offsets de palabra, addr(7:2)):
 --   0x00 CTRL   RW  b0 alg (0=KEM,1=DSA)
 --   0x04 CMD    W1P b1:0 op, b2 start  (pulsa start del core seleccionado)
---   0x08 STATUS R   b0 busy, b1 done, b2 kem_rej, b3 dsa_result,
---                   b6:4 dsa_reason, b7 done_sticky
+--                   b3 ZEROIZE (wipe all secret-holding memories and the
+--                   sponge, aborting a running operation), b4 ERR_CLR
+--   0x08 STATUS R   b0 busy, b1 done, b2 reserved (0), b3 dsa_result,
+--                   b6:4 dsa_reason, b7 done_sticky, b8 zeroize busy,
+--                   b9 zeroize done (sticky), b13:10 err (sticky):
+--                   b10 sponge protocol error, b11 command rejected,
+--                   b12 ML-DSA Sign iteration bound reached
+--   Audit 2026-11: b2 used to be kem_rej, the Decaps implicit-rejection
+--   outcome. It was a plaintext-checking oracle and is no longer exported.
 --   0x0C ADDR   RW  b13:0 direccion de byte en el core (auto-inc en acceso DATA)
 --   0x10 DATA   RW  b7:0 dato; escribe/lee el byte en ADDR; ADDR++ tras acceso
 --   0x14 SIGLEN RW  b15:0 dsa_siglen
@@ -67,7 +74,13 @@ architecture rtl of pqc_mmio is
   signal kem_start  : std_logic := '0';
   signal kem_done   : std_logic;
   signal kem_busy   : std_logic;
-  signal kem_rej    : std_logic;
+  -- zeroization / error status
+  signal zcmd       : std_logic := '0';
+  signal eclr       : std_logic := '0';
+  signal zbusy_i    : std_logic;
+  signal zdone_i    : std_logic;
+  signal zdone_stky : std_logic := '0';
+  signal err_i      : std_logic_vector(3 downto 0);
   signal kem_haddr  : std_logic_vector(12 downto 0);
   signal kem_hdin   : std_logic_vector(7 downto 0);
   signal kem_hwe    : std_logic := '0';
@@ -156,6 +169,7 @@ begin
         siglen_r <= (others => '0');
         done_stky<= '0';
         kem_start<= '0'; dsa_start <= '0';
+        zcmd     <= '0'; eclr <= '0'; zdone_stky <= '0';
         kem_op   <= (others => '0'); dsa_op <= (others => '0');
         kem_hwe  <= '0';
         dsa_hwe  <= '0';
@@ -170,6 +184,10 @@ begin
       else
         -- pulsos de 1 ciclo por defecto (hsel_q se maneja por acceso)
         kem_start <= '0'; dsa_start <= '0';
+        zcmd      <= '0'; eclr <= '0';
+        if zdone_i = '1' then
+          zdone_stky <= '1';
+        end if;
         kem_hwe   <= '0';
         dsa_hwe   <= '0';
         hsel_q    <= '0';
@@ -214,6 +232,15 @@ begin
                 kem_op <= wdata(1 downto 0);
               else
                 dsa_op <= wdata(1 downto 0);
+              end if;
+              -- zeroize / error-clear commands (audit 2026-11)
+              if wdata(3) = '1' then
+                zcmd       <= '1';
+                zdone_stky <= '0';
+                host_mode  <= '0';
+              end if;
+              if wdata(4) = '1' then
+                eclr <= '1';
               end if;
               if wdata(2) = '1' then
                 kick_cnt <= to_unsigned(4, 3);  -- 4 ciclos de estabilizacion
@@ -271,10 +298,12 @@ begin
 
   rdata <=
     (0 => alg_r, others => '0')                         when sel_ctrl = '1' else
-    (0 => busy_i, 1 => done_i, 2 => kem_rej,
+    (0 => busy_i, 1 => done_i, 2 => '0',
      3 => dsa_result,
      4 => dsa_reason(0), 5 => dsa_reason(1), 6 => dsa_reason(2),
-     7 => done_stky, others => '0')                     when sel_stat = '1' else
+     7 => done_stky, 8 => zbusy_i, 9 => zdone_stky,
+     10 => err_i(0), 11 => err_i(1), 12 => err_i(2), 13 => err_i(3),
+     others => '0')                                     when sel_stat = '1' else
     std_logic_vector(resize(cur_addr, 32))              when sel_addr = '1' else
     (x"000000" & rd_data_byte)                          when sel_data = '1' else
     (x"0000" & siglen_r)                                when sel_siglen = '1' else
@@ -289,14 +318,16 @@ begin
       clk => clk, rst_n => rst_n,
       alg => alg,
       kem_op => kem_op, kem_start => kem_start,
-      kem_done => kem_done, kem_busy => kem_busy, kem_rej => kem_rej,
+      kem_done => kem_done, kem_busy => kem_busy,
       kem_haddr => kem_haddr, kem_hdin => kem_hdin, kem_hwe => kem_hwe,
       kem_hsel => kem_hsel, kem_hdout => kem_hdout,
       dsa_op => dsa_op, dsa_start => dsa_start, dsa_siglen => siglen_r,
       dsa_done => dsa_done, dsa_busy => dsa_busy, dsa_result => dsa_result,
       dsa_reason => dsa_reason,
       dsa_haddr => dsa_haddr, dsa_hdin => dsa_hdin, dsa_hwe => dsa_hwe,
-      dsa_hsel => dsa_hsel, dsa_hdout => dsa_hdout
+      dsa_hsel => dsa_hsel, dsa_hdout => dsa_hdout,
+      zeroize => zcmd, zbusy => zbusy_i, zdone => zdone_i,
+      err => err_i, err_clr => eclr
     );
 
 end architecture rtl;

@@ -47,8 +47,13 @@ begin
           cols(c)(to_integer(unsigned(wr_row))) <= wr_data;
         end if;
         if rd_en = '1' then
-          row_data((c+1)*FP_W-1 downto c*FP_W)
-            <= cols(c)(to_integer(unsigned(rd_row)));
+          -- audit 2026-11: rows >= DP read as zero (no out-of-range index)
+          if unsigned(rd_row) < DP then
+            row_data((c+1)*FP_W-1 downto c*FP_W)
+              <= cols(c)(to_integer(unsigned(rd_row)));
+          else
+            row_data((c+1)*FP_W-1 downto c*FP_W) <= (others => '0');
+          end if;
         end if;
       end if;
     end process;
@@ -80,11 +85,16 @@ begin
   process (clk)
   begin
     if rising_edge(clk) then
-      if wr_en = '1' then
+      -- audit 2026-11: addresses >= DP are ignored / read as zero
+      if wr_en = '1' and unsigned(wr_addr) < DP then
         mem(to_integer(unsigned(wr_addr))) <= wr_data;
       end if;
       if rd_en = '1' then
-        rd_data <= mem(to_integer(unsigned(rd_addr)));
+        if unsigned(rd_addr) < DP then
+          rd_data <= mem(to_integer(unsigned(rd_addr)));
+        else
+          rd_data <= (others => '0');
+        end if;
       end if;
     end if;
   end process;
@@ -125,7 +135,7 @@ begin
     if rst_n = '0' then
       mirror <= (others => (others => '0'));
     elsif rising_edge(clk) then
-      if wr_en = '1' then
+      if wr_en = '1' and unsigned(wr_addr) < DP then   -- audit: range guard
         mem(to_integer(unsigned(wr_addr))) <= wr_data;
         if unsigned(wr_addr) < D then
           mirror(to_integer(unsigned(wr_addr))) <= wr_data;
@@ -138,9 +148,17 @@ begin
   begin
     if rising_edge(clk) then
       if rd_en = '1' then
-        rd_data <= mem(to_integer(unsigned(rd_addr)));
+        if unsigned(rd_addr) < DP then
+          rd_data <= mem(to_integer(unsigned(rd_addr)));
+        else
+          rd_data <= (others => '0');
+        end if;
       end if;
-      ext_rd_data <= mem(to_integer(unsigned(ext_rd_addr)));
+      if unsigned(ext_rd_addr) < DP then
+        ext_rd_data <= mem(to_integer(unsigned(ext_rd_addr)));
+      else
+        ext_rd_data <= (others => '0');
+      end if;
     end if;
   end process;
 

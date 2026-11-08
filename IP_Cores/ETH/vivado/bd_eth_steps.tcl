@@ -70,13 +70,14 @@ generate_target all [get_files bd_soc_usart.bd]
 remove_files [get_files -quiet {*m1553_word_tx.vhd *m1553_word_rx.vhd \
   *m1553_rt_core.vhd *m1553_bc_core.vhd *m1553_mmio.vhd *mem_subsys_m1553.vhd \
   *soc_top_m1553.vhd *soc_top_m1553_wrap.v}]
-# el spw_fifo canonico SE QUEDA (parametrizable, WIDTH=9 para el MAC). Si por
-# algun motivo no estuviera, se re-anade desde ~/spw_ip sin duplicar la fuente.
-if {[llength [get_files -quiet *spw_fifo.vhd]] == 0} {
-  add_files -norecurse $env(HOME)/spw_ip/spw_fifo.vhd
-}
+# audit 2026-11: eth_mmio no longer uses spw_fifo (asynchronous-read) but the
+# local synchronous-read eth_fifo.vhd; real MII adds the CDC sources.
 add_files -norecurse [list \
   $env(HOME)/eth_ip/rtl/eth_pkg.vhd \
+  $env(HOME)/eth_ip/rtl/eth_fifo.vhd \
+  $env(HOME)/eth_ip/rtl/eth_cdc_sync.vhd \
+  $env(HOME)/eth_ip/rtl/eth_async_fifo.vhd \
+  $env(HOME)/eth_ip/rtl/eth_mii_cdc.vhd \
   $env(HOME)/eth_ip/rtl/eth_tx_mii.vhd \
   $env(HOME)/eth_ip/rtl/eth_rx_mii.vhd \
   $env(HOME)/eth_ip/rtl/eth_mac.vhd \
@@ -85,7 +86,6 @@ add_files -norecurse [list \
   $env(HOME)/eth_ip/rtl/soc_top_eth.vhd \
   $env(HOME)/eth_ip/rtl/soc_top_eth_wrap.v]
 set_property file_type {VHDL 2008} [get_files $env(HOME)/eth_ip/rtl/*.vhd]
-set_property file_type {VHDL 2008} [get_files $env(HOME)/spw_ip/spw_fifo.vhd]
 # XDC de pines MII (banco 302 HDIO, LVCMOS33). Verificar PACKAGE_PIN antes.
 add_files -fileset constrs_1 -norecurse $env(HOME)/eth_ip/eth_pins.xdc
 update_compile_order -fileset sources_1

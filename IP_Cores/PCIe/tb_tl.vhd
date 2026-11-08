@@ -37,6 +37,7 @@ architecture sim of tb_tl is
   signal bar0_dbg : dw_t;
   signal cfg_done : std_logic;
   signal mwr_cnt, mrd_cnt : std_logic_vector(15 downto 0);
+  signal rx_ready : std_logic;   -- audit 2026-11: the EP now applies backpressure
 
   -- captura de la respuesta
   type cap_t is array (0 to 31) of byte_t;
@@ -50,7 +51,7 @@ begin
     generic map (BAR0_WORDS => 256)
     port map (clk=>clk, rst=>rst,
               rx_valid=>rx_valid, rx_data=>rx_data, rx_start=>rx_start,
-              rx_last=>rx_last,
+              rx_last=>rx_last, rx_ready=>rx_ready,
               tx_valid=>tx_valid, tx_data=>tx_data, tx_start=>tx_start,
               tx_last=>tx_last, tx_ready=>tx_ready,
               msi_trigger=>msi_trigger,
@@ -92,7 +93,7 @@ begin
         rx_data <= hb(i); rx_valid <= '1';
         if i=0 then rx_start<='1'; else rx_start<='0'; end if;
         if i=11 and last_no_data then rx_last<='1'; else rx_last<='0'; end if;
-        wait until rising_edge(clk);
+        loop wait until rising_edge(clk); exit when rx_ready='1'; end loop;
       end loop;
       rx_valid<='0'; rx_start<='0'; rx_last<='0';
     end procedure;
@@ -106,7 +107,7 @@ begin
       for i in 0 to 3 loop
         rx_data <= bb(i); rx_valid <= '1'; rx_start<='0';
         if i=3 and last then rx_last<='1'; else rx_last<='0'; end if;
-        wait until rising_edge(clk);
+        loop wait until rising_edge(clk); exit when rx_ready='1'; end loop;
       end loop;
       rx_valid<='0'; rx_last<='0';
     end procedure;
@@ -140,9 +141,12 @@ begin
     report "A: PASS CfgRd0 Vendor/Device = 0x5043_1AF4";
 
     -- ===== B: CfgWr0 a BAR0 (0x10) y relectura =====
+    cap_en<='1';
     send_hdr(B0_CFGWR0, 1, x"0000", x"02", to_unsigned(16#10#,32), false);
     send_dw(x"DEADBEEF", true);
-    for k in 0 to 10 loop wait until rising_edge(clk); end loop;
+    wait_cpl;   -- audit 2026-11: CfgWr0 is non-posted -> Cpl (SC), tag 0x02
+    assert cap(0) = B0_CPL and cap(6)(7 downto 5) = "000" and cap(10) = x"02"
+      report "B: CfgWr0 sin Cpl SC correcto" severity failure;
     cap_en<='1';
     send_hdr(B0_CFGRD0, 1, x"0000", x"03", to_unsigned(16#10#,32), true);
     wait_cpl;
@@ -180,12 +184,14 @@ begin
 
     -- ===== D: MSI =====
     -- programar dir MSI (cfg 0x50 -> indice 20) y dato (0x54 -> 21)
+    cap_en<='1';
     send_hdr(B0_CFGWR0, 1, x"0000", x"07", to_unsigned(16#50#,32), false);
     send_dw(x"FEED0000", true);
-    for k in 0 to 6 loop wait until rising_edge(clk); end loop;
+    wait_cpl;
+    cap_en<='1';
     send_hdr(B0_CFGWR0, 1, x"0000", x"08", to_unsigned(16#54#,32), false);
     send_dw(x"0000CAFE", true);
-    for k in 0 to 6 loop wait until rising_edge(clk); end loop;
+    wait_cpl;
     -- disparar MSI y capturar el MWr3 resultante
     cap_en<='1';
     msi_trigger<='1'; wait until rising_edge(clk); msi_trigger<='0';

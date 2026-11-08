@@ -17,6 +17,14 @@
 --    W4  Lectura privada: TTX -> CMD READ/RLAST -> RX, t_bit en STAT
 --    W5  IBI por TREQ: IRQ por nivel, IBIADDR, ibiack, MDB, sticky T_IBIDONE
 --    W6  Watermark de TRX como IRQ y overflow de TTX (drop-newest + sticky)
+--  Audit 2026-11:
+--    W7  STAT W1C per bit, CMD with EN=0 -> CMD_DROP, rdata gated by sel,
+--        WM clamp to 32
+--    W8  CMD written while another one is pending -> CMD_DROP, the pending
+--        one still executes
+--    W9  Non-IBI command while an IBI is pending -> DONE + CMD_DROP
+--    W10 CMD vs incoming IBI START at every offset 0..24 cycles: DONE always
+--        arrives (no evaporated command), IBI served afterwards
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -109,7 +117,7 @@ begin
         assert t < 200000
           report "TIMEOUT esperando DONE: " & msg severity failure;
       end loop;
-      mwr(x"04", x"00000000");                       -- limpiar stickies
+      mwr(x"04", x"FFFFFFFF");  -- W1C clear all (audit 2026-11)
       v := s;
     end procedure;
 
@@ -199,7 +207,7 @@ begin
       report "FALLO W2: la DA asignada no recibio ACK" severity failure;
     assert d(19) = '1'
       report "FALLO W2: no se registro el sticky T_EVDA" severity failure;
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");  -- W1C clear all (audit 2026-11)
     mrd(x"2C", d);
     assert d(8) = '1' and d(6 downto 0) = "0110000"
       report "FALLO W2: TDA no refleja la DA 0x30" severity failure;
@@ -339,11 +347,127 @@ begin
     mrd(x"04", d);
     assert d(26) = '1'
       report "FALLO W6: el overflow de TTX no dejo sticky" severity failure;
-    mwr(x"04", x"00000000");
+    mwr(x"04", x"FFFFFFFF");  -- W1C clear all (audit 2026-11)
     mrd(x"04", d);
     assert d(26) = '0'
       report "FALLO W6: el sticky de overflow no quedo limpio"
       severity failure;
+
+    -- ------------------------------------------------------------ W7
+    -- Audit 2026-11: W1C per bit, rdata gated by sel, WM clamp
+    report "W7: STAT W1C per bit, rdata gated by sel, WM clamp";
+    mwr(x"44", x"00000000");
+    mwr(x"38", x"000000EE");                         -- TTX full -> TTX_OVF
+    mwr(x"00", x"00000082");                         -- EN = 0 (target stays)
+    cmdw(x"000001FC");                               -- CMD with EN=0: dropped
+    mrd(x"04", d);
+    assert d(26) = '1' and d(28) = '1'
+      report "FALLO W7: precondition TTX_OVF / CMD_DROP" severity failure;
+    assert d(11) = '0' report "FALLO W7: dropped CMD left pending" severity failure;
+    mwr(x"04", x"00000000");
+    mrd(x"04", d);
+    assert d(26) = '1' and d(28) = '1'
+      report "FALLO W7: a write of 0 cleared stickies" severity failure;
+    mwr(x"04", x"04000000");                         -- clear TTX_OVF only
+    mrd(x"04", d);
+    assert d(26) = '0' and d(28) = '1'
+      report "FALLO W7: W1C bit 26 cleared the wrong bits" severity failure;
+    mwr(x"04", x"10000000");
+    mrd(x"04", d);
+    assert d(28) = '0' report "FALLO W7: W1C bit 28" severity failure;
+    addr <= x"18"; sel <= '0';
+    wait until falling_edge(clk);
+    assert rdata = x"00000000" report "FALLO W7: rdata not gated by sel"
+      severity failure;
+    tick1;
+    mwr(x"4C", x"00003F3F");                         -- 63 > depth 32
+    mrd(x"4C", d);
+    assert d(5 downto 0) = "100000" and d(13 downto 8) = "100000"
+      report "FALLO W7: WM not clamped to 32" severity failure;
+    mwr(x"4C", x"00000000");
+
+    -- ------------------------------------------------------------ W8
+    report "W8: CMD while another one is pending -> CMD_DROP, no corruption";
+    mwr(x"00", x"00000083");
+    mwr(x"04", x"FFFFFFFF");
+    cmdw(x"000001FC");                               -- #1 START 0x7E/W (runs)
+    for i in 0 to 100 loop                           -- until #1 accepted
+      mrd(x"04", d);
+      exit when d(11) = '0' and d(0) = '1';
+    end loop;
+    cmdw(x"00001200");                               -- #2 STOP (pending)
+    mrd(x"04", d);
+    assert d(11) = '1' report "FALLO W8: #2 not pending" severity failure;
+    cmdw(x"000001FC");                               -- #3 while #2 pending
+    mrd(x"04", d);
+    assert d(28) = '1' report "FALLO W8: #3 not flagged CMD_DROP" severity failure;
+    for i in 0 to 200000 loop                        -- #1 and #2 complete
+      mrd(x"04", d);
+      exit when d(11) = '0' and d(0) = '0' and d(1) = '0';
+      assert i < 199999 report "TIMEOUT W8 STAT=0x" & to_hstring(d) severity failure;
+    end loop;
+    assert d(3) = '0' report "FALLO W8: #1 header lost its ACK" severity failure;
+    mwr(x"04", x"FFFFFFFF");
+
+    -- ------------------------------------------------------------ W9
+    report "W9: non-IBI command while an IBI is pending -> DONE + CMD_DROP";
+    mwr(x"34", x"00000001");                         -- target IBI_GO
+    for i in 0 to 200000 loop
+      mrd(x"04", d);
+      exit when d(2) = '1';
+      assert i < 199999 report "TIMEOUT W9 IBI_REQ" severity failure;
+    end loop;
+    mwr(x"04", x"FFFFFFFF");
+    cmdw(x"000001FC");                               -- START header: invalid now
+    poll_done_nc("W9 rejected command");
+    mrd(x"04", d);
+    assert d(28) = '1' and d(2) = '1'
+      report "FALLO W9: rejection not reported (CMD_DROP/IBI_REQ)"
+      severity failure;
+    mwr(x"04", x"FFFFFFFF");
+    cmdw(x"00008000");                               -- serve the IBI
+    poll_done(d, "W9 ibiack");
+    cmdw(x"00000400");
+    poll_done(d, "W9 MDB");
+    mrd(x"10", d);
+    assert d(7 downto 0) = TGT_MDB report "FALLO W9: MDB after rejection"
+      severity failure;
+    cmdw(x"00001200");
+    poll_done(d, "W9 STOP");
+    mrd(x"04", d);
+    assert d(28) = '0' report "FALLO W9: spurious CMD_DROP" severity failure;
+
+    -- ------------------------------------------------------------ W10
+    -- A START header written at every offset k (in clk cycles) relative to
+    -- an IBI request: the command may win, lose arbitration, collide with
+    -- the IBI START in IDLE (retried) or land in IBIWAIT (rejected). In all
+    -- cases DONE must arrive (pre-audit: the command could evaporate and
+    -- DONE never came), and the IBI is then served normally.
+    report "W10: CMD vs incoming IBI START, offset sweep 0..24 cycles";
+    for k in 0 to 24 loop
+      mwr(x"04", x"FFFFFFFF");
+      mwr(x"34", x"00000001");                       -- target IBI_GO
+      for j in 1 to k loop tick1; end loop;
+      cmdw(x"000001FC");                             -- START 0x7E/W
+      poll_done_nc("W10 k=" & integer'image(k));
+      for i in 0 to 200000 loop                      -- IBI must be pending
+        mrd(x"04", d);
+        exit when d(2) = '1';
+        assert i < 199999
+          report "FALLO W10: no IBI_REQ, k=" & integer'image(k) severity failure;
+      end loop;
+      mwr(x"04", x"FFFFFFFF");
+      cmdw(x"00008000");                             -- IBIACK
+      poll_done(d, "W10 ibiack");
+      cmdw(x"00000400");                             -- MDB
+      poll_done(d, "W10 MDB");
+      mrd(x"10", d);
+      assert d(8) = '1' and d(7 downto 0) = TGT_MDB
+        report "FALLO W10: MDB wrong, k=" & integer'image(k) severity failure;
+      cmdw(x"00001200");                             -- STOP
+      poll_done(d, "W10 STOP");
+      wait for 1 us;
+    end loop;
 
     report "CAPA 2 COMPLETA: TODOS LOS TESTS DEL MMIO I3C PASARON";
     finish;

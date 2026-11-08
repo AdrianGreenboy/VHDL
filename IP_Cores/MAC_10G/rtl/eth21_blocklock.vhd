@@ -12,6 +12,14 @@
 --     mirar la entrada (el GT tarda en aplicar el desplazamiento de 1 bit)
 -- Eventos de 1 ciclo para contadores: cabecera invalida, slip, perdida de
 -- lock.
+-- Window boundary (audit 2026-11, finding B2 re-verified): the 16-invalid
+-- test is evaluated BEFORE the window-restart branch, so an invalid header
+-- that is the 64th of a window with 15 invalid already counted drops the
+-- lock (tb_eth21_bl case "frontera"). An invalid 64th header with fewer
+-- than 15 before cannot reach 16 in that window, so not adding it to
+-- inv_cnt before the restart has no effect (Fig. 49-15 resets the count at
+-- the same point). No functional change was needed; PCS_25G's
+-- pcs_blocksync is the same machine with the count written explicitly.
 --
 -- MIT License.
 -------------------------------------------------------------------------------

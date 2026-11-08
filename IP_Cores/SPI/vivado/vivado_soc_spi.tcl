@@ -27,7 +27,7 @@ set_property board_part $BOARD_PART [current_project]
 set rtl_files {
   riscv_pkg.vhd alu.vhd regfile.vhd muldiv.vhd immgen.vhd control.vhd
   csr.vhd dp_ram.vhd cpu_pipeline.vhd dma_burst.vhd axil_soc.vhd
-  spi_engine.vhd byte_fifo.vhd spi_dma.vhd spi_axi_top.vhd
+  spi_engine.vhd spi_byte_fifo.vhd spi_dma.vhd spi_axi_top.vhd
   mem_subsys_spi.vhd soc_top_spi.vhd
 }
 foreach f $rtl_files {

@@ -23,6 +23,7 @@ use ieee.numeric_std.all;
 use std.env.all;
 
 entity tb_spw_1c is
+  generic (G_RX_MODE : integer := 1);   -- run_1c.sh runs both receivers
 end entity tb_spw_1c;
 
 architecture tb of tb_spw_1c is
@@ -91,8 +92,9 @@ begin
   s_ba <= sb;
 
   codec_a : entity work.spw_codec
+    generic map (G_RX_MODE => G_RX_MODE)
     port map (
-      clk => clk, arstn => arstn, en => en_a, div => div_a,
+      clk => clk, rst => not arstn, en => en_a, div => div_a,
       link_start => start_a, link_autostart => '0', link_disable => dis_a,
       tick_in => tick_a, time_in => timein_a,
       tick_out => tickout_a, time_out => timeout_a,
@@ -104,8 +106,9 @@ begin
     );
 
   codec_b : entity work.spw_codec
+    generic map (G_RX_MODE => G_RX_MODE)
     port map (
-      clk => clk, arstn => arstn, en => en_b, div => div_b,
+      clk => clk, rst => not arstn, en => en_b, div => div_b,
       link_start => '0', link_autostart => auto_b, link_disable => dis_b,
       tick_in => tick_b, time_in => timein_b,
       tick_out => tickout_b, time_out => timeout_b,

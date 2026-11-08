@@ -46,6 +46,7 @@ architecture sim of tb_poly_mem is
   signal bm_baddr  : std_logic_vector(7 downto 0) := (others => '0');
   signal bm_bdata  : std_logic_vector(15 downto 0);
   signal bm_daddr  : std_logic_vector(7 downto 0) := (others => '0');
+  signal bm_dre    : std_logic := '0';
   signal bm_drdata : std_logic_vector(15 downto 0);
   signal bm_dwdata : std_logic_vector(15 downto 0) := (others => '0');
   signal bm_dwe    : std_logic := '0';
@@ -81,7 +82,7 @@ begin
               ntt_waddr => ntt_waddr, ntt_wdata => ntt_wdata, ntt_we => ntt_we,
               bm_aaddr => bm_aaddr, bm_adata => bm_adata,
               bm_baddr => bm_baddr, bm_bdata => bm_bdata,
-              bm_daddr => bm_daddr, bm_drdata => bm_drdata,
+              bm_daddr => bm_daddr, bm_dre => bm_dre, bm_drdata => bm_drdata,
               bm_dwdata => bm_dwdata, bm_dwe => bm_dwe,
               sm_waddr => sm_waddr, sm_wdata => sm_wdata, sm_we => sm_we,
               fsm_raddr => fsm_raddr, fsm_rdata => fsm_rdata,
@@ -255,7 +256,11 @@ begin
     bm_dwe    <= '1';
     wait_clk(1);
     bm_dwe    <= '0';
-    wait_clk(2);
+    -- the destination read is strobed, as basemul_k does with d_re
+    bm_dre    <= '1';
+    wait_clk(1);
+    bm_dre    <= '0';
+    wait_clk(1);
     assert to_integer(signed(bm_drdata)) = 1234
       report "TB FAIL basemul destination readback got=" &
              integer'image(to_integer(signed(bm_drdata)))

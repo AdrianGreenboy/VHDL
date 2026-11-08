@@ -410,10 +410,11 @@ path with the probes before trusting anything.
 | `rtl/ptp_rx.vhd` | gPTP parser (mvalid/mtype/seqid/spid + ack) |
 | `rtl/ptp_pdelay.vhd`, `rtl/ptp_pdelay_fsm.vhd` | meanPathDelay arithmetic + initiator/responder orchestrator |
 | `rtl/eth_tx_mii.vhd`, `rtl/eth_rx_mii.vhd`, `rtl/eth_mac.vhd` | MII serialiser/deserialiser, CRC, DA filter, LOOP_INT mux, `mii_ce` divider |
-| `rtl/spw_fifo.vhd` | 9-bit FWFT frame FIFO (family pattern) + pointer debug taps |
+| `rtl/ptp_fifo.vhd` | 9-bit FWFT frame FIFO, synchronous-read + prefetch (renamed from the PTP copy of `spw_fifo`, audit 2026-11) |
+| `rtl/eth_cdc_sync.vhd`, `rtl/eth_async_fifo.vhd`, `rtl/eth_mii_cdc.vhd` | real-MII clock-domain crossing (copies of `ETH/rtl`) — see `AUDIT_FIXES.md` |
 | `rtl/ptp_mac.vhd` | TX/RX/orchestrator integration, S&F gate, command queue, silicon probes |
 | `rtl/ptp_regs.vhd`, `rtl/ptp_top.vhd` | MMIO register bank and IP top |
-| `rtl/ptp_axil.vhd`, `rtl/ptp_axil_master.vhd` | AXI4-Lite slave wrapper and the embedded core-side master |
+| `rtl/ptp_axil.vhd`, `rtl/ptp_axil_master.vhd` | AXI4-Lite slave wrapper and the embedded core-side master (**`ptp_axil_master.vhd` is missing from the repo**, see `rtl/MISSING_ptp_axil_master.md`) |
 | `sim/run_regression.sh`, `sim/tb_*.vhd`, `sim/iss_*.py`, `sim/verify_*.py` | the 17-check regression and the Python oracle |
 | `fw/ptp_bringup.s`, `fw/ptp_diag_*.s` | layer-4 / bring-up and targeted-diagnostic RV32 programs |
 | `bringup/ptp_verify.c`, `bringup/ptp_dump_*.c`, `bringup/ptp_signature.txt` | silicon bring-up over `/dev/mem` + probe decoders with automatic verdicts |

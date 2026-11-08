@@ -24,6 +24,18 @@
 -- Salidas de estado: state (ltssm_t), link_up ('1' en L0), y contadores.
 -- Timeouts acotados (no 3 ms): si no se completa el entrenamiento en
 -- TIMEOUT_CYCLES, vuelve a DETECT (fallo limpio observable).
+--
+-- Audit 2026-11: L0 now has error exits and RECOVERY is reachable:
+--   L0 -> RECOVERY when a TS1 is received from the partner (it entered
+--   Recovery) or when 'retrain' is pulsed (DLL REPLAY_NUM rollover, receiver
+--   sync loss). RECOVERY has two sub-states:
+--     RcvrLock : send TS1, wait for N_TS_POLL TS1/TS2 from the partner;
+--     RcvrCfg  : send TS2; exit to L0 after N_TS_CFG TS2 received and
+--                2*N_TS_CFG TS2 sent after the first TS2 was received (so a
+--                partner that entered Recovery later also sees enough TS2).
+--   Timeout -> DETECT (link down), Hot Reset request in TS -> HOT_RESET.
+--   TS2 received while in L0 are trailing TS2 of a partner finishing
+--   RcvrCfg and are ignored.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -43,6 +55,7 @@ entity pcie_ltssm is
     cmd_hotrst  : in  std_logic;
     cmd_loopbk  : in  std_logic;
     cmd_disable : in  std_logic;
+    retrain     : in  std_logic := '0';      -- pulse: request L0 -> Recovery
 
     -- hacia el generador de TS / framer
     tx_send_ts  : out std_logic;
@@ -69,6 +82,9 @@ architecture rtl of pcie_ltssm is
   signal n_ts2_rx  : integer range 0 to 65535 := 0;
   signal n_ts2_tx  : integer range 0 to 65535 := 0;
   signal tmo       : integer range 0 to TIMEOUT_CYCLES := 0;
+  signal rec_cfg   : std_logic := '0';       -- '0' RcvrLock, '1' RcvrCfg
+  signal rec_ts2_seen : std_logic := '0';
+  signal retrain_p : std_logic := '0';       -- latched retrain request
 begin
 
   state_o    <= ltssm_code(st);
@@ -85,9 +101,11 @@ begin
     if rising_edge(clk) then
       if rst = '1' then
         st <= LT_DETECT; n_ts1_rx <= 0; n_ts2_rx <= 0; n_ts2_tx <= 0; tmo <= 0;
+        rec_cfg <= '0'; rec_ts2_seen <= '0'; retrain_p <= '0';
         tx_send_ts <= '0'; tx_ts_kind <= '0'; tx_ctl <= (others => '0');
       else
         tx_send_ts <= '0';
+        if retrain = '1' then retrain_p <= '1'; end if;
 
         -- ordenes globales de maxima prioridad
         if cmd_disable = '1' then
@@ -156,14 +174,42 @@ begin
                 st <= LT_HOTRESET;
               elsif cmd_loopbk = '1' then
                 st <= LT_LOOPBACK;
-              elsif cmd_start = '0' then
-                null;  -- permanece en L0
+              elsif retrain_p = '1' or retrain = '1' or
+                    (rx_ts_valid = '1' and rx_is_ts2 = '0') then
+                -- error exit: partner is in Recovery, or local retrain request
+                retrain_p <= '0';
+                st <= LT_RECOVERY; rec_cfg <= '0'; rec_ts2_seen <= '0';
+                n_ts1_rx <= 0; n_ts2_rx <= 0; n_ts2_tx <= 0; tmo <= 0;
               end if;
 
             when LT_RECOVERY =>
-              tx_send_ts <= '1'; tx_ts_kind <= '1'; tx_ctl <= (others => '0');
-              if rx_ts_valid = '1' and rx_is_ts2 = '1' then
-                st <= LT_L0;
+              retrain_p <= '0';
+              tx_send_ts <= '1'; tx_ctl <= (others => '0');
+              if rec_cfg = '0' then
+                -- Recovery.RcvrLock: TS1 until the partner's TS are seen
+                tx_ts_kind <= '0';
+                if rx_ts_valid = '1' then
+                  if n_ts1_rx >= N_TS_POLL - 1 then
+                    rec_cfg <= '1'; n_ts2_rx <= 0; n_ts2_tx <= 0;
+                    rec_ts2_seen <= '0';
+                  else
+                    n_ts1_rx <= n_ts1_rx + 1;
+                  end if;
+                end if;
+              else
+                -- Recovery.RcvrCfg: TS2
+                tx_ts_kind <= '1';
+                if rx_ts_valid = '1' and rx_is_ts2 = '1' then
+                  rec_ts2_seen <= '1';
+                  if n_ts2_rx < N_TS_CFG then n_ts2_rx <= n_ts2_rx + 1; end if;
+                  if rx_ctl(TC_HOTRESET) = '1' then st <= LT_HOTRESET; end if;
+                end if;
+                if tx_ts_done = '1' and rec_ts2_seen = '1' and n_ts2_tx < 65535 then
+                  n_ts2_tx <= n_ts2_tx + 1;
+                end if;
+                if n_ts2_rx >= N_TS_CFG and n_ts2_tx >= 2*N_TS_CFG then
+                  st <= LT_L0; tmo <= 0;
+                end if;
               end if;
 
             when LT_HOTRESET =>

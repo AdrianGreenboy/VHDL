@@ -65,12 +65,20 @@ remove_files [get_files -quiet {*spw_fifo.vhd *spw_tx.vhd *spw_rx.vhd \
   *spw_link.vhd *spw_codec.vhd *spw_mmio.vhd *mem_subsys_spw.vhd \
   *soc_top_spw.vhd *soc_top_spw_wrap.v *byte_fifo.vhd}]
 
-# anadir el RTL del IP ADCS (arquitectura de SINTESIS: fp32_fma_xil, NO la behav)
+# anadir el RTL del IP ADCS. Audit 2026-11: fp32_fma.vhd es ahora un selector
+# (generic IMPL); la seleccion FPGA se hace compilando fp32_cfg_pkg_xil.vhd
+# (C_FMA_IMPL = FMA_IMPL_XIL -> core FPO) EN LUGAR de fp32_cfg_pkg.vhd.
+# fp32_fma_rtl.vhd se incluye para que el analisis resuelva la rama RTL (no se
+# elabora con IMPL=XIL). Para probar la FMA portable en FPGA, usar
+# fp32_cfg_pkg.vhd en vez de fp32_cfg_pkg_xil.vhd.
 set ADCS $env(HOME)/vhdl_repo/IP_Cores/ADCS
 add_files -norecurse [list \
   $ADCS/rtl/riscv_pkg.vhd \
   $ADCS/rtl/fp32_pkg.vhd \
+  $ADCS/rtl/fp32_cfg_pkg_xil.vhd \
   $ADCS/rtl/fp32_fma_xil.vhd \
+  $ADCS/rtl/fp32_fma_rtl.vhd \
+  $ADCS/rtl/fp32_fma.vhd \
   $ADCS/rtl/adcs_pkg.vhd \
   $ADCS/rtl/mpc_dot_row.vhd \
   $ADCS/rtl/mpc_dot_x8.vhd \
@@ -83,8 +91,8 @@ add_files -norecurse [list \
   $ADCS/rtl/soc_top_master_adcs.vhd]
 # fuentes del core RV32IM compartidas (referenciadas desde origen, no duplicadas)
 add_files -norecurse [glob $env(HOME)/rv32i/{alu,control,csr,immgen,muldiv,regfile,cpu_pipeline,dp_ram,axi4_master,dma_burst,axil_soc,clint}.vhd]
-# CRITICO: la arquitectura behav (fp32_fma.vhd) NO debe entrar a sintesis
-# (acumulador 480b no sintetizable). Solo fp32_fma_xil.vhd.
+# Audit 2026-11: el modelo behav de 480 bits solo existe en la rama
+# IMPL=FMA_IMPL_BEHAV de fp32_fma.vhd, que no se elabora en sintesis.
 set_property file_type {VHDL 2008} [get_files $ADCS/rtl/*.vhd]
 # wrapper Verilog del module-ref (si el patron de familia lo usa)
 add_files -norecurse $ADCS/rtl/soc_top_master_adcs_wrap.v

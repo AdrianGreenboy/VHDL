@@ -10,6 +10,11 @@ use std.textio.all;
 use ieee.std_logic_textio.all;
 
 entity tb_fft_dp is
+  generic (
+    MEMFILE : string  := "tb_fft.mem";
+    -- AUDIT 2026-11: corner files carry a 5th CASE field = expected sticky sat
+    HAS_SAT : boolean := false
+  );
 end entity;
 
 architecture sim of tb_fft_dp is
@@ -25,6 +30,7 @@ architecture sim of tb_fft_dp is
   signal done, busy : std_logic;
   signal rd_idx: std_logic_vector(9 downto 0) := (others=>'0');
   signal rd_re, rd_im : std_logic_vector(15 downto 0);
+  signal sat : std_logic;
   signal sim_done : boolean := false;
 
   type mem_t is array (0 to 1023) of std_logic_vector(15 downto 0);
@@ -36,14 +42,14 @@ begin
     port map (clk=>clk, rst=>rst, log2n=>log2n, inv=>inv,
               wr_en=>wr_en, wr_idx=>wr_idx, wr_re=>wr_re, wr_im=>wr_im,
               start=>start, done=>done, busy=>busy,
-              rd_idx=>rd_idx, rd_re=>rd_re, rd_im=>rd_im);
+              rd_idx=>rd_idx, rd_re=>rd_re, rd_im=>rd_im, sat=>sat);
 
   clk <= not clk after CLK_P/2 when not sim_done else '0';
 
   stim : process
-    file fh : text open read_mode is "tb_fft.mem";
+    file fh : text open read_mode is MEMFILE;
     variable ln : line;
-    variable ncases, l2, invf, n : integer;
+    variable ncases, l2, invf, n, satexp : integer;
     variable tag : string(1 to 4);
     variable vri, vii, vre, vie : std_logic_vector(15 downto 0);
     variable errors, total : integer := 0;
@@ -54,6 +60,8 @@ begin
     for c in 0 to ncases-1 loop
       readline(fh, ln);
       read(ln, tag); read(ln, l2); read(ln, invf); read(ln, n);
+      satexp := 0;
+      if HAS_SAT then read(ln, satexp); end if;
 
       -- cargar entrada y guardar esperado
       for t in 0 to n-1 loop
@@ -78,6 +86,13 @@ begin
         exit when done='1';
       end loop;
       assert done='1' report "TIMEOUT caso "&integer'image(c) severity failure;
+      if HAS_SAT then
+        if (sat = '1') /= (satexp = 1) then
+          errors := errors + 1;
+          report "FFT sat flag mismatch c="&integer'image(c)&" got="&std_logic'image(sat)&
+                 " exp="&integer'image(satexp) severity warning;
+        end if;
+      end if;
 
       -- comparar
       for t in 0 to n-1 loop

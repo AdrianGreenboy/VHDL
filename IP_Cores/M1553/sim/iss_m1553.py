@@ -70,6 +70,10 @@ class Bus1553Model:
                 data = [self.txfifo.pop(0) for _ in range(n)]
                 for d in data:
                     self.rxfifo.append((d, self._src_of(rt), sa, 0))
+                    # audit 2026-11: the BC monitors the RT->RT data words and
+                    # stores them too (same cycle as the receiving RT; the RX
+                    # write queue serializes: receiving RT first, then BC)
+                    self.rxfifo.append((d, 0, 0, 0))
                 src.me = 0
                 dst.me = 0
                 self.stat1 = src.status()   # primero el transmisor
@@ -187,9 +191,9 @@ def run_reference():
     f = bus.run_message(1, 0, RT0_ADDR, 4, 2, RT1_ADDR, 4)
     trace.append(("P4", "flags", f))
     trace.append(("P4", "stat12", (bus.stat1, bus.stat2)))
-    g = drain(2, "P4")
+    g = drain(4, "P4")                         # 2 de RT1 (rx) + 2 copias del BC
     sig.append((bus.stat2 << 16) | bus.stat1)  # sig[4] = RESULT (stat2<<16|stat1)
-    sig.append(g[0][0] & g[1][0])              # sig[5]
+    sig.append(g[0][0] & g[1][0] & g[2][0] & g[3][0])  # sig[5]
 
     # Paso 5: broadcast wc=2
     for d in (0xB4B4, 0xB5B5):

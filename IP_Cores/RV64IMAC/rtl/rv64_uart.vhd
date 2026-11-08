@@ -46,12 +46,17 @@ architecture rtl of rv64_uart is
   signal wb       : std_logic_vector(7 downto 0);
   signal tx_empty, rx_avail, tx_full, rx_full : std_logic;
   signal bitlen   : unsigned(19 downto 0);
+  signal divisor  : unsigned(15 downto 0);
 begin
   tx_empty <= '1' when tx_wp = tx_rp else '0';
   tx_full  <= '1' when tx_wp - tx_rp = 16 else '0';
   rx_avail <= '1' when rx_wp /= rx_rp else '0';
   rx_full  <= '1' when rx_wp - rx_rp = 16 else '0';
-  bitlen   <= unsigned(std_logic_vector'(dlm & dll)) & "0000";   -- divisor x16 ciclos por bit
+  -- divisor x16 ciclos por bit. A divisor of 0 (undefined on a 16550) is
+  -- treated as 1: otherwise bitlen = 0 and the tick counters compare against
+  -- bitlen - 1 = 2^20 - 1, i.e. ~1M cycles per bit (link silently dead).
+  divisor  <= unsigned(std_logic_vector'(dlm & dll));
+  bitlen   <= (divisor & "0000") when divisor /= 0 else to_unsigned(16, 20);
   wb <= wdata(8 * to_integer(unsigned(addr)) + 7 downto 8 * to_integer(unsigned(addr)));
   irq <= (ier(0) and rx_avail) or (ier(1) and thre_irq_armed);
 

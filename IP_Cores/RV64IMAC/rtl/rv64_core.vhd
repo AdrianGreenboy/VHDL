@@ -282,6 +282,12 @@ begin
     end if;
     f_fill_n <= fill;
     cnt_next := fq_cnt - f_consume_n + fill;
+    -- audit-2026-11: the rst term is load-bearing, NOT redundant. Without it
+    -- the core issues fetches during reset; a responder that is not reset by
+    -- the same rst (tb_core's memory model, or any slave on another reset
+    -- domain) answers after reset and the core takes that stale response as
+    -- the reply to its first real fetch (lockstep mismatch at retire 2 of
+    -- csr_sweep / irq_race / cbo_test). Kept on purpose.
     want := rst = '0' and redirect = '0' and (f_out = '0' or i_rsp_valid = '1') and f_self = '0'
             and cnt_next <= 2;
     -- traduccion: pagina -> PMA (mismo orden que el ISS)
@@ -587,7 +593,7 @@ begin
     if memwb.v = '1' and (memwb.exc = '1' or memwb.sys /= S_NONE) then older_ok := false; end if;
     free := d_out = '0' or d_rsp_valid = '1';
 
-    if rst = '0' and need_req and free and (not side or older_ok) and wb_flush = '0' then
+    if rst = '0' and need_req and free and (not side or older_ok) and wb_flush = '0' then  -- rst: see 'want'
       core_req_valid <= '1';
     else
       core_req_valid <= '0';

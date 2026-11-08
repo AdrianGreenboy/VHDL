@@ -45,6 +45,7 @@ entity ptp_rx is
     origin_sec : out std_logic_vector(SEC_W-1 downto 0);
     origin_ns  : out std_logic_vector(NS_W-1 downto 0);
     corr_field : out std_logic_vector(63 downto 0);   -- correctionField
+    req_port_id: out std_logic_vector(79 downto 0);   -- requestingPortIdentity [Resp]
     rx_sec     : out std_logic_vector(SEC_W-1 downto 0);
     rx_ns      : out std_logic_vector(NS_W-1 downto 0);
     rd_ack     : in  std_logic
@@ -62,6 +63,7 @@ architecture rtl of ptp_rx is
   signal osec_r   : std_logic_vector(SEC_W-1 downto 0) := (others => '0');
   signal ons_r    : std_logic_vector(NS_W-1 downto 0) := (others => '0');
   signal corr_r   : std_logic_vector(63 downto 0) := (others => '0');
+  signal rpid_r   : std_logic_vector(79 downto 0) := (others => '0');
 
   signal rxsec_r  : std_logic_vector(SEC_W-1 downto 0) := (others => '0');
   signal rxns_r   : std_logic_vector(NS_W-1 downto 0) := (others => '0');
@@ -85,6 +87,7 @@ begin
   origin_sec  <= osec_r;
   origin_ns   <= ons_r;
   corr_field  <= corr_r;
+  req_port_id <= rpid_r;
   rx_sec      <= rxsec_r;
   rx_ns       <= rxns_r;
   rx_ts_ack   <= ack_ts_r;
@@ -149,6 +152,11 @@ begin
           -- sourcePortIdentity: bytes OFF_SPID..OFF_SPID+9 (10 bytes, BE)
           if p >= OFF_SPID and p < OFF_SPID + 10 then
             spid_r((9-(p-OFF_SPID))*8+7 downto (9-(p-OFF_SPID))*8) <= rx_data;
+          end if;
+
+          -- requestingPortIdentity (Pdelay_Resp): OFF_REQ_PORTID..+9 (BE)
+          if p >= OFF_REQ_PORTID and p < OFF_REQ_PORTID + 10 then
+            rpid_r((9-(p-OFF_REQ_PORTID))*8+7 downto (9-(p-OFF_REQ_PORTID))*8) <= rx_data;
           end if;
 
           -- sequenceId: bytes OFF_SEQID..+1 (BE)

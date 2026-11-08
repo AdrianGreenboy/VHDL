@@ -18,7 +18,7 @@ SIG_ORA=$(grep -o 'FIRMA_ORACULO=0x[0-9A-F]*' $WORK/oracle.log | cut -d= -f2)
 
 echo "== Analisis GHDL =="
 ghdl -a --std=08 --workdir=$WORK \
-    $RTL/fp32_pkg.vhd $RTL/fp32_fma.vhd $RTL/adcs_pkg.vhd \
+    $RTL/fp32_pkg.vhd $RTL/fp32_cfg_pkg.vhd $RTL/fp32_fma_rtl.vhd $RTL/fp32_fma.vhd $RTL/adcs_pkg.vhd \
     $RTL/mpc_dot_row.vhd $RTL/mpc_dot_x8.vhd $RTL/adcs_mem_banks.vhd \
     $RTL/mpc_engine.vhd tb_mpc_engine.vhd || exit 1
 ghdl -e --std=08 --workdir=$WORK tb_mpc_engine || exit 1

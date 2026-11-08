@@ -3,6 +3,11 @@
 eth_pkg.vhd
 eth_rx_mii.vhd
 eth_tx_mii.vhd
+eth_cdc_sync.vhd
+eth_async_fifo.vhd
+eth_mii_cdc.vhd
+# GHDL work directory of run_regression.sh
+work_reg/
 
 # Proyecto Vivado: regenerable desde vivado/tsn_soc_steps.tcl. Pesado y con
 # rutas absolutas; no se versiona.

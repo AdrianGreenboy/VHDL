@@ -106,7 +106,9 @@ begin
   m_addr <= dmem_addr(7 downto 0);
 
   -- deteccion combinacional del "start" (sw a CTRL con bit0=1)
-  dma_go <= '1' when (is_dmareg = '1' and dmem_wstrb /= "0000"
+  -- audit 2026-11: qualified by dmem_req (a stale address/strobe without a
+  -- request must not start a DMA or write a register)
+  dma_go <= '1' when (is_dmareg = '1' and dmem_req = '1' and dmem_wstrb /= "0000"
                       and dmem_addr(7 downto 0) = x"0C" and dmem_wdata(0) = '1')
             else '0';
 
@@ -152,7 +154,7 @@ begin
         busy_sticky <= '0'; dma_started <= '0';
       else
         dma_start <= '0';
-        if is_dmareg = '1' and dmem_wstrb /= "0000" then
+        if is_dmareg = '1' and dmem_req = '1' and dmem_wstrb /= "0000" then
           case dmem_addr(7 downto 0) is
             when x"00" => dma_src <= dmem_wdata;
             when x"04" => dma_dst <= dmem_wdata;

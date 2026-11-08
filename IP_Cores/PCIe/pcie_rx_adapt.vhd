@@ -1,21 +1,18 @@
 -- ============================================================================
--- pcie_rx_adapt.vhd -- PCIE IP v1
--- Adaptador RX: toma los tokens del deframer (RK_TLP_START/DATA/END/ABORT) y
--- reconstruye un stream de bytes con start/last bien definidos, apto para
--- alimentar tanto al TL_EP (que parsea el TLP crudo) como a la DLL RX.
+-- pcie_rx_adapt.vhd -- PCIE IP (reworked in audit 2026-11)
+-- RX adapter: turns the deframer tokens (RK_TLP_START/DATA/END/ABORT/ERR)
+-- into the raw byte stream of one TLP for the DLL RX:
+--   [seq_hi seq_lo][header+payload][lcrc0..3]
+-- out_start on the first byte (seq_hi); out_last on the final data byte
+-- (lcrc3). A one-byte holding register lets 'last' be attached to that byte
+-- when the END token arrives.
 --
--- Un TLP en el cable es: STP, [seq_hi seq_lo][header+payload][lcrc0..3], END.
--- El deframer entrega: RK_TLP_START (por el STP), luego RK_TLP_DATA por cada
--- byte (incluye seq y lcrc), y RK_TLP_END al final.
---
--- Salida "cruda" (out_*): el stream completo tal cual (seq + tlp + lcrc), con
--- out_start en el primer byte (seq_hi) y out_last en el ultimo (lcrc3).
---
--- Salida "TL" (tl_*): el TLP SIN los 2 bytes de seq iniciales ni los 4 de LCRC
--- finales -> exactamente el header+payload que el completer espera. Para
--- lograrlo con streaming se usa un retardo de 4 bytes (para recortar el LCRC) y
--- se saltan los 2 primeros (seq). tl_start en el primer byte del header,
--- tl_last en el ultimo byte de payload.
+-- Audit changes:
+--   * The TL is NO LONGER fed from here (it was fed before LCRC/seq
+--     validation). The validated path is DLL RX -> pcie_rx_tlp_fifo -> TL.
+--   * out_abort: EDB, a framing error (RK_ERR), a new STP / ordered set inside
+--     an open TLP, or more than MAX_BYTES bytes -> the DLL RX discards the TLP.
+--   * The byte counter saturates (no integer overflow on a runaway TLP).
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -23,6 +20,9 @@ use ieee.numeric_std.all;
 use work.pcie_ltssm_pkg.all;   -- rx_kind_t
 
 entity pcie_rx_adapt is
+  generic (
+    MAX_BYTES : integer := 134    -- MAX_TLP + 2 (seq) + 4 (LCRC)
+  );
   port (
     clk       : in  std_logic;
     rst       : in  std_logic;
@@ -31,95 +31,76 @@ entity pcie_rx_adapt is
     tok_data  : in  byte_t;
     tok_valid : in  std_logic;
 
-    -- stream crudo (seq+tlp+lcrc) -> DLL RX
+    -- raw stream (seq+tlp+lcrc) -> DLL RX
     out_valid : out std_logic;
     out_data  : out byte_t;
     out_start : out std_logic;
     out_last  : out std_logic;
-
-    -- stream TL (header+payload, sin seq ni lcrc) -> TL EP
-    tl_valid  : out std_logic;
-    tl_data   : out byte_t;
-    tl_start  : out std_logic;
-    tl_last   : out std_logic
+    out_abort : out std_logic
   );
 end entity;
 
 architecture rtl of pcie_rx_adapt is
   type st_t is (A_IDLE, A_RUN);
-  signal st : st_t := A_IDLE;
-  signal bcnt : integer range 0 to 4095 := 0;   -- bytes desde el start
-
-  -- retardo de 4 bytes para poder recortar el LCRC al ver END
-  type d4_t is array (0 to 4) of byte_t;
-  signal dl   : d4_t := (others => (others=>'0'));
-  signal dv   : std_logic_vector(0 to 4) := (others=>'0');
-  signal fill : integer range 0 to 5 := 0;
-  signal tl_first : std_logic := '1';
+  signal st   : st_t := A_IDLE;
+  signal bcnt : integer range 0 to MAX_BYTES+1 := 0;
+  -- one byte of delay so that 'last' can be attached to the final byte
+  signal hold_v : std_logic := '0';
+  signal hold_d : byte_t := (others => '0');
+  signal hold_s : std_logic := '0';
 begin
 
   process(clk)
-    variable is_data, is_start, is_end : boolean;
   begin
     if rising_edge(clk) then
       if rst='1' then
-        st <= A_IDLE; bcnt <= 0; fill <= 0; tl_first <= '1';
-        out_valid<='0'; out_start<='0'; out_last<='0'; out_data<=(others=>'0');
-        tl_valid<='0'; tl_start<='0'; tl_last<='0'; tl_data<=(others=>'0');
-        dv <= (others=>'0');
+        st <= A_IDLE; bcnt <= 0; hold_v <= '0'; hold_s <= '0';
+        out_valid<='0'; out_start<='0'; out_last<='0'; out_abort<='0';
+        out_data<=(others=>'0');
       else
-        out_valid<='0'; out_start<='0'; out_last<='0';
-        tl_valid<='0'; tl_start<='0'; tl_last<='0';
-
-        is_start := (tok_valid='1' and tok=RK_TLP_START);
-        is_data  := (tok_valid='1' and tok=RK_TLP_DATA);
-        is_end   := (tok_valid='1' and (tok=RK_TLP_END or tok=RK_TLP_ABORT));
-
-        case st is
-          when A_IDLE =>
-            if is_start then
-              st <= A_RUN; bcnt <= 0; fill <= 0; tl_first <= '1';
-              dv <= (others=>'0');
-            end if;
-
-          when A_RUN =>
-            if is_data then
-              -- ----- stream crudo -----
-              out_valid <= '1';
-              out_data  <= tok_data;
-              if bcnt = 0 then out_start <= '1'; end if;
-
-              -- ----- stream TL: saltar 2 bytes de seq, retrasar 4 (LCRC) -----
-              -- empujar al pipeline de 4
-              dl(4)<=dl(3); dl(3)<=dl(2); dl(2)<=dl(1); dl(1)<=dl(0);
-              dl(0)<=tok_data;
-              dv(4)<=dv(3); dv(3)<=dv(2); dv(2)<=dv(1); dv(1)<=dv(0);
-              -- el byte que entra es valido para TL solo si bcnt>=2 (tras seq)
-              if bcnt >= 2 then dv(0)<='1'; else dv(0)<='0'; end if;
-
-              -- emitir el byte que sale del retardo (4 posiciones atras) SOLO si
-              -- aun no estamos en la zona de LCRC. Como no conocemos la longitud
-              -- de antemano, emitimos con retardo 4 y confiamos en que END corta
-              -- justo cuando los 4 en vuelo son el LCRC.
-              if dv(4)='1' then
-                tl_valid <= '1';
-                tl_data  <= dl(4);
-                if tl_first = '1' then tl_start <= '1'; tl_first <= '0'; end if;
+        out_valid<='0'; out_start<='0'; out_last<='0'; out_abort<='0';
+        if tok_valid = '1' then
+          case st is
+            when A_IDLE =>
+              if tok = RK_TLP_START then
+                st <= A_RUN; bcnt <= 0; hold_v <= '0'; hold_s <= '1';
               end if;
 
-              bcnt <= bcnt + 1;
-
-            elsif is_end then
-              -- al END, los 4 bytes en vuelo (dl(0..3)) son el LCRC -> se
-              -- descartan. El ultimo byte de payload ya salio; marcamos last en
-              -- el byte que sale ahora (dl(4) si valido).
-              out_valid <= '1'; out_data <= tok_data; out_last <= '1';
-              if dv(4)='1' then
-                tl_valid <= '1'; tl_data <= dl(4); tl_last <= '1';
-              end if;
-              st <= A_IDLE;
-            end if;
-        end case;
+            when A_RUN =>
+              case tok is
+                when RK_TLP_DATA =>
+                  if bcnt > MAX_BYTES then
+                    out_valid <= '1'; out_abort <= '1';      -- runaway TLP
+                    st <= A_IDLE; hold_v <= '0';
+                  else
+                    bcnt <= bcnt + 1;
+                    if hold_v = '1' then
+                      out_valid <= '1'; out_data <= hold_d; out_start <= hold_s;
+                      hold_s <= '0';
+                    end if;
+                    hold_v <= '1'; hold_d <= tok_data;
+                  end if;
+                when RK_TLP_END =>
+                  if hold_v = '1' then
+                    out_valid <= '1'; out_data <= hold_d; out_start <= hold_s;
+                    out_last <= '1';
+                  else
+                    out_valid <= '1'; out_abort <= '1';       -- empty TLP
+                  end if;
+                  hold_v <= '0'; st <= A_IDLE;
+                when RK_TLP_START =>
+                  -- STP inside an open TLP: abort the old one, start a new one
+                  out_valid <= '1'; out_abort <= '1';
+                  bcnt <= 0; hold_v <= '0'; hold_s <= '1';
+                when RK_TLP_ABORT | RK_ERR | RK_TS1 | RK_TS2 | RK_EIOS |
+                     RK_DLLP_START =>
+                  out_valid <= '1'; out_abort <= '1';
+                  hold_v <= '0'; st <= A_IDLE;
+                when others =>
+                  null;   -- RK_SKP etc. cannot appear inside a TLP: ignore
+              end case;
+          end case;
+        end if;
       end if;
     end if;
   end process;

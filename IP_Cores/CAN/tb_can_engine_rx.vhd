@@ -29,6 +29,7 @@ architecture sim of tb_can_engine_rx is
 
   signal clk  : std_logic := '0';
   signal rstn : std_logic := '0';
+  signal rst  : std_logic;
 
   signal busw : std_logic := 'H';
   signal eng_tx, eng_rx : std_logic;
@@ -65,10 +66,11 @@ begin
   busw <= 'H';
   busw <= '0' when eng_tx = '0' else 'Z';
   eng_rx <= to_x01(busw);
+  rst <= not rstn;
 
   dut : entity work.can_engine
     port map (
-      clk => clk, rstn => rstn,
+      clk => clk, rst => rst,
       brp => x"09", tseg1 => "1100", tseg2 => "101", sjw => "01",
       tx_req => '0', tx_abort => '0',
       tx_id => (others => '0'), tx_ide => '0', tx_rtr => '0',
@@ -263,6 +265,12 @@ begin
           idx := idx + 1;
         end if;
       end loop;
+      -- ISO 11898-1: stuffing covers the CRC sequence inclusive; a run of 5
+      -- ending at the last CRC bit gets a stuff bit before the delimiter
+      if rn = 5 then
+        sb := not lb;
+        putraw(sb, false);
+      end if;
 
       -- delimitador de CRC
       if corrupt = 3 then
@@ -297,6 +305,43 @@ begin
         chk_flag(ke, true); -- el overload siempre es un flag dominante
       end if;
       busw <= 'Z';
+    end procedure;
+
+    -- local error seen only by the engine: SOF + 5 dominant bits (the 6th
+    -- dominant is a stuff violation detected at raw bit 5). The engine
+    -- sends its active flag on raw 6..11. Then:
+    --   hold > 0 : the model keeps the bus dominant for 'hold' more bits
+    --              (raw 12 ..), i.e. the 1st bit after the flag is dominant
+    --   dpos > 0 : dominant bit at error-delimiter bit 'dpos' (bit 1 = raw 12)
+    procedure lerr(hold : integer; dpos : integer) is
+      variable r : std_logic;
+    begin
+      t0 := now + 4 * C_BIT;
+      k := 0;
+      for i in 0 to 5 loop
+        putraw('0', false);
+      end loop;
+      wait for t0 + 6 * C_BIT - now;
+      busw <= 'Z';
+      for i in 6 to 11 loop
+        graw(i, r);
+        assert r = '0'
+          report "FALLO: flag activo del receptor incompleto (lerr)"
+          severity failure;
+      end loop;
+      if hold > 0 then
+        wait for t0 + 12 * C_BIT - now;
+        busw <= '0';
+        wait for hold * C_BIT;
+        busw <= 'Z';
+      end if;
+      if dpos > 0 then
+        wait for t0 + (11 + dpos) * C_BIT - now;
+        busw <= '0';
+        wait for C_BIT;
+        busw <= 'Z';
+      end if;
+      wait for 40 * C_BIT;  -- flags, delimiter and intermission settle
     end procedure;
 
     procedure wrxv(msg : string) is
@@ -501,6 +546,72 @@ begin
     wait for 1 ns;
     assert to_integer(unsigned(g_tec)) = 0
       report "FALLO: R12 TEC alterado sin transmisiones" severity failure;
+
+    -- ------------------------------------------------------------------
+    -- R13: CRC sequence ending in a run of 5 -> stuff bit before the CRC
+    -- delimiter (ISO 11898-1). id 0x100 / 0x118, data 0x22 (independent
+    -- search: CRC 0x5EDF ends in five 1s, 0x46E0 in five 0s)
+    -- ------------------------------------------------------------------
+    report "R13: bit de stuff tras la secuencia CRC";
+    rstn <= '0';
+    wait for 100 ns;
+    wait until rising_edge(clk);
+    rstn <= '1';
+    wait for 20 us;
+    send("000000000000000000" & "00100000000", '0', '0', x"1",
+         x"2200000000000000", 0, false, true);
+    wrxv("R13a");
+    assert g_rid(10 downto 0) = "00100000000" and g_rdat = x"2200000000000000"
+      report "FALLO: R13a trama incorrecta" severity failure;
+    send("000000000000000000" & "00100011000", '0', '0', x"1",
+         x"2200000000000000", 0, false, true);
+    wrxv("R13b");
+    assert g_rid(10 downto 0) = "00100011000" and g_rdat = x"2200000000000000"
+      report "FALLO: R13b trama incorrecta" severity failure;
+    chk_rec(0, "R13");
+
+    -- ------------------------------------------------------------------
+    -- R14: receiver detects a dominant 1st bit after its error flag:
+    -- REC = +1 (stuff error) +8 (ISO 11898-1 rule 2) = 9
+    -- ------------------------------------------------------------------
+    report "R14: dominante tras el flag de error del receptor";
+    lerr(1, 0);
+    chk_rec(9, "R14");
+
+    -- ------------------------------------------------------------------
+    -- R15: 8 dominant bits after the flag (14th dominant after an active
+    -- flag): REC = +1 +8 (1st bit) +8 (8 consecutive) = 17
+    -- ------------------------------------------------------------------
+    report "R15: 14 dominantes consecutivos";
+    rstn <= '0';
+    wait for 100 ns;
+    wait until rising_edge(clk);
+    rstn <= '1';
+    wait for 20 us;
+    lerr(8, 0);
+    chk_rec(17, "R15");
+    -- the engine must still receive normally afterwards (REC - 1)
+    send("000000000000000000" & "00100100011", '0', '0', x"1",
+         x"5A00000000000000", 0, false, true);
+    wrxv("R15 limpia");
+    chk_rec(16, "R15 tras la trama limpia");
+
+    -- ------------------------------------------------------------------
+    -- R16: dominant bit in the error delimiter (bit 3): form error,
+    -- REC +1 and a new error flag
+    -- ------------------------------------------------------------------
+    report "R16: error de forma en el delimitador de error";
+    rstn <= '0';
+    wait for 100 ns;
+    wait until rising_edge(clk);
+    rstn <= '1';
+    wait for 20 us;
+    lerr(0, 3);
+    chk_rec(2, "R16");
+    send("000000000000000000" & "00100100011", '0', '0', x"1",
+         x"5B00000000000000", 0, false, true);
+    wrxv("R16 limpia");
+    chk_rec(1, "R16 tras la trama limpia");
 
     report "CAPA 1b OK: motor CAN receptor contra modelo transmisor bit-bang";
     finish;

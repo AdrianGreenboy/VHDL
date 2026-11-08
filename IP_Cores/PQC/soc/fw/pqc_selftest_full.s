@@ -151,9 +151,9 @@
     li   x14, 2048
     li   x15, 2400
     jal  x28, fold_region
-# park dk: mover 2048->5000 (2400B)
+# park dk: mover 2048->5760 (2400B)
     li   x14, 2048
-    li   x22, 5000
+    li   x22, 5760
     li   x15, 2400
     jal  x28, move_region
 # cargar m@0
@@ -233,12 +233,12 @@
     li   x14, 32
     li   x15, 32
     jal  x28, fold_region
-# mover ct 2048->0 (1088B), restaurar dk 5000->2048 (2400B)
+# mover ct 2048->0 (1088B), restaurar dk 5760->2048 (2400B)
     li   x14, 2048
     li   x22, 0
     li   x15, 1088
     jal  x28, move_region
-    li   x14, 5000
+    li   x14, 5760
     li   x22, 2048
     li   x15, 2400
     jal  x28, move_region
@@ -335,13 +335,13 @@
     li   x14, 2304
     li   x15, 4032
     jal  x28, fold_region
-# mover sk 2304->0 (4032B), guardar pk: mover 256->6144 temporal (1952B)
+# mover sk 2304->0 (4032B), guardar pk: mover 256->11520 temporal (1952B)
     li   x14, 2304
     li   x22, 0
     li   x15, 4032
     jal  x28, move_region
     li   x14, 256
-    li   x22, 6144          # park pk temporal
+    li   x22, 11520         # park pk temporal
     li   x15, 1952
     jal  x28, move_region
 # cargar mu@4096
@@ -482,12 +482,12 @@
     li   x14, 8192
     li   x15, 3309
     jal  x28, fold_region
-# mover sig 8192->2176 (3309B), pk 6144->0 (1952B), cargar mu@2048
+# mover sig 8192->2176 (3309B), pk 11520->0 (1952B), cargar mu@2048
     li   x14, 8192
     li   x22, 2176
     li   x15, 3309
     jal  x28, move_region
-    li   x14, 6144
+    li   x14, 11520
     li   x22, 0
     li   x15, 1952
     jal  x28, move_region

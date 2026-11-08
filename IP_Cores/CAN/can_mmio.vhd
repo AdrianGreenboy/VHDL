@@ -2,15 +2,18 @@
 --  can_mmio.vhd - Capa 2: registros del IP CAN (dos nucleos, A y B)
 --
 --  Envuelve DOS instancias identicas de can_engine (nodo A y nodo B) con un
---  FIFO FWFT de recepcion de 128 bytes por nodo. Cada trama recibida se
+--  FIFO FWFT de recepcion de 128 bytes por nodo (can_byte_fifo, lectura
+--  registrada con prefetch de 1 palabra). Cada trama recibida se
 --  empaqueta en un registro FIJO de 13 bytes: [flags+ID (4, MSB primero),
 --  DLC (1), datos (8, byte0 primero, relleno a cero)]. Bus dmem simple:
 --  sel (req de 1 ciclo), we, addr(7:0), wdata; rdata es COMBINACIONAL y el
 --  pop-on-read se consume en el flanco del req (contrato dmem del RV32i).
 --
 --  Semanticas (heredadas de los IP IIC/I3C):
---    - STAT: los stickies (b16..) se limpian con CUALQUIER escritura a STAT;
---      los sets del mismo ciclo GANAN sobre la limpieza.
+--    - STAT: stickies (b16..b27) are WRITE-1-TO-CLEAR per bit (audit
+--      2026-11; formerly any write cleared all). Writing 0 leaves a bit
+--      untouched; a set in the same cycle WINS over the clear. Writing back
+--      the value just read clears exactly the events that were observed.
 --    - IRQ por NIVEL sin ack: irq = or(IRQ_EN and IRQ_STAT).
 --    - Overflow de RX: drop-newest a granularidad de TRAMA + sticky.
 --    - CMD_x: escritura con b0 (GO) pulsa tx_req del nodo (el motor latchea
@@ -19,18 +22,24 @@
 --      dominante = 0), pads liberados. Es el self-test de silicio.
 --    - SELFACK_x (CTRL b8/b9): ack_free del nodo; NO conforme con ISO 11898
 --      (un nodo jamas asiente su propia trama), solo para depuracion sin
---      segundo nodo.
+--      segundo nodo. LOCKED: b8/b9 are only updated by a CTRL write that
+--      carries the key 0xA5 in b31:24; a CTRL write without the key leaves
+--      SELFACK unchanged (a stray write can never enable it).
 --    - EN_x: con '0' el nucleo queda en reset sincrono (configurar BTR antes
 --      de habilitar).
+--    - BTR writes are IGNORED while EN_A or EN_B is set (changing the bit
+--      timing of a running node would corrupt the bus); clear EN first.
 --
 --  Mapa de registros (decode addr(7:0)):
 --    0x00 CTRL    b0 EN_A, b1 EN_B, b7 LOOP_INT, b8 SELFACK_A, b9 SELFACK_B
+--                 (b8/b9 written only with key b31:24 = 0xA5)
 --    0x04 STAT    vivos: b0 BUSY_A, b1 BUSY_B, b3:2 ESTADO_A, b5:4 ESTADO_B,
 --                        b6 RXNE_A, b7 RXNE_B
---                 stickies: b16 TXDONE_A, b17 TXDONE_B, b18 ARB_A, b19 ARB_B,
+--                 stickies (W1C): b16 TXDONE_A, b17 TXDONE_B, b18 ARB_A, b19 ARB_B,
 --                        b20 TXERR_A, b21 TXERR_B, b22 ERR_A, b23 ERR_B,
 --                        b24 RXV_A, b25 RXV_B, b26 RXOVF_A, b27 RXOVF_B
 --    0x08 BTR     b7:0 BRP, b11:8 TSEG1, b14:12 TSEG2, b17:16 SJW
+--                 (write ignored while EN_A or EN_B = 1)
 --    0x10 TXID_A  b28:0 ID, b29 RTR, b30 IDE      0x30 TXID_B
 --    0x14 TXDLC_A b3:0                            0x34 TXDLC_B
 --    0x18 TXDH_A  bytes 0-3 (tx_data 63:32)       0x38 TXDH_B
@@ -94,7 +103,7 @@ architecture rtl of can_mmio is
   signal s_rxva, s_rxvb, s_ovfa, s_ovfb : std_logic := '0';
 
   -- motores
-  signal rstna, rstnb : std_logic;
+  signal rsta, rstb : std_logic;
   signal a_tx, b_tx, a_rx, b_rx, bus_int : std_logic;
   signal a_busy, a_done, a_arb, a_txe, a_rxv, a_errp : std_logic;
   signal b_busy, b_done, b_arb, b_txe, b_rxv, b_errp : std_logic;
@@ -107,7 +116,6 @@ architecture rtl of can_mmio is
   signal a_est, b_est : std_logic_vector(1 downto 0);
 
   -- FIFOs de recepcion (128 bytes, registros de 13 bytes)
-  signal aresetn : std_logic;
   signal fa_wr, fa_rd, fa_full, fa_empty : std_logic;
   signal fa_d, fa_q : std_logic_vector(7 downto 0);
   signal fa_lvl : unsigned(7 downto 0);
@@ -125,16 +133,16 @@ architecture rtl of can_mmio is
 
 begin
 
-  aresetn <= not rst;
-  rstna <= (not rst) and ena_r;
-  rstnb <= (not rst) and enb_r;
+  -- engines held in synchronous reset while disabled
+  rsta <= rst or (not ena_r);
+  rstb <= rst or (not enb_r);
 
   -- ==========================================================================
   --  Nucleos
   -- ==========================================================================
   nodo_a : entity work.can_engine
     port map (
-      clk => clk, rstn => rstna,
+      clk => clk, rst => rsta,
       brp => brp_r, tseg1 => tseg1_r, tseg2 => tseg2_r, sjw => sjw_r,
       ack_free => sacka_r,
       tx_req => reqa_p, tx_abort => aba_p,
@@ -149,7 +157,7 @@ begin
 
   nodo_b : entity work.can_engine
     port map (
-      clk => clk, rstn => rstnb,
+      clk => clk, rst => rstb,
       brp => brp_r, tseg1 => tseg1_r, tseg2 => tseg2_r, sjw => sjw_r,
       ack_free => sackb_r,
       tx_req => reqb_p, tx_abort => abb_p,
@@ -176,18 +184,18 @@ begin
   -- ==========================================================================
   --  FIFOs FWFT de recepcion (128 bytes por nodo)
   -- ==========================================================================
-  fifo_a : entity work.byte_fifo
+  fifo_a : entity work.can_byte_fifo
     generic map (LOG2_DEPTH => 7)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => fa_wr, wr_data => fa_d, full => fa_full,
       rd_en => fa_rd, rd_data => fa_q, empty => fa_empty, level => fa_lvl
     );
 
-  fifo_b : entity work.byte_fifo
+  fifo_b : entity work.can_byte_fifo
     generic map (LOG2_DEPTH => 7)
     port map (
-      clk => clk, aresetn => aresetn,
+      clk => clk, rst => rst,
       wr_en => fb_wr, wr_data => fb_d, full => fb_full,
       rd_en => fb_rd, rd_data => fb_q, empty => fb_empty, level => fb_lvl
     );
@@ -313,18 +321,32 @@ begin
               ena_r   <= wdata(0);
               enb_r   <= wdata(1);
               loop_r  <= wdata(7);
-              sacka_r <= wdata(8);
-              sackb_r <= wdata(9);
+              if wdata(31 downto 24) = x"A5" then -- SELFACK key
+                sacka_r <= wdata(8);
+                sackb_r <= wdata(9);
+              end if;
             when x"04" =>
-              -- limpiar stickies (los sets de este mismo ciclo GANAN abajo)
-              s_tda <= '0'; s_tdb <= '0'; s_arba <= '0'; s_arbb <= '0';
-              s_txea <= '0'; s_txeb <= '0'; s_erra <= '0'; s_errb <= '0';
-              s_rxva <= '0'; s_rxvb <= '0'; s_ovfa <= '0'; s_ovfb <= '0';
+              -- W1C per bit (los sets de este mismo ciclo GANAN abajo)
+              if wdata(16) = '1' then s_tda  <= '0'; end if;
+              if wdata(17) = '1' then s_tdb  <= '0'; end if;
+              if wdata(18) = '1' then s_arba <= '0'; end if;
+              if wdata(19) = '1' then s_arbb <= '0'; end if;
+              if wdata(20) = '1' then s_txea <= '0'; end if;
+              if wdata(21) = '1' then s_txeb <= '0'; end if;
+              if wdata(22) = '1' then s_erra <= '0'; end if;
+              if wdata(23) = '1' then s_errb <= '0'; end if;
+              if wdata(24) = '1' then s_rxva <= '0'; end if;
+              if wdata(25) = '1' then s_rxvb <= '0'; end if;
+              if wdata(26) = '1' then s_ovfa <= '0'; end if;
+              if wdata(27) = '1' then s_ovfb <= '0'; end if;
             when x"08" =>
-              brp_r   <= wdata(7 downto 0);
-              tseg1_r <= wdata(11 downto 8);
-              tseg2_r <= wdata(14 downto 12);
-              sjw_r   <= wdata(17 downto 16);
+              -- bit timing is locked while any node is enabled
+              if ena_r = '0' and enb_r = '0' then
+                brp_r   <= wdata(7 downto 0);
+                tseg1_r <= wdata(11 downto 8);
+                tseg2_r <= wdata(14 downto 12);
+                sjw_r   <= wdata(17 downto 16);
+              end if;
             when x"10" =>
               txida_r <= wdata(28 downto 0);
               rtra_r  <= wdata(29);

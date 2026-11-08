@@ -4,6 +4,9 @@ use ieee.numeric_std.all;
 use std.textio.all;
 
 entity tb_l2 is
+  -- AUDIT 2026-11: BUBBLES idle cycles between bytes (2 = legacy pacing,
+  -- 0 = line rate, 1 byte per cycle: the parser must not lose any byte)
+  generic (BUBBLES : integer := 2);
 end entity;
 
 architecture sim of tb_l2 is
@@ -107,8 +110,7 @@ begin
       wait until rising_edge(clk);
       -- bubble to let non-reading FSM states advance without dropping a byte
       byte_valid <= '0';
-      wait until rising_edge(clk);
-      wait until rising_edge(clk);
+      for b in 1 to BUBBLES loop wait until rising_edge(clk); end loop;
     end loop;
     byte_valid <= '0';
     for i in 0 to 9 loop wait until rising_edge(clk); end loop;

@@ -73,7 +73,11 @@ module soc_top_m1553_wrap #(
     // ---- pads MIL-STD-1553 (single-ended; inocuos en LOOP_INT) ----
     input  wire                     m1553_rx,
     output wire                     m1553_tx,
-    output wire                     m1553_txen
+    output wire                     m1553_txen,
+    // bus B of the dual-redundant pair (audit 2026-11)
+    input  wire                     m1553_rx_b,
+    output wire                     m1553_tx_b,
+    output wire                     m1553_txen_b
 );
 
     soc_top_m1553 #(
@@ -131,7 +135,10 @@ module soc_top_m1553_wrap #(
         .m1553_irq_out (m1553_irq_out),
         .m1553_rx      (m1553_rx),
         .m1553_tx      (m1553_tx),
-        .m1553_txen    (m1553_txen)
+        .m1553_txen    (m1553_txen),
+        .m1553_rx_b    (m1553_rx_b),
+        .m1553_tx_b    (m1553_tx_b),
+        .m1553_txen_b  (m1553_txen_b)
     );
 
 endmodule

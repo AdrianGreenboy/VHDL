@@ -22,7 +22,11 @@ use work.riscv_pkg.all;
 
 entity dma_burst is
   generic (
-    ADDR_W   : natural := 40
+    ADDR_W   : natural := 40;
+    -- true: the local RAM has a 1-cycle synchronous read port. For
+    -- local->DDR bursts the address is then presented one beat ahead
+    -- (look-ahead on the W handshake) so m_axi_wdata is valid in time.
+    SYNC_LOC : boolean := false
   );
   port (
     clk      : in  std_logic;
@@ -35,6 +39,7 @@ entity dma_burst is
     dir   : in  std_logic;
     start : in  std_logic;
     busy  : out std_logic;
+    err   : out std_logic;   -- sticky: a burst got SLVERR/DECERR (cleared on start)
 
     loc_addr  : out std_logic_vector(31 downto 0);
     loc_wdata : out word_t;
@@ -85,7 +90,11 @@ architecture rtl of dma_burst is
   -- palabras hasta la proxima frontera de 4 KB desde ddr_addr:
   --   (0x1000 - (ddr_addr mod 0x1000)) / 4
   signal words_to_4k : unsigned(10 downto 0);   -- 1..1024
+  signal err_q       : std_logic := '0';
+  signal loc_idx_rd  : unsigned(31 downto 0);
 begin
+
+  err <= err_q;
 
   m_axi_awsize  <= "010";
   m_axi_arsize  <= "010";
@@ -107,7 +116,13 @@ begin
 
   busy <= '0' when state = D_IDLE else '1';
 
-  loc_addr  <= std_logic_vector(loc_idx(29 downto 0) & "00");
+  -- Local address. Writes (DDR->local) always use loc_idx. Reads
+  -- (local->DDR) with a synchronous RAM use the look-ahead index: the word
+  -- for beat n+1 is addressed in the cycle beat n is accepted.
+  loc_idx_rd <= loc_idx + 1 when (SYNC_LOC and state = W_DATA and m_axi_wready = '1')
+                else loc_idx;
+  loc_addr  <= std_logic_vector(loc_idx_rd(29 downto 0) & "00") when SYNC_LOC and is_write = '1'
+               else std_logic_vector(loc_idx(29 downto 0) & "00");
   loc_wdata <= m_axi_rdata;
   loc_we    <= '1' when (state = R_DATA and m_axi_rvalid = '1') else '0';
 
@@ -122,10 +137,12 @@ begin
     if rising_edge(clk) then
       if aresetn = '0' then
         state <= D_IDLE;
+        err_q <= '0';
       else
         case state is
           when D_IDLE =>
             if start = '1' then
+              err_q      <= '0';
               words_left <= unsigned(len);
               is_write   <= dir;
               if dir = '0' then
@@ -158,6 +175,7 @@ begin
             if m_axi_arready = '1' then state <= R_DATA; end if;
           when R_DATA =>
             if m_axi_rvalid = '1' then
+              if m_axi_rresp(1) = '1' then err_q <= '1'; end if;
               loc_idx    <= loc_idx + 1;
               ddr_addr   <= ddr_addr + 4;
               burst_cnt  <= burst_cnt - 1;
@@ -177,7 +195,10 @@ begin
               if burst_cnt = 1 then state <= W_RESP; end if;
             end if;
           when W_RESP =>
-            if m_axi_bvalid = '1' then state <= D_CALC; end if;
+            if m_axi_bvalid = '1' then
+              if m_axi_bresp(1) = '1' then err_q <= '1'; end if;
+              state <= D_CALC;
+            end if;
         end case;
       end if;
     end if;

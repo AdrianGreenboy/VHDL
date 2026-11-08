@@ -12,8 +12,9 @@ independent Python ISS, and the ISS is itself checked against Spike.
 
 ## 1. What this is
 
-The RV32IMA core in this repository boots nommu Linux on a multicycle,
-cache-less datapath. This core is the production step: 64-bit, three privilege
+The former RV32IMA core of this repository (removed in audit-2026-11: the
+product standardises on this core; see git history) booted nommu Linux on a
+multicycle, cache-less datapath. This core is the production step: 64-bit, three privilege
 levels, a real MMU, caches, a standard memory bus and an interrupt controller,
 so that the IP_Cores can run under a regular Linux with drivers and DMA.
 
@@ -153,7 +154,7 @@ negative control (no `cbo.clean`) fails as it should.
 
 ## 5. Verification methodology
 
-Same rule as RV32IMA: every layer has a bit-exact pass criterion, and every
+Same rule as the former RV32IMA: every layer has a bit-exact pass criterion, and every
 layer ships with mutations that must fail.
 
 **Layer 0 — the oracle.** `iss64.py` was written before the RTL. It passes

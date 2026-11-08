@@ -31,6 +31,21 @@
 --  entre rafagas, nunca a media transaccion AXI) permite cancelar un canal
 --  armado que nunca recibio nada.
 --
+--  Audit 2026-11 changes (English):
+--    * rx_abort / tx_abort are 1-cycle pulses that may arrive in ANY state.
+--      They are latched into a sticky request (abort_rx_q / abort_tx_q) and
+--      acted upon at the next burst boundary (X_DEC / T_DEC), never in the
+--      middle of an AXI transaction. Previously rx_abort was only sampled
+--      while sitting in X_DEC and was silently lost otherwise.
+--      The request is cleared when the channel returns to idle or restarts.
+--    * tx_aborted / rx_aborted pulse together with the corresponding done
+--      when the channel closed because of an abort.
+--    * DDR offsets use all 32 bits of tx_addr / rx_addr (were truncated to
+--      31 bits).
+--    * RLAST is checked against the beat count on the read channel; a
+--      mismatch is reported through tx_rerr (same pulse as RRESP /= OKAY).
+--      The beat counter stays authoritative (no hang on a missing RLAST).
+--
 --  Contrato con usart_mmio v1.1: los FIFOs viven alla; este modulo empuja
 --  (dma_txf_*) y drena (dma_rxf_*) via los ganchos. Los pops del DMA rearman
 --  el idle-timeout del MMIO igual que los pops de PIO.
@@ -53,9 +68,11 @@ entity usart_dma is
     tx_addr  : in  std_logic_vector(31 downto 0);  -- offset DDR (lectura)
     tx_len   : in  unsigned(23 downto 0);          -- bytes
     tx_start : in  std_logic;                      -- pulso
+    tx_abort : in  std_logic := '0';               -- pulse, latched (audit)
     tx_busy  : out std_logic;
     tx_done  : out std_logic;                      -- pulso
-    tx_rerr  : out std_logic;                      -- pulso: RRESP /= OKAY
+    tx_rerr  : out std_logic;                      -- pulse: RRESP/=OKAY or RLAST mismatch
+    tx_aborted : out std_logic;                    -- pulse with tx_done (audit)
 
     -- comando canal RX
     rx_addr    : in  std_logic_vector(31 downto 0); -- offset DDR (escritura)
@@ -65,6 +82,7 @@ entity usart_dma is
     rx_busy    : out std_logic;
     rx_done    : out std_logic;                     -- pulso
     rx_flushed : out std_logic;                     -- con rx_done: cerro por idle
+    rx_aborted : out std_logic;                     -- pulse with rx_done (audit)
     rx_berr    : out std_logic;                     -- pulso: BRESP /= OKAY
     rx_count   : out unsigned(23 downto 0);         -- bytes escritos a DDR
 
@@ -144,6 +162,9 @@ architecture rtl of usart_dma is
   signal ic        : unsigned(15 downto 0) := (others => '0');
   signal flush_hit : std_logic;
 
+  -- latched abort requests (audit 2026-11)
+  signal abort_tx_q, abort_rx_q : std_logic := '0';
+
   function fmin(a, b : natural) return natural is
   begin
     if a < b then return a; else return b; end if;
@@ -190,23 +211,42 @@ begin
     variable v_space, v_left, v_w : natural;
   begin
     if rising_edge(clk) then
-      tx_done <= '0';
-      tx_rerr <= '0';
+      tx_done    <= '0';
+      tx_rerr    <= '0';
+      tx_aborted <= '0';
       if aresetn = '0' then
-        ts <= T_IDLE;
+        ts         <= T_IDLE;
+        abort_tx_q <= '0';
+        tx_left    <= (others => '0');
+        txa_c      <= (others => '0');
+        t_beats    <= (others => '0');
+        t_bytes    <= (others => '0');
+        t_beatb    <= (others => '0');
+        t_bidx     <= "00";
+        arlen_r    <= (others => '0');
+        t_word     <= (others => '0');
       else
+        -- abort request is sticky until the channel acts on it
+        if tx_abort = '1' and ts /= T_IDLE then
+          abort_tx_q <= '1';
+        end if;
         case ts is
           when T_IDLE =>
+            abort_tx_q <= '0';
             if tx_start = '1' then
               tx_left <= tx_len;
               txa_c   <= unsigned(ddr_base) +
-                         resize(unsigned(tx_addr(30 downto 0)), ADDR_W);
+                         resize(unsigned(tx_addr), ADDR_W);  -- full 32 bits
               ts <= T_DEC;
             end if;
 
-          when T_DEC =>
+          when T_DEC =>                  -- burst boundary
             if tx_left = 0 then
               tx_done <= '1';
+              ts <= T_IDLE;
+            elsif abort_tx_q = '1' or tx_abort = '1' then
+              tx_done    <= '1';         -- cancelled; bytes already pushed
+              tx_aborted <= '1';         -- stay in the TX FIFO
               ts <= T_IDLE;
             else
               v_space := DEPTH - to_integer(txf_lvl);
@@ -233,6 +273,10 @@ begin
               t_beatb <= to_unsigned(fmin(4, to_integer(t_bytes)), 3);
               t_bidx  <= "00";
               if m_axi_rresp /= "00" then tx_rerr <= '1'; end if;
+              -- RLAST must be asserted exactly on the last beat
+              if (m_axi_rlast = '1') /= (t_beats = 1) then
+                tx_rerr <= '1';
+              end if;
               ts <= T_PUSH;
             end if;
 
@@ -281,16 +325,34 @@ begin
       rx_done    <= '0';
       rx_flushed <= '0';
       rx_berr    <= '0';
+      rx_aborted <= '0';
       if aresetn = '0' then
-        xs <= X_IDLE;
+        xs         <= X_IDLE;
+        abort_rx_q <= '0';
+        rx_left    <= (others => '0');
+        rxa_c      <= (others => '0');
+        x_beats    <= (others => '0');
+        x_bytes    <= (others => '0');
+        x_beatb    <= (others => '0');
+        x_colc     <= (others => '0');
+        x_bidx     <= "00";
+        awlen_r    <= (others => '0');
+        x_word     <= (others => '0');
+        x_strb     <= "0000";
+        rx_cnt_r   <= (others => '0');
       else
+        -- abort request is sticky until the channel acts on it
+        if rx_abort = '1' and xs /= X_IDLE then
+          abort_rx_q <= '1';
+        end if;
         case xs is
           when X_IDLE =>
+            abort_rx_q <= '0';
             if rx_start = '1' then
               rx_left  <= rx_len;
               rx_cnt_r <= (others => '0');
               rxa_c    <= unsigned(ddr_base) +
-                          resize(unsigned(rx_addr(30 downto 0)), ADDR_W);
+                          resize(unsigned(rx_addr), ADDR_W);  -- full 32 bits
               xs <= X_DEC;
             end if;
 
@@ -300,9 +362,10 @@ begin
             if v_left = 0 then
               rx_done <= '1';                            -- cierre por cuenta
               xs <= X_IDLE;
-            elsif rx_abort = '1' then
-              rx_done <= '1';                            -- cancelado; el
-              xs <= X_IDLE;                              -- residuo queda en PIO
+            elsif rx_abort = '1' or abort_rx_q = '1' then
+              rx_done    <= '1';                         -- cancelled; the
+              rx_aborted <= '1';                         -- residue stays for PIO
+              xs <= X_IDLE;
             elsif v_lvl >= 4 or (v_lvl > 0 and v_lvl >= v_left) or
                   (flush_hit = '1' and v_lvl > 0) then
               if v_lvl >= v_left then

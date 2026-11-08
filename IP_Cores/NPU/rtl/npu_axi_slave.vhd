@@ -14,6 +14,14 @@
 --   0x08 ID      R  0x4E505531
 --   0x0C BASE    RW base del buffer en DDR
 --   0x10 ERRCODE R  ultimo RRESP/BRESP no OKAY
+--
+-- Audit 2026-11:
+--   * escritura: SLVERR si CUALQUIER beat de la rafaga cae fuera de los
+--     registros (antes solo se miraba la direccion de AW) o si AWSIZE > 2;
+--     los beats no mapeados / con AWSIZE invalido no escriben nada.
+--   * AxSIZE respetado: la direccion avanza 2**AxSIZE por beat (narrow
+--     transfers); el registro se decodifica por la direccion de palabra
+--     (bits 15:2). AxSIZE > 2 (mas ancho que el bus) -> SLVERR.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -87,11 +95,13 @@ architecture rtl of npu_axi_slave is
   signal aw_addr  : unsigned(15 downto 0) := (others => '0');
   signal aw_burst : std_logic_vector(1 downto 0) := C_BURST_INCR;
   signal aw_id    : std_logic_vector(G_ID_W-1 downto 0) := (others => '0');
+  signal aw_size  : natural range 0 to 7 := 2;
   signal w_bad    : boolean := false;
 
   signal ar_addr  : unsigned(15 downto 0) := (others => '0');
   signal ar_burst : std_logic_vector(1 downto 0) := C_BURST_INCR;
   signal ar_id    : std_logic_vector(G_ID_W-1 downto 0) := (others => '0');
+  signal ar_size  : natural range 0 to 7 := 2;
   signal ar_cnt   : natural range 0 to 255 := 0;
   signal ar_len   : natural range 0 to 255 := 0;
 
@@ -109,9 +119,26 @@ architecture rtl of npu_axi_slave is
   signal loadw_r : std_logic := '0';
   signal base_r  : std_logic_vector(31 downto 0) := x"70000000";
 
-  -- Direccion mapeada? Solo los cinco registros definidos.
-  function mapeada (a : unsigned(15 downto 0)) return boolean is
+  -- direccion de palabra (los registros son de 32 bits)
+  function wa (a : unsigned(15 downto 0)) return unsigned is
   begin
+    return a(15 downto 2) & "00";
+  end function;
+  -- avance de direccion por beat segun AxSIZE
+  function incr (sz : natural) return unsigned is
+  begin
+    case sz is
+      when 0 => return to_unsigned(1, 16);
+      when 1 => return to_unsigned(2, 16);
+      when others => return to_unsigned(4, 16);
+    end case;
+  end function;
+
+  -- Direccion mapeada? Solo los cinco registros definidos.
+  function mapeada (a0 : unsigned(15 downto 0)) return boolean is
+    variable a : unsigned(15 downto 0);
+  begin
+    a := a0(15 downto 2) & "00";
     case to_integer(a) is
       when C_REG_CTRL | C_REG_STATUS | C_REG_ID |
            C_REG_BASE | C_REG_ERRCODE => return true;
@@ -127,7 +154,7 @@ architecture rtl of npu_axi_slave is
     return std_logic_vector is
     variable v : std_logic_vector(31 downto 0) := (others => '0');
   begin
-    case to_integer(a) is
+    case to_integer(wa(a)) is
       when C_REG_STATUS =>
         v(0) := busy;
         v(1) := done;
@@ -183,7 +210,8 @@ begin
               aw_addr  <= unsigned(s_awaddr(15 downto 0));
               aw_burst <= s_awburst;
               aw_id    <= s_awid;
-              w_bad    <= not mapeada(unsigned(s_awaddr(15 downto 0)));
+              aw_size  <= to_integer(unsigned(s_awsize));
+              w_bad    <= false;
               awready_r <= '0';
               wready_r  <= '1';
               wstate <= WS_DATA;
@@ -192,8 +220,9 @@ begin
           when WS_DATA =>
             if s_wvalid = '1' and wready_r = '1' then
               -- WSTRB respetado: solo se actualiza si el byte esta habilitado
-              if mapeada(aw_addr) then
-                case to_integer(aw_addr) is
+              -- (y solo si ESTE beat es valido: mapeado y AWSIZE <= 2)
+              if mapeada(aw_addr) and aw_size <= 2 then
+                case to_integer(wa(aw_addr)) is
                   when C_REG_CTRL =>
                     if s_wstrb(0) = '1' then
                       start_r <= s_wdata(0);
@@ -210,20 +239,22 @@ begin
                 end case;
               end if;
 
-              -- FIXED no avanza; INCR y WRAP avanzan
+              -- FIXED no avanza; INCR y WRAP avanzan 2**AWSIZE
               if aw_burst /= C_BURST_FIXED then
-                aw_addr <= aw_addr + 4;
+                aw_addr <= aw_addr + incr(aw_size);
               end if;
 
               if s_wlast = '1' then
                 wready_r <= '0';
-                if w_bad then
+                if w_bad or not mapeada(aw_addr) or aw_size > 2 then
                   bresp_r <= C_RESP_SLVERR;
                 else
                   bresp_r <= C_RESP_OKAY;
                 end if;
                 bvalid_r <= '1';
                 wstate <= WS_RESP;
+              elsif not mapeada(aw_addr) or aw_size > 2 then
+                w_bad <= true;                     -- recordar el beat malo
               end if;
             end if;
 
@@ -254,13 +285,14 @@ begin
               ar_addr  <= a;
               ar_burst <= s_arburst;
               ar_id    <= s_arid;
+              ar_size  <= to_integer(unsigned(s_arsize));
               ar_len   <= to_integer(unsigned(s_arlen));
               ar_cnt   <= 0;
               arready_r <= '0';
               -- primera palabra
               rdata_r <= leer_reg(a, i_busy, i_done, i_error,
                                   i_clase, i_errcode, base_r);
-              if mapeada(a) then
+              if mapeada(a) and to_integer(unsigned(s_arsize)) <= 2 then
                 rresp_r <= C_RESP_OKAY;
               else
                 rresp_r <= C_RESP_SLVERR;
@@ -284,12 +316,12 @@ begin
                 if ar_burst = C_BURST_FIXED then
                   a := ar_addr;
                 else
-                  a := ar_addr + 4;
+                  a := ar_addr + incr(ar_size);
                   ar_addr <= a;
                 end if;
                 rdata_r <= leer_reg(a, i_busy, i_done, i_error,
                                     i_clase, i_errcode, base_r);
-                if mapeada(a) then
+                if mapeada(a) and ar_size <= 2 then
                   rresp_r <= C_RESP_OKAY;
                 else
                   rresp_r <= C_RESP_SLVERR;

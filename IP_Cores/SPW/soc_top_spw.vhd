@@ -182,6 +182,10 @@ begin
     );
 
   u_spw : entity work.spw_mmio
+    -- FPGA (TE0950) bring-up build: oversampling receiver, as validated in
+    -- silicon up to 50 Mbit/s (audit 2026-11: the recovered-clock RX is the
+    -- IP default for the ASIC target; see README "Timing constraints")
+    generic map (G_RX_MODE => 0, G_TX_CLK => 0)
     port map (
       clk => aclk, rst => cpu_rst,
       sel => spw_sel_req, we => spw_we, addr => spw_addr,

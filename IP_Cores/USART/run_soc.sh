@@ -1,7 +1,7 @@
 #!/bin/bash
 # run_soc.sh -- MMUSART layer 4: RV32 + mem_subsys_usart + usart_axi_top.
 # Fuentes compartidas del SoC v3 desde ~/rv32i/ (mismo patron de run_xsim.sh)
-# y byte_fifo desde ~/spi_ip/. Ensambla usart_test.s con asm.py y genera el
+# y el FIFO privado usart_byte_fifo.vhd (audit 2026-11). Ensambla usart_test.s con asm.py y genera el
 # patron usart_ddr.mem (byte k = k mod 256, little-endian por palabra).
 set -e
 
@@ -10,8 +10,7 @@ if ! command -v xvhdl >/dev/null 2>&1; then
 fi
 
 RV=~/rv32i
-BF=~/spi_ip/byte_fifo.vhd
-[ -f "$BF" ] || BF=./byte_fifo.vhd
+BF=./usart_byte_fifo.vhd
 
 # --- programa RV32 ---
 if [ ! -f usart_test.mem ] || [ usart_test.s -nt usart_test.mem ]; then

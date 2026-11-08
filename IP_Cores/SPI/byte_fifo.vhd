@@ -1,4 +1,10 @@
 -- =============================================================================
+--  NOTE (audit 2026-11): the SPI core itself now uses spi_byte_fifo.vhd.
+--  This file is left UNCHANGED because other projects may still pull it as
+--  the shared ~/spi_ip/byte_fifo.vhd. New designs should use a per-core FIFO
+--  with a unique entity name (see spi_byte_fifo.vhd).
+-- =============================================================================
+-- =============================================================================
 --  byte_fifo.vhd  -  FIFO sincrono de bytes, lectura FWFT (first-word-fall-
 --                    through: rd_data siempre muestra la cabeza sin latencia)
 --  Licencia: MIT

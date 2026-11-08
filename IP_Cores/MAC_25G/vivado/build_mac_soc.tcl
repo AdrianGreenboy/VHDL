@@ -31,10 +31,10 @@ set SRCS [list \
   $RV/muldiv.vhd $RV/csr.vhd $RV/clint.vhd $RV/cpu_pipeline.vhd $RV/dp_ram.vhd \
   $RV/axi4_master.vhd $RV/dma_burst.vhd $RV/mem_subsys_dma.vhd $RV/axil_soc.vhd \
   $PCS/pcs_scrambler.vhd $PCS/pcs_gearbox_tx.vhd $PCS/pcs_gearbox_rx.vhd \
-  $PCS/pcs_rx_datapath.vhd $PCS/pcs_mmio_bridge.vhd \
+  $PCS/pcs_blocksync.vhd $PCS/pcs_rx_datapath.vhd $PCS/pcs_mmio_bridge.vhd \
   $MAC/mac25g_crc_pkg.vhd $MAC/mac25g_pkg.vhd $MAC/mac25g_sync.vhd $MAC/mac25g_pcs_tx.vhd \
   $MAC/mac25g_gen.vhd $MAC/mac25g_tx.vhd $MAC/mac25g_rx.vhd $MAC/mac25g_chk.vhd $MAC/mac25g_pcs66.vhd \
-  $MAC/mac25g_datapath.vhd $MAC/mac25g_top.vhd $MAC/soc_top_mac.vhd]
+  $MAC/mac25g_flow.vhd $MAC/mac25g_datapath.vhd $MAC/mac25g_top.vhd $MAC/soc_top_mac.vhd]
 add_files -norecurse $SRCS
 set_property FILE_TYPE {VHDL 2008} [get_files -filter {FILE_TYPE == VHDL}]
 add_files -norecurse $MAC/soc_top_mac_wrap.v

@@ -30,17 +30,19 @@ O="$HERE/oracle/check_tb.py"
 python3 -I "$HERE/oracle/eth21_oracle.py" || exit 1
 
 RTL="$PCS/pcs_scrambler.vhd $MAC/mac25g_crc_pkg.vhd $MAC/mac25g_pkg.vhd \
-     $MAC/mac25g_tx.vhd $MAC/mac25g_rx.vhd $MAC/mac25g_pcs66.vhd $MAC/mac25g_sync.vhd \
+     $MAC/mac25g_tx.vhd $MAC/mac25g_rx.vhd $MAC/mac25g_pcs66.vhd $MAC/mac25g_sync.vhd $MAC/mac25g_flow.vhd \
      $HERE/rtl/eth21_pkg.vhd $HERE/rtl/eth21_udp_gen.vhd $HERE/rtl/eth21_udp_chk.vhd \
      $HERE/rtl/eth21_blocklock.vhd $HERE/rtl/eth21_gtmap.vhd $HERE/rtl/eth21_txpath.vhd \
      $HERE/rtl/eth21_rxpath.vhd $HERE/rtl/eth21_gt_rst.vhd $HERE/rtl/eth21_clkmeter.vhd \
      $HERE/rtl/eth21_top.vhd"
 TBS="$HERE/tb/tb_eth21_pkg.vhd $HERE/tb/eth21_gt_model.vhd $HERE/tb/tb_eth21_gen.vhd \
      $HERE/tb/tb_eth21_chk.vhd $HERE/tb/tb_eth21_bl.vhd $HERE/tb/tb_eth21_path.vhd \
-     $HERE/tb/tb_eth21_top.vhd $HERE/tb/tb_eth21_gtrst.vhd"
+     $HERE/tb/tb_eth21_top.vhd $HERE/tb/tb_eth21_gtrst.vhd \
+     $HERE/tb/tb_eth21_flow.vhd $HERE/tb/tb_eth21_regs.vhd"
 cd "$W/run"        # ghdl -e (mcode) ya abre los archivos de salida de los TB
 ghdl -a $GF $RTL $TBS || exit 1
-for t in tb_eth21_gen tb_eth21_chk tb_eth21_bl tb_eth21_path tb_eth21_top tb_eth21_gtrst; do
+for t in tb_eth21_gen tb_eth21_chk tb_eth21_bl tb_eth21_path tb_eth21_top tb_eth21_gtrst \
+         tb_eth21_flow tb_eth21_regs; do
   ghdl -e $GF $t || exit 1
 done
 cd "$W/run"
@@ -152,6 +154,14 @@ X=$(python3 "$O" pathexp 18 1472 97 15 1 0)
 out=$(ghdl -r $GF tb_eth21_top -gINJ=1 -gCREV=0 -gCSWAP=1 -gN=15 -gLSTEP=97 2>&1)
 got=$(echo "$out" | grep -oE "txf=.*")
 if [ "$got" = "$X" ] && echo "$out" | grep -q "LAYER4 checks PASS"; then ok "rafaga con CRC inyectado, flags 0/1"; else bad "top inj" "$got"; fi
+
+echo "== Audit 2026-11"
+if ghdl -r $GF tb_eth21_flow 2>&1 | grep -q "TB_ETH21_FLOW_PASS"; then
+  ok "802.3x PAUSE: XOFF/XON por la RX FIFO, pausa respetada, sin perdidas"
+else bad "pause" "ver tb_eth21_flow"; fi
+if ghdl -r $GF tb_eth21_regs 2>&1 | grep -q "TB_ETH21_REGS_PASS"; then
+  ok "registros: WSTRB, SLVERR, PAUSE_*"
+else bad "regs" "ver tb_eth21_regs"; fi
 
 echo
 echo "RESULTADO: $PASS PASS, $FAILS FAIL"

@@ -14,6 +14,17 @@
 --   2 = recibir sin ACK, verificar silencio (flag PASIVO)
 --   3 = inyectar dominante en el primer bit de DATA, verificar flag ACTIVO
 --   5 = inyectar dominante en el primer bit de DATA, sin verificacion (loop)
+--   6 = inject dominant on raw bit 5 (the recessive stuff bit after SOF+4
+--       dominant ID bits): stuff error during arbitration, check active flag
+--   7 = no ACK; drive one dominant bit inside the engine's PASSIVE flag
+--   8 = receive + ACK, then drive an EARLY SOF 800 ns into the 3rd
+--       intermission bit and receive the engine's (joined) frame on that grid
+--   9 = inject dominant on the first DATA bit, then force the engine's RX
+--       recessive during the 3rd bit of its active error flag (bit error)
+--
+-- Model per ISO 11898-1 (audit 2026-11): bit stuffing covers SOF..CRC
+-- sequence INCLUSIVE, so after the last CRC bit a run of 5 is followed by a
+-- stuff bit before the CRC delimiter (both receiver model and bit-bang TX).
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -31,6 +42,7 @@ architecture sim of tb_can_engine is
 
   signal clk  : std_logic := '0';
   signal rstn : std_logic := '0';
+  signal rst  : std_logic;
 
   -- bus con pull recesivo
   signal busw : std_logic := 'H';
@@ -76,6 +88,12 @@ architecture sim of tb_can_engine is
   signal mtx_dlc  : std_logic_vector(3 downto 0) := (others => '0');
   signal mtx_data : std_logic_vector(63 downto 0) := (others => '0');
   signal m_txdone : integer := 0;
+  signal m_crcstuff : integer := 0;   -- frames whose CRC needed a final stuff bit
+  signal frc_rec  : boolean := false;
+  -- hard-sync alignment checker
+  signal hs_arm   : boolean := false;
+  signal hs_ref   : time := 0 ns;
+  signal hs_ok    : integer := 0;
 
   function mcrc(bits : std_logic_vector; n : integer) return std_logic_vector is
     variable c   : std_logic_vector(14 downto 0) := (others => '0');
@@ -98,11 +116,13 @@ begin
   -- pull recesivo + conductor del motor (colector abierto)
   busw <= 'H';
   busw <= '0' when eng_tx = '0' else 'Z';
-  eng_rx <= to_x01(busw);
+  -- frc_rec: TB-only disturbance that makes the engine read recessive
+  eng_rx <= '1' when frc_rec else to_x01(busw);
+  rst <= not rstn;
 
   dut : entity work.can_engine
     port map (
-      clk => clk, rstn => rstn,
+      clk => clk, rst => rst,
       brp => x"09", tseg1 => "1100", tseg2 => "101", sjw => "01",
       tx_req => e_req, tx_abort => e_abort,
       tx_id => e_id, tx_ide => e_ide, tx_rtr => e_rtr,
@@ -144,6 +164,7 @@ begin
     variable b    : std_logic;
     variable mode : integer;
     variable inj  : boolean;
+    variable t_next : time;
 
     -- muestrear el bit crudo k por tiempo absoluto
     procedure graw(k : in integer; bo : out std_logic) is
@@ -292,6 +313,15 @@ begin
       vdat := (others => '0');
       nb := 0;
 
+      if md = 6 then
+        -- raw bits 1..4 are dominant ID bits, raw bit 5 the recessive stuff
+        -- bit: overwrite it with dominant
+        ginj(5);
+        chk_active_flag(5);
+        m_events <= m_events + 1;
+        return;
+      end if;
+
       -- 11 bits de identificador base
       for i in 10 downto 0 loop
         gds(b); vid(i) := b; cb(cn) := b; cn := cn + 1;
@@ -322,11 +352,19 @@ begin
 
       -- datos (con posible inyeccion en el primer bit)
       for i in 0 to nb - 1 loop
-        if i = 0 and (md = 3 or md = 5) then
+        if i = 0 and (md = 3 or md = 5 or md = 9) then
           gds_or_inject(true, injd, b);
           if injd then
             if md = 3 then
               chk_active_flag(kk);
+            elsif md = 9 then
+              -- disturb the engine's RX during the 3rd bit of its flag
+              ka := kk;
+              if t0 + (ka + 3) * C_BIT + 200 ns > now then
+                wait for t0 + (ka + 3) * C_BIT + 200 ns - now;
+              end if;
+              frc_rec <= true, false after 1600 ns;
+              skip_flag(ka + 3);
             else
               skip_flag(kk);
             end if;
@@ -347,6 +385,16 @@ begin
       assert vcrc = mcrc(cb, cn)
         report "FALLO: CRC del modelo no coincide con el recibido"
         severity failure;
+      -- ISO 11898-1: the CRC sequence is stuffed inclusive; a run of 5
+      -- ending at the last CRC bit is followed by a complementary stuff bit
+      if rn = 5 then
+        kk := kk + 1; graw(kk, b);
+        assert b /= lb
+          report "FALLO: falta el bit de stuff tras la secuencia CRC"
+          severity failure;
+        rn := 1; lb := b;
+        m_crcstuff <= m_crcstuff + 1;
+      end if;
 
       -- delimitador de CRC
       kk := kk + 1; graw(kk, b);
@@ -356,7 +404,7 @@ begin
 
       -- ranura de ACK
       ka := kk + 1;
-      if md = 0 then
+      if md = 0 or md = 8 then
         ginj(ka);          -- conducir ACK dominante
         kk := ka;
       else
@@ -367,6 +415,10 @@ begin
           severity failure;
         if md = 1 then
           chk_active_flag(ka);
+        elsif md = 7 then
+          -- one dominant bit in the middle of the passive error flag
+          ginj(ka + 2);
+          skip_flag(ka + 2);
         else
           chk_quiet(ka);
         end if;
@@ -387,6 +439,9 @@ begin
           report "FALLO: EOF no recesivo en bit " & integer'image(i)
           severity failure;
       end loop;
+
+      -- md 8: start of intermission bit 1 (for the early-SOF test)
+      t_next := t0 + (kk + 1) * C_BIT;
 
       -- registrar la trama
       md_id <= vid;
@@ -512,6 +567,11 @@ begin
           idx := idx + 1;
         end if;
       end loop;
+      -- ISO 11898-1: final stuff bit after the CRC sequence if run = 5
+      if rn = 5 then
+        sb := not lb;
+        putraw(sb, false);
+      end if;
 
       putraw('1', false);  -- delimitador de CRC
       putraw('1', true);   -- ranura de ACK: esperar dominante del motor
@@ -537,8 +597,41 @@ begin
         t0 := now;
         mode := m_mode;
         do_receive(mode);
+        if mode = 8 then
+          -- early SOF: 800 ns into the 3rd intermission bit (before the
+          -- engine's sample point at 1.4 us). The engine has a pending
+          -- request and must hard-sync and join on this grid.
+          t0 := t_next + 2 * C_BIT + 800 ns;
+          wait for t0 - now;
+          busw <= '0', 'Z' after C_BIT - 100 ns;
+          hs_ref <= t0;
+          hs_arm <= true;
+          do_receive(0);
+          hs_arm <= false;
+        end if;
       end if;
     end loop;
+  end process;
+
+  -- --------------------------------------------------------------------
+  -- hard-sync checker: after the early SOF, the engine's first recessive
+  -- edge must lie on the SOF grid (edge + n bits + sync latency < 250 ns).
+  -- Without hard sync the engine's bits are ~600 ns early.
+  -- --------------------------------------------------------------------
+  hs_p : process
+    variable dt : integer;
+  begin
+    wait until hs_arm;
+    if eng_tx /= '0' then
+      wait until eng_tx = '0';
+    end if;
+    wait until eng_tx = '1';
+    dt := (now - hs_ref) / 1 ns;
+    assert (dt mod 2000) < 250
+      report "FALLO: hard sync en intermision: bits del motor desalineados "
+             & integer'image(dt mod 2000) & " ns respecto al SOF"
+      severity failure;
+    hs_ok <= hs_ok + 1;
   end process;
 
   -- --------------------------------------------------------------------
@@ -813,11 +906,16 @@ begin
     -- error de ACK en pasivo: excepcion, TEC no incrementa
     wevent("T8 fallo pasivo 16");
     chk_tec(134, "T8 excepcion ACK pasivo");
+    -- ISO 11898-1: the passive ACK exception only holds if no dominant bit
+    -- is detected while sending the passive flag -> here TEC+8
+    m_mode <= 7;
+    wevent("T8 fallo pasivo 17 (dominante en el flag pasivo)");
+    chk_tec(142, "T8 excepcion ACK anulada por dominante");
     m_mode <= 0;
     wdone("T8 exito");
     wframe("T8 exito");
-    chk_tec(133, "T8 tras el primer exito");
-    for i in 1 to 6 loop
+    chk_tec(141, "T8 tras el primer exito");
+    for i in 1 to 14 loop
       e_send("000000000000000000" & "00100100011", '0', '0', x"1",
              x"5500000000000000");
       wdone("T8 exito " & integer'image(i));
@@ -841,6 +939,16 @@ begin
     assert g_est = "10"
       report "FALLO: T9 no se alcanzo bus-off" severity failure;
     m_mode <= 0;
+    -- bus-off drops the pending request: tx_busy low
+    wait for 1 ns;
+    assert g_busy = '0'
+      report "FALLO: T9 tx_busy activo en bus-off" severity failure;
+    -- a request while bus-off is rejected (not latched)
+    e_send("000000000000000000" & "00100100011", '0', '0', x"1",
+           x"5500000000000000");
+    wait for 1 ns;
+    assert g_busy = '0'
+      report "FALLO: T9 peticion aceptada en bus-off" severity failure;
     if g_est /= "00" then
       wait until g_est = "00" for 6 ms;
     end if;
@@ -850,12 +958,128 @@ begin
     wait for 1 ns;
     assert to_integer(unsigned(g_rec)) = 0
       report "FALLO: T9 REC no se reinicio" severity failure;
-    -- la peticion pendiente se conserva: el motor transmite tras recuperar
+    -- no automatic transmission after recovery
+    wait for 300 us;
+    assert n_done = exp_done and m_frames = exp_frames
+      report "FALLO: T9 transmision espontanea tras bus-off" severity failure;
+    -- firmware re-requests explicitly
+    e_send("000000000000000000" & "01010101010", '0', '0', x"1",
+           x"AA00000000000000");
     wdone("T9 trama tras recuperacion");
     wframe("T9 trama tras recuperacion");
     assert md_data = x"AA00000000000000"
       report "FALLO: T9 datos tras recuperacion incorrectos" severity failure;
     chk_tec(0, "T9 final");
+
+    -- ------------------------------------------------------------------
+    -- T10: CRC sequence ending in a run of 5 -> stuff bit before the CRC
+    -- delimiter (ISO 11898-1). Frames found by an independent search:
+    --   id 0x100 data 0x22 -> CRC 0x5EDF (ends 0 11111)
+    --   id 0x118 data 0x22 -> CRC 0x46E0 (ends 1 00000)
+    -- ------------------------------------------------------------------
+    report "T10: bit de stuff entre CRC y delimitador";
+    e_send("000000000000000000" & "00100000000", '0', '0', x"1",
+           x"2200000000000000");
+    wdone("T10a");
+    wframe("T10a");
+    assert md_id(10 downto 0) = "00100000000" and md_data = x"2200000000000000"
+      report "FALLO: T10a trama incorrecta" severity failure;
+    assert m_crcstuff = 1
+      report "FALLO: T10a no ejercito el stuff final del CRC" severity failure;
+    e_send("000000000000000000" & "00100011000", '0', '0', x"1",
+           x"2200000000000000");
+    wdone("T10b");
+    wframe("T10b");
+    assert m_crcstuff = 2
+      report "FALLO: T10b no ejercito el stuff final del CRC" severity failure;
+    -- model transmits the same frames, the engine receives
+    for f in 0 to 1 loop
+      if f = 0 then
+        mtx_id <= "000000000000000000" & "00100000000";
+      else
+        mtx_id <= "000000000000000000" & "00100011000";
+      end if;
+      mtx_ide <= '0'; mtx_rtr <= '0'; mtx_dlc <= x"1";
+      mtx_data <= x"2200000000000000";
+      mtx_join <= false;
+      wait until rising_edge(clk);
+      mtx_go <= '1';
+      exp_txd := exp_txd + 1;
+      if m_txdone /= exp_txd then
+        wait until m_txdone = exp_txd for 2 ms;
+      end if;
+      assert m_txdone = exp_txd
+        report "FALLO: T10 timeout en la transmision del modelo" severity failure;
+      mtx_go <= '0';
+      exp_rxv := exp_rxv + 1;
+      if n_rxv /= exp_rxv then
+        wait until n_rxv = exp_rxv for 1 ms;
+      end if;
+      assert n_rxv = exp_rxv
+        report "FALLO: T10 el motor no valido la trama con stuff final"
+        severity failure;
+      wait for 1 ns;
+      assert g_rdat = x"2200000000000000"
+        report "FALLO: T10 datos recibidos incorrectos" severity failure;
+      wait for 30 us;
+    end loop;
+    chk_tec(0, "T10");
+    wait for 1 ns;
+    assert to_integer(unsigned(g_rec)) = 0
+      report "FALLO: T10 REC alterado" severity failure;
+
+    -- ------------------------------------------------------------------
+    -- T11: hard sync on an early SOF in the 3rd intermission bit with a
+    -- pending request: the engine joins on the foreign SOF grid
+    -- ------------------------------------------------------------------
+    report "T11: hard sync en la intermision";
+    m_mode <= 8;
+    e_send("000000000000000000" & "01010101010", '0', '0', x"1",
+           x"1100000000000000");
+    wdone("T11 primera");
+    m_mode <= 0;
+    e_send("000000000000000000" & "00011110000", '0', '0', x"1",
+           x"3300000000000000");
+    wframe("T11 primera (modelo)");
+    wdone("T11 segunda");
+    wframe("T11 segunda");
+    assert md_id(10 downto 0) = "00011110000" and md_data = x"3300000000000000"
+      report "FALLO: T11 trama unida incorrecta" severity failure;
+    assert hs_ok = 1
+      report "FALLO: T11 el comprobador de alineacion no actuo" severity failure;
+    chk_tec(0, "T11");
+
+    -- ------------------------------------------------------------------
+    -- T12: stuff error during arbitration on a recessive stuff bit:
+    -- no TEC increment (ISO 11898-1 exception)
+    -- ------------------------------------------------------------------
+    report "T12: excepcion de stuff en arbitraje";
+    wait for 40 us;
+    exp_ev := m_events;  -- T9 (mode 5) counts events without wevent
+    m_mode <= 6;
+    e_send("000000000000000000" & "00001010101", '0', '0', x"1",
+           x"4400000000000000");
+    wevent("T12 inyeccion en el stuff");
+    m_mode <= 0;
+    chk_tec(0, "T12 tras el error de stuff en arbitraje");
+    wdone("T12");
+    wframe("T12");
+    chk_tec(0, "T12 tras el reintento");
+
+    -- ------------------------------------------------------------------
+    -- T13: bit error while sending the active error flag: TEC+8 for the
+    -- detected error plus TEC+8 for the flag bit error
+    -- ------------------------------------------------------------------
+    report "T13: error de bit durante el flag activo";
+    m_mode <= 9;
+    e_send("000000000000000000" & "01010101010", '0', '0', x"1",
+           x"AA00000000000000");
+    wevent("T13 inyeccion");
+    m_mode <= 0;
+    chk_tec(16, "T13 tras el error en el flag");
+    wdone("T13");
+    wframe("T13");
+    chk_tec(15, "T13 tras el reintento");
 
     report "CAPA 1a OK: motor CAN contra modelo receptor independiente";
     finish;

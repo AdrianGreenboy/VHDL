@@ -89,3 +89,22 @@ With a real link partner the four flags are found at run time (`eth21 autodetect
 * **RX flags right** → nearly every block is an idle or a fault ordered set.
 * **TX flags wrong** → the partner cannot lock on us and answers **Remote
   Fault** (`RX_RF` grows); right → it sends idles and `RX_RF` = 0.
+
+## Audit 2026-11 additions (supersede the tables above where they differ)
+
+| Offset | Name | Access | Reset | Description |
+|-------:|------|--------|-------|-------------|
+| `0x0C` | `CMD` | W | — | adds b6 `SEND_PAUSE` (one PAUSE frame with `PAUSE_SWQ` quanta). A CMD write without byte lane 0 in `WSTRB` does nothing |
+| `0x10` | `STATUS` | RO | 0 | adds b6 `PAUSED`, b7 `XOFF` |
+| `0x50` | `PAUSE_CTRL` | RW | `0xFFFF0000` | b0 `HONOR`, b1 `AUTO`, b2 `RX_HOLD` (RX FIFO consumer stalled), b31:16 XOFF quanta |
+| `0x54` | `PAUSE_WM` | RW | `0x01800080` | b15:0 low, b31:16 high watermark (RX FIFO of 1024 words) |
+| `0x58` | `PAUSE_SWQ` | RW | 0 | quanta of `CMD.SEND_PAUSE` |
+| `0xDC`–`0xF8` | counters 23..30 | RO | — | `TX_PAUSE`, `PAUSE_HONOURED`, `TX_KEEP_ERR`, `PAUSED_CYCLES` (TX domain); `RX_PAUSE`, `RX_CTRL`, `RX_FIFO_DROP`, `RX_FIFO_MAX` (RX domain) |
+
+* Counters saturate; `WSTRB` honoured; unmapped/unaligned offsets (and
+  `0xFC`) answer `SLVERR`.
+* A command that hits `CMD_TIMEOUT` is killed in both domains (not executed
+  if the domain's clock returns later). Two commands issued while a
+  domain's clock is stopped still cancel in that domain's toggle (that
+  domain then times out again, visibly) — MAC_25G uses a Gray generation
+  counter instead; see AUDIT_FIXES.md.

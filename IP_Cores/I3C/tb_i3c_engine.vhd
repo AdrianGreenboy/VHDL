@@ -18,6 +18,10 @@
 --    V7  Arbitraje simultaneo: el controller pierde 0x7E contra el IBI
 --    V8  Hot-join + ENTDAA de reasignacion
 --    V9  Barrido de divisores: (div_pp,div_od) = (2,5) y (1,4)
+--  Audit 2026-11: an SDA push-pull contention monitor (both ends driving
+--  opposite levels) is active for the whole run; any contention fails.
+--  The pre-audit RTL showed 8 such fights here (controller Sr / data drive
+--  right after a target ACK, and the T=1 seize at div_pp = 1).
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -86,6 +90,7 @@ architecture sim of tb_i3c_engine is
   signal perr_c, ibid_c, ibin_c, hjd_c, evda_c, tren_c : integer := 0;
   signal saw_arb : std_logic := '0';
   signal mon_rst : std_logic := '0';
+  signal n_fight : natural := 0;                    -- audit 2026-11
 
 begin
 
@@ -99,6 +104,17 @@ begin
   sda_b <= t_sda_o when t_sda_t = '0' else 'Z';
   scl_iw <= to_x01(scl_b);
   sda_iw <= to_x01(sda_b);
+
+  fight : process
+    variable t0 : time;
+  begin
+    wait until c_sda_t = '0' and t_sda_t = '0' and c_sda_o /= t_sda_o;
+    t0 := now;
+    wait until not (c_sda_t = '0' and t_sda_t = '0' and c_sda_o /= t_sda_o);
+    n_fight <= n_fight + 1;
+    report "SDA CONTENTION for " & time'image(now - t0) & " at " &
+           time'image(t0) severity error;
+  end process;
 
   u_ctrl : entity work.i3c_controller
     port map (
@@ -548,6 +564,9 @@ begin
     wait for 200 ns;
     trafico("V9b");
 
+    assert n_fight = 0
+      report "FALLO: " & integer'image(n_fight) & " SDA push-pull contention(s)"
+      severity failure;
     report "CAPA 1C COMPLETA: CONTROLLER Y TARGET RTL SE ENTIENDEN EN EL BUS";
     finish;
   end process estimulo;

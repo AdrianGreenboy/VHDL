@@ -1,4 +1,11 @@
 -- ============================================================================
+--  DEPRECATED (audit 2026-11): no longer referenced by the I3C core, which
+--  now uses its private i3c_byte_fifo.vhd (unique entity name, synchronous active-
+--  high reset, SRAM-mappable registered read). This file is kept only
+--  because files are not deleted without the owner's consent; do not add it
+--  to new projects (its entity name `byte_fifo` collides with other copies).
+-- ============================================================================
+-- ============================================================================
 --  byte_fifo.vhd — FALLBACK LOCAL del FIFO FWFT de bytes
 --
 --  El ORIGINAL vive en ~/spi_ip/byte_fifo.vhd y tiene PRIORIDAD en

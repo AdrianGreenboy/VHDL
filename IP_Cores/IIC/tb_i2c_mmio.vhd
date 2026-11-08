@@ -18,6 +18,11 @@
 --  M8:  pads liberados durante una transacción en LOOP_INT
 --  M9:  ganchos DMA: push por dma_stx, pop por dma_srx (espejo FWFT)
 --  M10: overflow STX por CPU: drop-newest + sticky, nivel intacto
+--  Audit 2026-11:
+--  M11: STAT W1C per bit, rdata gated by sel, WM clamp to DEPTH
+--  M12: NOBYTE|STOP accepted with EN=0 (no CMD_DROP)
+--  M13: TOUT register, clock-stretch timeout sticky + IRQ, BUS_CLEAR
+--       recovery of a slave stuck mid-read, bus usable afterwards
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -63,6 +68,7 @@ architecture sim of tb_i2c_mmio is
   constant A_IRQEN  : std_logic_vector(7 downto 0) := x"24";
   constant A_IRQST  : std_logic_vector(7 downto 0) := x"28";
   constant A_WM     : std_logic_vector(7 downto 0) := x"2C";
+  constant A_TOUT   : std_logic_vector(7 downto 0) := x"30";   -- audit 2026-11
 
   -- bits de CMD
   constant C_START : std_logic_vector(31 downto 0) := x"00000100";
@@ -143,7 +149,7 @@ begin
         wait for 200 ns;
       end loop;
       stat_out := t;
-      reg_wr(A_STAT, (others => '0'));   -- limpia stickies
+      reg_wr(A_STAT, (others => '1'));  -- W1C clear all (audit 2026-11)   -- limpia stickies
     end procedure;
 
   begin
@@ -256,7 +262,7 @@ begin
     end loop;
     assert d(23) = '1'
       report "M5: CMD_DROP no quedo pegajoso" severity failure;
-    reg_wr(A_STAT, (others => '0'));
+    reg_wr(A_STAT, (others => '1'));  -- W1C clear all (audit 2026-11)
     mcmd(C_STOP or x"00000033", s);      -- cerrar la transaccion abierta
     reg_rd(A_SRX, d);
     assert d(8) = '1' and d(7 downto 0) = x"33"
@@ -272,7 +278,7 @@ begin
     reg_rd(A_IRQST, d);
     assert d(0) = '1'
       report "M6: IRQ_STAT no refleja la causa MDONE" severity failure;
-    reg_wr(A_STAT, (others => '0'));
+    reg_wr(A_STAT, (others => '1'));  -- W1C clear all (audit 2026-11)
     wait for 100 ns;
     assert irq = '0'
       report "M6: irq no bajo tras limpiar stickies (es por nivel)"
@@ -336,7 +342,7 @@ begin
       exit when d(16) = '1';
       wait for 200 ns;
     end loop;
-    reg_wr(A_STAT, (others => '0'));
+    reg_wr(A_STAT, (others => '1'));  -- W1C clear all (audit 2026-11)
     mcmd(C_STOP or x"00000055", s);
     reg_rd(A_SRX, d);
     assert d(8) = '1' and d(7 downto 0) = x"55"
@@ -393,7 +399,105 @@ begin
     assert unsigned(d(24 downto 16)) = 16
       report "M10: el drop-newest altero el nivel del FIFO" severity failure;
 
-    report "== TODOS LOS TESTS PASARON (M1-M10) ==";
+    -- drain STX for the following tests
+    reg_wr(A_STAT, (others => '1'));
+
+    ------------------------------------------------------------------ M11
+    -- Audit 2026-11: STAT W1C per bit + rdata gated by sel + WM clamp
+    report "M11: STAT W1C per bit, rdata gated by sel, WM clamp";
+    reg_wr(A_CTRL, x"00000000");         -- EN=0
+    reg_wr(A_STX, x"000000AA");          -- STX already full -> STX_OVF
+    reg_wr(A_CMD, x"00000055");          -- EN=0, normal cmd -> CMD_DROP
+    reg_rd(A_STAT, d);
+    assert d(24) = '1' and d(23) = '1'
+      report "M11: precondition STX_OVF/CMD_DROP" severity failure;
+    reg_wr(A_STAT, x"00000000");
+    reg_rd(A_STAT, d);
+    assert d(24) = '1' and d(23) = '1'
+      report "M11: write of 0 cleared stickies (not W1C)" severity failure;
+    reg_wr(A_STAT, x"01000000");         -- clear STX_OVF only
+    reg_rd(A_STAT, d);
+    assert d(24) = '0' and d(23) = '1'
+      report "M11: W1C bit 24 cleared the wrong bits" severity failure;
+    reg_wr(A_STAT, x"00800000");
+    reg_rd(A_STAT, d);
+    assert d(23) = '0' report "M11: W1C bit 23 failed" severity failure;
+    reg_wr(A_SADDR, x"0000002A");
+    wait until rising_edge(clk);
+    addr <= A_SADDR; sel <= '0';         -- not selected: must read 0
+    wait until rising_edge(clk);
+    assert rdata = x"00000000"
+      report "M11: rdata not gated by sel" severity failure;
+    reg_wr(A_WM, x"01FF01FF");           -- > DEPTH (16)
+    reg_rd(A_WM, d);
+    assert unsigned(d(8 downto 0)) = 16 and unsigned(d(24 downto 16)) = 16
+      report "M11: WM not clamped to DEPTH" severity failure;
+    reg_wr(A_WM, x"00000001");
+
+    ------------------------------------------------------------------ M12
+    report "M12: NOBYTE|STOP accepted with EN=0 (no CMD_DROP)";
+    reg_wr(A_CTRL, x"00000000");
+    reg_wr(A_CMD, C_NOB or C_STOP);
+    for i in 0 to 20 loop wait until rising_edge(clk); end loop;
+    reg_rd(A_STAT, d);
+    assert d(16) = '1' and d(23) = '0'
+      report "M12: STOP with EN=0 was dropped" severity failure;
+    reg_wr(A_STAT, (others => '1'));
+
+    ------------------------------------------------------------------ M13
+    -- slave (LOOP_INT, STRETCH_EN) stretches forever on a read with an empty
+    -- STX: the master stretch timeout must fire, then BUS_CLEAR recovers.
+    report "M13: TOUT register, stretch timeout sticky, bus clear recovery";
+    -- empty STX: read it out through a slave read is not possible yet, so
+    -- reset the core (sync reset also exercises the FIFO reset)
+    rst <= '1'; wait until rising_edge(clk); wait until rising_edge(clk);
+    rst <= '0'; wait until rising_edge(clk);
+    reg_rd(A_STAT, d);
+    assert d(25) = '0' report "M13: TIMEOUT set after reset" severity failure;
+    reg_wr(A_SCLDIV, x"00000004");
+    reg_wr(A_TOUT, x"00000040");         -- 64 quarters
+    reg_rd(A_TOUT, d);
+    assert d = x"00000040" report "M13: TOUT readback" severity failure;
+    reg_wr(A_SADDR, x"0000002A");
+    reg_wr(A_IRQEN, x"00000100");        -- IRQ on TIMEOUT
+    reg_wr(A_CTRL, x"00000087");         -- EN|SEN|STRETCH|LOOP
+    mcmd(C_START or x"00000055", s);     -- 0x2A/R, slave ACKs
+    assert s(18) = '0' report "M13: address not ACKed" severity failure;
+    reg_wr(A_CMD, C_READ or C_ACKN or C_STOP);   -- slave has no data: stretch
+    for i in 0 to 2000 loop
+      reg_rd(A_STAT, d);
+      exit when d(25) = '1';
+      assert i < 2000 report "M13: stretch timeout never fired" severity failure;
+    end loop;
+    assert d(0) = '0' and d(16) = '0'
+      report "M13: master busy or MDONE after timeout" severity failure;
+    for i in 0 to 3 loop wait until rising_edge(clk); end loop;
+    assert irq = '1' report "M13: TIMEOUT irq cause" severity failure;
+    reg_wr(A_STX, x"0000003C");          -- slave can go on now
+    reg_wr(A_CMD, x"00002000");          -- BUS_CLEAR
+    loop
+      reg_rd(A_STAT, d);
+      exit when d(16) = '1';
+      wait for 200 ns;
+    end loop;
+    for i in 0 to 400 loop wait until rising_edge(clk); end loop;
+    reg_rd(A_STAT, d);
+    assert d(9) = '1' and d(10) = '1' and d(1) = '0' and d(3) = '0'
+      report "M13: bus not recovered after BUS_CLEAR: 0x" & to_hstring(d)
+      severity failure;
+    reg_wr(A_STAT, x"02000000");         -- clear TIMEOUT only
+    reg_rd(A_STAT, d);
+    assert d(25) = '0' and d(16) = '1'
+      report "M13: W1C of TIMEOUT wrong" severity failure;
+    reg_wr(A_STAT, (others => '1'));
+    -- the bus works again: normal write to the slave
+    reg_wr(A_SCLDIV, x"00000004");
+    mcmd(C_START or x"00000054", s);
+    assert s(18) = '0' report "M13: slave dead after recovery" severity failure;
+    mcmd(C_STOP or x"00000077", s);
+    assert s(18) = '0' report "M13: data NACK after recovery" severity failure;
+
+    report "== TODOS LOS TESTS PASARON (M1-M13) ==";
     finish;
   end process;
 

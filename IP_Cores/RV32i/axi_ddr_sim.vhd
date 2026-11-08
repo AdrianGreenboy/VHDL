@@ -18,7 +18,12 @@ entity axi_ddr_sim is
     ADDR_W    : natural := 40;
     DEPTH     : natural := 1024;
     RD_LAT    : natural := 4;
-    INIT_FILE : string  := ""
+    INIT_FILE : string  := "";
+    -- error injection (audit-2026-11 tests): accesses to this word index
+    -- answer SLVERR ("10") on R / B and the write is dropped. -1 = never.
+    ERR_WORD  : integer := -1;
+    -- true: WREADY is only asserted every other cycle (back-pressure test)
+    W_STALL   : boolean := false
   );
   port (
     clk     : in  std_logic;
@@ -83,6 +88,8 @@ architecture sim of axi_ddr_sim is
   signal waddr_idx, raddr_idx : natural range 0 to DEPTH-1 := 0;
   signal rbeats : unsigned(7 downto 0) := (others => '0');   -- beats restantes-1
   signal latcnt : natural range 0 to 15 := 0;
+  signal werr   : std_logic := '0';
+  signal wtog   : std_logic := '0';
 
   function idx(a : std_logic_vector) return natural is
     constant HI : natural := 1 + integer(ceil(log2(real(DEPTH))));
@@ -93,11 +100,11 @@ begin
 
   dbg_data <= mem(dbg_addr) when dbg_addr < DEPTH else (others => '0');
 
-  s_axi_bresp <= "00";
-  s_axi_rresp <= "00";
+  s_axi_bresp <= "10" when werr = '1' else "00";
+  s_axi_rresp <= "10" when (ERR_WORD >= 0 and raddr_idx = ERR_WORD) else "00";
 
   s_axi_awready <= '1' when wstate = W_IDLE else '0';
-  s_axi_wready  <= '1' when wstate = W_DATA else '0';
+  s_axi_wready  <= '1' when (wstate = W_DATA and (not W_STALL or wtog = '1')) else '0';
   s_axi_bvalid  <= '1' when wstate = W_RESP else '0';
   s_axi_arready <= '1' when rstate = R_IDLE else '0';
   s_axi_rvalid  <= '1' when rstate = R_DATA else '0';
@@ -119,12 +126,15 @@ begin
                 report "BURST DE ESCRITURA CRUZA LIMITE DE 4KB (ilegal en AXI4)"
                 severity error;
               waddr_idx <= idx(s_axi_awaddr);
+              werr      <= '0';
               wstate    <= W_DATA;
             end if;
           when W_DATA =>
-            if s_axi_wvalid = '1' then
+            wtog <= not wtog;
+            if s_axi_wvalid = '1' and (not W_STALL or wtog = '1') then
+              if ERR_WORD >= 0 and waddr_idx = ERR_WORD then werr <= '1'; end if;
               for b in 0 to 3 loop
-                if s_axi_wstrb(b) = '1' then
+                if s_axi_wstrb(b) = '1' and not (ERR_WORD >= 0 and waddr_idx = ERR_WORD) then
                   mem(waddr_idx)(b*8+7 downto b*8) <= s_axi_wdata(b*8+7 downto b*8);
                 end if;
               end loop;

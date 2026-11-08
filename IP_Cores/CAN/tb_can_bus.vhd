@@ -25,6 +25,7 @@ architecture sim of tb_can_bus is
 
   signal clk  : std_logic := '0';
   signal rstn : std_logic := '0';
+  signal rst  : std_logic;
 
   signal busw : std_logic := 'H';
   signal a_tx, b_tx, rx_i : std_logic;
@@ -57,6 +58,8 @@ architecture sim of tb_can_bus is
 
 begin
 
+  rst <= not rstn;
+
   clk <= not clk after C_CLK / 2;
 
   busw <= 'H';
@@ -66,7 +69,7 @@ begin
 
   nodo_a : entity work.can_engine
     port map (
-      clk => clk, rstn => rstn,
+      clk => clk, rst => rst,
       brp => x"09", tseg1 => "1100", tseg2 => "101", sjw => "01",
       tx_req => a_req, tx_abort => '0',
       tx_id => a_id, tx_ide => a_ide, tx_rtr => a_rtr,
@@ -80,7 +83,7 @@ begin
 
   nodo_b : entity work.can_engine
     port map (
-      clk => clk, rstn => rstn,
+      clk => clk, rst => rst,
       brp => x"09", tseg1 => "1100", tseg2 => "101", sjw => "01",
       tx_req => b_req, tx_abort => '0',
       tx_id => b_id, tx_ide => b_ide, tx_rtr => b_rtr,

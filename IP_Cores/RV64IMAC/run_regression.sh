@@ -51,10 +51,10 @@ if [ -n "$SPIKE" ] && [ -x "$SPIKE" ]; then
   echo "   $((n-bad))/$n iguales a Spike"; check $bad
 fi
 
-step "capa 1: decompresor RVC (exhaustivo) y mul/div"
+step "capa 1: decompresor RVC (exhaustivo), mul/div y divisor de la UART"
 python3 tb/gen_rvc_vectors.py sim/rvc_vectors.txt && python3 tb/gen_muldiv_vectors.py sim/muldiv_vectors.txt > /dev/null
-(cd sim && ./tb_rvc && ./tb_muldiv) 2>&1 | grep -o 'tb_[a-z]* [A-Z]* [a-z]*=[0-9]*' | sed 's/^/   /'
-(cd sim && ./tb_rvc > /dev/null 2>&1 && ./tb_muldiv > /dev/null 2>&1); check $?
+(cd sim && ./tb_rvc && ./tb_muldiv && ./tb_uart) 2>&1 | grep -o 'tb_[a-z]* [A-Z]* [a-z]*=[0-9]*' | sed 's/^/   /'
+(cd sim && ./tb_rvc > /dev/null 2>&1 && ./tb_muldiv > /dev/null 2>&1 && ./tb_uart 2>&1 | grep -q 'tb_uart PASS'); check $?
 
 step "capa 2: lockstep RTL vs ISS, memoria ideal"
 python3 compare.py $P sw/csr_sweep sw/irq_m sw/irq_race sw/mmu_test sw/cbo_test sw/amo_lanes > /tmp/r_l2.txt; r=$?

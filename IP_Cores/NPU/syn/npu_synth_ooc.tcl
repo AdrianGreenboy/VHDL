@@ -37,6 +37,7 @@ puts "=========================================================="
 set SRCS [list \
   "$NPU_DIR/rtl/npu_pkg.vhd" \
   "$NPU_DIR/rtl/npu_array.vhd" \
+  "$NPU_DIR/rtl/npu_sram.vhd" \
   "$NPU_DIR/rtl/npu_seq_conv1.vhd" \
   "$NPU_DIR/rtl/npu_seq_full.vhd" \
   "$NPU_DIR/rtl/npu_top.vhd" ]

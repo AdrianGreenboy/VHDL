@@ -49,6 +49,36 @@
 --  done: exactamente un pulso por comando aceptado (incluida la perdida de
 --  arbitraje). La captura de IBI desde IDLE no es un comando: solo emite
 --  ibi_avalid. rvalid pulsa por cada byte leido (lecturas y ENTDAA).
+--
+--  Audit 2026-11 changes (English):
+--    * Spike filter: SDA is 2FF-synchronized and then majority-filtered over
+--      3 samples (same filter as the I2C master). The FILTERED value is
+--      used for the IBI START detection in IDLE and for every open-drain
+--      sample (arbitrated header, ACK/NACK, ENTDAA payload, IBI header).
+--      Push-pull samples (read data, T bit) keep the unfiltered 2FF value
+--      because at div_pp = 1..2 the filter latency would eat the margin.
+--      The dead scl_f1/scl_f2 synchronizer (I3C has no stretching) is gone.
+--    * Turnaround after a target-driven bit: when a command is accepted in
+--      S_XOPEN right after a bit driven by the TARGET (ACK of a header or
+--      DA, T bit of a read, last ENTDAA payload bit), the controller first
+--      spends one open-drain quarter (S_TURN, SDA released, SCL low) before
+--      it may drive SDA push-pull. A target that releases SDA through a
+--      2FF-synchronized SCL edge detector (as i3c_target does, ~3 target
+--      clocks) can therefore never fight a push-pull high from the
+--      controller (Sr setup, first data bit). Requirement:
+--      (div_od + 1) * Tclk_ctrl > target release latency.
+--    * cmd_acc pulses in the cycle after cmd_valid was ACCEPTED. busy alone
+--      is not an acceptance indication: an IBI START detected in IDLE raises
+--      busy in the very cycle a command is refused (the register file used
+--      to take that for an acceptance and the command evaporated).
+--    * cmd_rej pulses (together with done) when a command is not valid in
+--      the current state (non-IBI command while an IBI is pending), so the
+--      register file can flag it instead of reporting a silent success.
+--    * Minimum div_pp: 1 for a target on the SAME clock (internal loop),
+--      2 for a target on an independent clock (T bit is sampled at the end
+--      of q2: 3*(div_pp+1) - 3 sync cycles must exceed the target's output
+--      latency of ~3 of its clocks). Verified by tb_i3c_async.
+--  Scope: SDR only. HDR modes (ENTHDRx) are NOT implemented.
 -- ============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -85,6 +115,8 @@ entity i3c_controller is
     ibi_addr   : out std_logic_vector(7 downto 0);   -- header capturado
     ibi_avalid : out std_logic;                      -- pulso
     xact_open  : out std_logic;
+    cmd_rej    : out std_logic;                      -- pulse: cmd not valid (audit)
+    cmd_acc    : out std_logic;                      -- pulse: cmd accepted (audit)
 
     scl_o      : out std_logic;
     scl_t      : out std_logic;                      -- '1' libera
@@ -102,7 +134,7 @@ architecture rtl of i3c_controller is
                 S_BITS, S_ACKB, S_ACKDRV, S_TBWR, S_TBRD,
                 S_RSEIZE, S_RSEIZE2, S_HOLD0,
                 S_STP_A, S_STP_B, S_STP_C,
-                S_XOPEN, S_IBIWAIT, S_IBI_S);
+                S_XOPEN, S_IBIWAIT, S_IBI_S, S_TURN);
   type md_t is (M_HDR_OD, M_HDR_PP, M_WR, M_RD, M_DAA64, M_DAADR, M_IBIC);
 
   signal st      : st_t := S_IDLE;
@@ -140,7 +172,16 @@ architecture rtl of i3c_controller is
   signal sdat_r  : std_logic := '1';
 
   signal sda_f1, sda_f2 : std_logic := '1';
-  signal scl_f1, scl_f2 : std_logic := '1';
+  -- 3-sample majority filter on the synchronized SDA (audit 2026-11)
+  signal sda_h  : std_logic_vector(2 downto 0) := (others => '1');
+  signal sda_m  : std_logic := '1';
+
+  -- turnaround after a target-driven bit (audit 2026-11)
+  signal tgt_drv : std_logic := '0';
+  signal rej_p   : std_logic := '0';
+  signal acc_p   : std_logic := '0';
+  signal s_start, s_read, s_nobyte, s_daa, s_daadr : std_logic := '0';
+  signal s_ibiack, s_ibinak : std_logic := '0';
 
   function pxor(v : std_logic_vector) return std_logic is
     variable x : std_logic := '0';
@@ -164,6 +205,8 @@ begin
   ibi_addr   <= ibiad_r;
   ibi_avalid <= ibiav_p;
   xact_open  <= xopen_r;
+  cmd_rej    <= rej_p;
+  cmd_acc    <= acc_p;
   scl_o      <= sclo_r;
   scl_t      <= sclt_r;
   sda_o      <= sdao_r;
@@ -173,19 +216,130 @@ begin
     variable div_sel : unsigned(15 downto 0);
     variable b       : std_logic;
     variable timed   : boolean;
+
+    -- Command dispatch (factored out by the audit so that it can run either
+    -- at acceptance or after the S_TURN turnaround; logic unchanged).
+    procedure dispatch(c_start, c_stop, c_rlast, c_read, c_nobyte : std_logic;
+                       c_daa, c_daadr, c_ibiack, c_ibinak : std_logic;
+                       c_wdata : std_logic_vector(7 downto 0);
+                       from_idle, from_ibiwait : boolean) is
+    begin
+      busy_r  <= '1';
+      p_stop  <= c_stop;
+      p_rlast <= c_rlast;
+      p_wdata <= c_wdata;
+      lost_r  <= '0';
+      daahdr  <= '0';
+      nackib  <= '0';
+      q       <= (others => '0');
+      qcnt    <= (others => '0');
+
+      if from_ibiwait then
+        if c_ibiack = '1' then
+          st     <= S_ACKDRV;
+          od_cur <= '1';
+        elsif c_ibinak = '1' then
+          st     <= S_ACKB;
+          od_cur <= '1';
+          nackib <= '1';
+        else
+          -- comando no valido en IBIWAIT: no-op con done (+ cmd_rej)
+          done_p <= '1';
+          rej_p  <= '1';
+          busy_r <= '0';
+        end if;
+
+      elsif c_daa = '1' then
+        daahdr <= '1';
+        txreg  <= x"FD";                  -- 0x7E<<1 | R
+        md     <= M_HDR_PP;
+        st     <= S_SR_A;
+        od_cur <= '1';
+        sdat_r <= '0';
+        sdao_r <= '1';                    -- SDA alto para preparar Sr
+
+      elsif c_daadr = '1' then
+        md     <= M_DAADR;
+        txreg  <= c_wdata(7 downto 1) &
+                  (not pxor(c_wdata(7 downto 1)));
+        st     <= S_BITS;
+        od_cur <= '0';
+        bit_i  <= to_unsigned(7, 6);
+        sclo_r <= '0';
+
+      elsif c_nobyte = '1' then
+        if c_stop = '1' then
+          st     <= S_STP_A;
+          od_cur <= '1';
+          sdat_r <= '0';
+          sdao_r <= '0';
+          sclo_r <= '0';
+        else
+          done_p <= '1';
+          busy_r <= '0';
+          if not from_idle then
+            st <= S_XOPEN;                -- (after S_TURN) back to parked
+          end if;
+        end if;
+
+      elsif c_read = '1' then
+        md     <= M_RD;
+        st     <= S_BITS;
+        od_cur <= '0';
+        bit_i  <= to_unsigned(7, 6);
+        sdat_r <= '1';
+        sclo_r <= '0';
+
+      else
+        -- byte de escritura (header con cmd_start, dato sin el)
+        txreg <= c_wdata;
+        if c_start = '1' then
+          if from_idle then
+            md      <= M_HDR_OD;
+            od_cur  <= '1';
+            st      <= S_STA_A;
+            sdat_r  <= '0';
+            sdao_r  <= '0';               -- START: SDA bajo con SCL alto
+            xopen_r <= '1';
+          elsif srskip = '1' then
+            srskip <= '0';
+            md     <= M_HDR_PP;
+            od_cur <= '0';
+            st     <= S_BITS;
+            bit_i  <= to_unsigned(7, 6);
+            sclo_r <= '0';
+          else
+            md     <= M_HDR_PP;
+            st     <= S_SR_A;
+            od_cur <= '1';
+            sdat_r <= '0';
+            sdao_r <= '1';                -- SDA alto para preparar Sr
+          end if;
+        else
+          md     <= M_WR;
+          od_cur <= '0';
+          st     <= S_BITS;
+          bit_i  <= to_unsigned(7, 6);
+          sclo_r <= '0';
+        end if;
+      end if;
+    end procedure;
   begin
     if rising_edge(clk) then
-      -- sincronizadores 2FF
+      -- sincronizadores 2FF + filtro de mayoria de 3 muestras (audit)
       sda_f1 <= sda_i;
       sda_f2 <= sda_f1;
-      scl_f1 <= scl_i;
-      scl_f2 <= scl_f1;
+      sda_h  <= sda_h(1 downto 0) & sda_f2;
+      sda_m  <= (sda_h(2) and sda_h(1)) or (sda_h(2) and sda_h(0)) or
+                (sda_h(1) and sda_h(0));
 
       -- pulsos por defecto a cero
       done_p  <= '0';
       rval_p  <= '0';
       ibiav_p <= '0';
       arb_p   <= '0';
+      rej_p   <= '0';
+      acc_p   <= '0';
 
       if rst = '1' or en = '0' then
         st      <= S_IDLE;
@@ -197,6 +351,7 @@ begin
         lost_r  <= '0';
         daahdr  <= '0';
         nackib  <= '0';
+        tgt_drv <= '0';
         q       <= (others => '0');
         qcnt    <= (others => '0');
         sclo_r  <= '1';
@@ -212,7 +367,7 @@ begin
         if st = S_IDLE then
           sclt_r <= '0';
           sclo_r <= '1';
-          if sda_f2 = '1' then
+          if sda_m = '1' then             -- filtered SDA (spike-immune)
             armed <= '1';
           elsif armed = '1' then
             -- IBI entrante
@@ -232,101 +387,32 @@ begin
         -- Aceptacion de comando
         -- --------------------------------------------------------------
         if cmd_valid = '1' and busy_r = '0' and
-           ((st = S_IDLE and sda_f2 = '1') or st = S_XOPEN or st = S_IBIWAIT) then
-          busy_r  <= '1';
-          p_stop  <= cmd_stop;
-          p_rlast <= cmd_rlast;
-          p_wdata <= cmd_wdata;
-          lost_r  <= '0';
-          daahdr  <= '0';
-          nackib  <= '0';
-          q       <= (others => '0');
-          qcnt    <= (others => '0');
-
-          if st = S_IBIWAIT then
-            if cmd_ibiack = '1' then
-              st     <= S_ACKDRV;
-              od_cur <= '1';
-            elsif cmd_ibinak = '1' then
-              st     <= S_ACKB;
-              od_cur <= '1';
-              nackib <= '1';
-            else
-              -- comando no valido en IBIWAIT: no-op con done
-              done_p <= '1';
-              busy_r <= '0';
-            end if;
-
-          elsif cmd_daa = '1' then
-            daahdr <= '1';
-            txreg  <= x"FD";              -- 0x7E<<1 | R
-            md     <= M_HDR_PP;
-            st     <= S_SR_A;
-            od_cur <= '1';
-            sdat_r <= '0';
-            sdao_r <= '1';                -- SDA alto para preparar Sr
-
-          elsif cmd_daadr = '1' then
-            md     <= M_DAADR;
-            txreg  <= cmd_wdata(7 downto 1) &
-                      (not pxor(cmd_wdata(7 downto 1)));
-            st     <= S_BITS;
-            od_cur <= '0';
-            bit_i  <= to_unsigned(7, 6);
-            sclo_r <= '0';
-
-          elsif cmd_nobyte = '1' then
-            if cmd_stop = '1' then
-              st     <= S_STP_A;
-              od_cur <= '1';
-              sdat_r <= '0';
-              sdao_r <= '0';
-              sclo_r <= '0';
-            else
-              done_p <= '1';
-              busy_r <= '0';
-            end if;
-
-          elsif cmd_read = '1' then
-            md     <= M_RD;
-            st     <= S_BITS;
-            od_cur <= '0';
-            bit_i  <= to_unsigned(7, 6);
-            sdat_r <= '1';
-            sclo_r <= '0';
-
+           ((st = S_IDLE and sda_m = '1') or st = S_XOPEN or st = S_IBIWAIT) then
+          acc_p <= '1';
+          if st = S_XOPEN and tgt_drv = '1' then
+            -- the last bit was driven by the target: turnaround first
+            busy_r   <= '1';
+            p_stop   <= cmd_stop;
+            p_rlast  <= cmd_rlast;
+            p_wdata  <= cmd_wdata;
+            s_start  <= cmd_start;
+            s_read   <= cmd_read;
+            s_nobyte <= cmd_nobyte;
+            s_daa    <= cmd_daa;
+            s_daadr  <= cmd_daadr;
+            s_ibiack <= cmd_ibiack;
+            s_ibinak <= cmd_ibinak;
+            tgt_drv  <= '0';
+            sdat_r   <= '1';              -- SDA released, SCL stays low
+            od_cur   <= '1';
+            q        <= (others => '0');
+            qcnt     <= (others => '0');
+            st       <= S_TURN;
           else
-            -- byte de escritura (header con cmd_start, dato sin el)
-            txreg <= cmd_wdata;
-            if cmd_start = '1' then
-              if st = S_IDLE then
-                md      <= M_HDR_OD;
-                od_cur  <= '1';
-                st      <= S_STA_A;
-                sdat_r  <= '0';
-                sdao_r  <= '0';           -- START: SDA bajo con SCL alto
-                xopen_r <= '1';
-              elsif srskip = '1' then
-                srskip <= '0';
-                md     <= M_HDR_PP;
-                od_cur <= '0';
-                st     <= S_BITS;
-                bit_i  <= to_unsigned(7, 6);
-                sclo_r <= '0';
-              else
-                md     <= M_HDR_PP;
-                st     <= S_SR_A;
-                od_cur <= '1';
-                sdat_r <= '0';
-                sdao_r <= '1';            -- SDA alto para preparar Sr
-              end if;
-            else
-              md     <= M_WR;
-              od_cur <= '0';
-              st     <= S_BITS;
-              bit_i  <= to_unsigned(7, 6);
-              sclo_r <= '0';
-            end if;
+            tgt_drv <= '0';
+            dispatch(cmd_start, cmd_stop, cmd_rlast, cmd_read, cmd_nobyte,
+                     cmd_daa, cmd_daadr, cmd_ibiack, cmd_ibinak, cmd_wdata,
+                     st = S_IDLE, st = S_IBIWAIT);
           end if;
         end if;
 
@@ -339,7 +425,7 @@ begin
                  (st = S_TBWR) or (st = S_TBRD) or
                  (st = S_RSEIZE) or (st = S_RSEIZE2) or (st = S_HOLD0) or
                  (st = S_STP_A) or (st = S_STP_B) or (st = S_STP_C) or
-                 (st = S_IBI_S);
+                 (st = S_IBI_S) or (st = S_TURN);
 
         if od_cur = '1' then
           div_sel := unsigned(div_od);
@@ -427,7 +513,11 @@ begin
                     q <= "11";
 
                   when others =>                    -- "11": muestreo y avance
-                    b := sda_f2;
+                    if od_cur = '1' then
+                      b := sda_m;                   -- open-drain: filtered
+                    else
+                      b := sda_f2;                  -- push-pull: low latency
+                    end if;
                     sclo_r <= '0';
                     shreg  <= shreg(6 downto 0) & b;
                     if md = M_HDR_OD and lost_r = '0' and
@@ -451,9 +541,10 @@ begin
                           rdata_r <= shreg(6 downto 0) & b;
                           st      <= S_TBRD;
                         when M_DAA64 =>
-                          done_p <= '1';
-                          busy_r <= '0';
-                          st     <= S_XOPEN;
+                          done_p  <= '1';
+                          busy_r  <= '0';
+                          tgt_drv <= '1';           -- last payload bit: target
+                          st      <= S_XOPEN;
                         when M_IBIC =>
                           ibiad_r <= shreg(6 downto 0) & b;
                           ibiav_p <= '1';
@@ -496,7 +587,7 @@ begin
                   when "10" =>
                     q <= "11";
                   when others =>
-                    b := sda_f2;
+                    b := sda_m;                     -- open-drain ACK: filtered
                     ack_r  <= b;
                     sclo_r <= '0';
                     q      <= "00";
@@ -507,10 +598,11 @@ begin
                         st     <= S_BITS;
                         od_cur <= '1';
                       else
-                        daahdr <= '0';
-                        done_p <= '1';
-                        busy_r <= '0';
-                        st     <= S_XOPEN;
+                        daahdr  <= '0';
+                        done_p  <= '1';
+                        busy_r  <= '0';
+                        tgt_drv <= '1';
+                        st      <= S_XOPEN;
                       end if;
                     elsif nackib = '1' then
                       nackib  <= '0';
@@ -532,9 +624,10 @@ begin
                         sdat_r <= '0';
                         sdao_r <= '0';
                       else
-                        done_p <= '1';
-                        busy_r <= '0';
-                        st     <= S_XOPEN;
+                        done_p  <= '1';
+                        busy_r  <= '0';
+                        tgt_drv <= '1';             -- ACK driven by the target
+                        st      <= S_XOPEN;
                       end if;
                     end if;
                 end case;
@@ -614,10 +707,11 @@ begin
                       st     <= S_RSEIZE;           -- SCL sigue alto, SDA bajo (Sr)
                       od_cur <= '1';
                     else
-                      sclo_r <= '0';
-                      done_p <= '1';
-                      busy_r <= '0';
-                      st     <= S_XOPEN;
+                      sclo_r  <= '0';
+                      done_p  <= '1';
+                      busy_r  <= '0';
+                      tgt_drv <= '1';               -- target drives next bit
+                      st      <= S_XOPEN;
                     end if;
                 end case;
 
@@ -688,6 +782,11 @@ begin
                 else
                   q <= q + 1;
                 end if;
+
+              when S_TURN =>                        -- 1 OD quarter, SDA free
+                dispatch(s_start, p_stop, p_rlast, s_read, s_nobyte,
+                         s_daa, s_daadr, s_ibiack, s_ibinak, p_wdata,
+                         false, false);
 
               when others =>
                 null;

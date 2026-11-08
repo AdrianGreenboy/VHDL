@@ -62,8 +62,10 @@ IP_Cores/<CORE>/
 ├── bringup/        Linux-side tools (aarch64, static) + expected signatures
 ├── vivado*/        Vivado project / rebuild TCL for the silicon flow
 ├── architecture.svg  block diagram
-└── README.md       full documentation: registers, usage, verification,
-                    silicon flow, problems faced, roadmap
+├── README.md       full documentation: registers, usage, verification,
+│                   silicon flow, problems faced, roadmap
+└── AUDIT_FIXES.md  audit-2026-11: every finding, the fix, the test that
+                    fails on the old RTL, and what is still open
 ```
 
 ## The cores
@@ -71,11 +73,17 @@ IP_Cores/<CORE>/
 > Each core has its own README with the full story — register maps, software
 > examples, the complete build flow from zero, and the honest log of problems.
 > Start there.
+>
+> **About the Status column:** it records the silicon result of the **v1.x**
+> RTL. Every core was then reworked in the **v2.0 audit (Nov 2026)**, see
+> [Version history](#v20--audit-2026-11-november-2026). The v2.0 RTL is
+> verified in GHDL. Board re-validation is still pending, and each core's
+> `AUDIT_FIXES.md` lists exactly what to re-check.
 
 | Core | What it is | Status |
 |---|---|---|
 | **[RV32i](IP_Cores/RV32i/)** | A complete **RV32IM SoC**: 5-stage pipelined RISC-V CPU (hardware multiply/divide, CSRs, CLINT), local RAM, burst **DMA engine** with AXI4 master to DDR, MMIO bus for peripherals, plus its own Python assembler (`asm.py`) and ISS used as the golden oracle by every other core. This is the heart that drives all the bring-ups. | **SILICON PASS** — GEMV from LPDDR4 up to 64×64, 100 MHz, WNS +3.2 ns |
-| **[RV32IMA](IP_Cores/RV32IMA/)** | A **Linux-capable RV32IMA** soft core: the RV32i heart extended with the **atomic (A) extension** (`rv32_amo_unit` LR/SC/AMO sequencer), machine **and** user privilege levels, and the traps, CSRs and timer plumbing a kernel needs. It **boots mainline Linux 6.1.14 (nommu)** to an interactive shell on the Versal: the PS writes the kernel image into a reserved DDR region, releases the core, and the core runs free through its own NoC port, mounts a root filesystem and reaches `Run /init as init process`. The whole chain — RTL, synthesis, silicon — is closed with bit-identical signatures, including a full **46 M-instruction boot** in lockstep with the Python ISS. The step from bare-metal to a real operating system. | **SILICON PASS** — boots Linux 6.1.14 to a shell, ~5.2 M instr/s, WNS +1.67 ns / WHS +0.040 ns |
+| **[RV64IMAC](IP_Cores/RV64IMAC/)** | **Linux-capable 64-bit RISC-V SoC**: RV64IMAC core with M/S/U privilege levels, **Sv39 MMU**, I$/D$, AXI4 master, CLINT/PLIC, and native one-cycle MMIO slots for the rest of the family. It boots **OpenSBI + MMU Linux**, checked instruction by instruction against an independent Python ISS (itself checked against Spike). The production CPU of the family, aimed at an ASIC on IHP SG13G2. | **SILICON PASS** — OpenSBI 1.6 + Linux 6.6 to `/init` on TE0950 @ 50 MHz, WNS +2.28 ns, 16.5 k LUT |
 | **[SPW](IP_Cores/SPW/)** | **SpaceWire** link controller (ECSS-E-ST-50-12C): Data-Strobe codec, full ECSS link FSM, credit-based flow control, Time-Codes, 9-bit N-Char FIFOs, internal loopback self-test. The spacecraft onboard network, memory-mapped for an RV32. | **SILICON PASS** — 10/20/25/50 Mbit/s, WNS +2.740 ns |
 | **[PTP](IP_Cores/PTP/)** | **PTP / IEEE 802.1AS** (gPTP) time-sync endpoint: 80-bit PTP clock with PI servo, hardware SFD timestamping, peer-delay measurement in hardware, master/slave Sync loop, and its **own MII Ethernet MAC** with 1-step timestamp override. The time plane of TSN. | **SILICON PASS** — mpd 40 ns, offset 0, WNS +1.171 ns |
 | **[ADCS](IP_Cores/ADCS/)** | **ADCS MPC accelerator**: a projected-gradient QP solver for spacecraft attitude control — dense `70×70` float32 GEMV + gradient + clamp, iterated in hardware, on an **8-lane fused multiply-add datapath** bit-exact to the AMD FPO. Two AXI masters to DDR, an on-chip sequencer (`LOAD_H → solve → STORE_U`), governed by the RV32. The compute plane of an ADCS. | **SILICON PASS** — signature `0x0C4CCCD2` bit-identical sim↔silicon, WNS +2.844 ns |
@@ -100,6 +108,67 @@ IP_Cores/<CORE>/
 | **[ECC_Scrubber](IP_Cores/ECC_Scrubber/)** | **ECC memory scrubber** (SECDED 39,32): a background agent that corrects single-event upsets in DDR before they accumulate into uncorrectable double-bit errors. A **Hamming (39,32)** code — 32 data + 6 parity + 1 overall — protects each 64-bit DDR word (correct 1 / detect 2-bit). An RV32 runs the scrub loop: **DMA a tile DDR->local, decode every word through an MMIO SECDED codec accelerator, correct correctable errors and count CE/DED, DMA the tile back**. The PS-side selftest runs a **protected vs unprotected** campaign over a real 16 MB reserved DDR region and proves the contrast: the scrubbed region and the untouched region hash to different signatures, both predicted bit-for-bit by the Python oracle. The SECDED codec is proven identical across Python, VHDL **and** C. The reliability plane of the family. | **SILICON PASS** — run A `0xbebc26d1` (scrub ON) != run B `0xc91192e2` (scrub OFF), bit-identical sim<->silicon, WNS +16.85 ns |
 
 ## Version history
+
+### v2.0 — audit-2026-11 (November 2026)
+
+Every core was re-read line by line against its standard, with two goals: no
+silent failure anywhere, and RTL that is ready for an ASIC as well as an FPGA.
+The rule for each fix: **a new test that fails on the old RTL and passes on
+the new one**, plus a mutation run so the test can catch the bug. All
+existing regressions still pass, and their signatures are unchanged unless
+the change is intentional and documented.
+
+**Changes across the whole family**
+
+- **Sticky status bits are write-1-to-clear (W1C), per bit.** Before, any
+  write to a status register cleared every flag, so one driver could erase
+  an error that another had not read yet.
+- **ASIC readiness.** The datapaths now use synchronous active-high resets.
+  FIFOs and working memories have registered (synchronous) read ports, so
+  they map to SRAM macros. CDC toggles get a power-on reset.
+- **No shared `byte_fifo`.** Each core has its own FIFO entity. Before,
+  three copies with the same name but different reset semantics collided
+  in a multi-core build.
+- **Bus hygiene.** AXI `WSTRB` is honoured, `SLVERR` is returned on
+  unmapped addresses, `RRESP`/`BRESP`/`RLAST` are checked, counters
+  saturate instead of wrapping, and every wait state has a timeout.
+- **RV32IMA removed.** RV64IMAC is the only production CPU of the family.
+
+**Per core** (details, file:line references and residual risks are in
+each `IP_Cores/<CORE>/AUDIT_FIXES.md`)
+
+| Core | Main improvements in v2.0 |
+|---|---|
+| **RV32i** | Precise misaligned load/store exceptions (`mcause` 4/6 + `mtval`); full illegal-instruction decode, where unknown opcodes used to run as NOP; AXI errors raise access faults; `SYNC_READ` memories for ASIC; CSR set/clear keyed on `rs1`; `mtval` written on every trap; fewer spurious load-use stalls. |
+| **RV64IMAC** | AXI write IDs use the same scheme as read IDs; UART divisor 0 is safe; new UART testbench. Full lockstep regression: random memory latency, caches + AXI, SoC boot from ROM, and 31/31 mutations killed. |
+| **SPW** | **400 Mbit/s capable**: new data-strobe recovered-clock receiver (`D xor S`, DDR capture, Gray async FIFO) and transmitter in its own clock domain. Detection of simultaneous D/S transitions; ECSS time-code validity (+1 mod 64); stale tick refused outside Run; W1C; synchronous FIFOs. |
+| **PTP** | External-PHY MII with real CDC; AXI-Lite concurrent read/write corruption fixed, `WSTRB` honoured; a timeout on every wait state; `allowedLostResponses` / `asCapable`; `correctionField` in the offset; Pdelay_Resp matched on sequence and port identity; private sync-read FIFO; `NOW_SECHI` register. |
+| **ADCS** | **Synthesizable FP32 FMA in RTL**, bit-exact and with no Xilinx FPO dependency, so the core is ASIC-ready. DMA checks `RRESP`/`BRESP` and has a timeout; guards on `maxiter`/`n_dim` = 0; CPU stores no longer dropped during DMA; burst-length fix. |
+| **DSP** | FFT twiddle-product wrap fixed in the complex and real FFT; oracle aligned with per-stage saturation; MMIO range checks with `status_err`; FIR bounds; single-read-port memories. |
+| **RF** | Rounding instead of truncation in CIC/FIR, which removes a −0.5 LSB DC bias; new Python model and golden; sync-read FIFO with overflow flag; MMIO/DMA pop arbitration. The signature changes on purpose. |
+| **ADC** | External modulator in its own clock domain (`pdm_clk_i`, Gray CDC, overrun flag); MMIO/DMA arbitration; sticky FIFO overflow IRQ; new `run_adc_regress.sh` that tests the repo files themselves. |
+| **CAN** | Missing stuff bit at the CRC/delimiter boundary fixed; hard sync on SOF in intermission; fault-confinement rules; private registered-read FIFO; keyed SELFACK; transmit rejected in bus-off; BTR locked while enabled; W1C. |
+| **M1553** | **Dual redundant A/B bus** (per-message bus on the BC, two receivers on the RT); real **Busy / SSF / TF** status flags; no blind response; independent fail-safe transmitter timer; illegal-broadcast handling; TX underflow handling; RX-FIFO write queue; W1C; synchronous reset. |
+| **ETH** | External-PHY MII CDC; maximum frame length enforced; RX overflow rewinds the whole frame instead of storing a partial one; sync-read FIFO; new status bits and `LEVEL` register; `TX_FLUSH` fix; W1C. |
+| **TSN** | Per-port MII CDC for external PHYs; SFD outputs for PTP timestamping; 1522-byte 802.1Q maximum; `WSTRB`; new W1C `ERR_STICKY` register; injector length checks. |
+| **USART** | Private FIFO; sticky RX abort; 32-bit DMA addresses; `RLAST` check; full datapath reset; selectable RS-485 DE polarity; watermark clamp; PIO/DMA collision flag; W1C. |
+| **SPI** | Private FIFO; CS held for the whole DMA transfer, with a sticky underrun flag; DMA abort; 32-bit offsets; AXI error reporting; datapath reset; W1C. |
+| **IIC** | Private FIFO; clock-stretch and stuck-bus timeouts, plus tBUF after a foreign STOP; read data gated by select; watermark clamp; W1C. |
+| **I3C** | Private FIFO; spike filter on IBI START detection; turnaround after every target-driven bit; explicit command handshake so commands can no longer vanish; W1C. SDR only (documented). |
+| **PCIe** | Transaction layer now fed **after** the LCRC and sequence checks; real NAK, replay timer and ACK/NAK DLLPs; replay buffer wrap and free-slot check; completion timeout, UR for MRd outside BAR0, `Length` honoured; MSI no longer corrupts the RX FSM; RX backpressure; Recovery reachable from L0; no idle inserted inside an open TLP. |
+| **NPU** | DMA error flags reset and cleared per transfer; **1R1W synchronous-read SRAMs** (ASIC); `SLVERR` per beat and on `AWSIZE`; resets added; requantisation shift overflow fixed; zero-byte DMA safe. |
+| **PQC** | Polynomial memories split into SRAM-mappable banks (no 3R1W); the Decaps reject/accept oracle on STATUS removed; **key zeroization** (`G_ZEROIZE`) for the flight variant; `op`/`alg` latched; host access blocked during an operation; Keccak sponge error flags; constant-time norm checks. Side-channel and fault-injection limits are listed honestly in `AUDIT_FIXES.md`. |
+| **MIPI** | Duplicated AXI AW/W beats fixed; packet parser at full rate (1 byte/cycle) with no silent drop; real 4-lane deskew and PHY port; ECC abort and framebuffer-overrun handling; `FBDATA` and RAW12 byte-drop fixes. |
+| **PCS_25G** | 64B/66B sync header in IEEE order on the wire; **real clause-49 block lock** with a windowed `hi_ber` (125 µs); register writes latched correctly; `WSTRB` and `SLVERR`; CDC with power-on reset and req/ack event sync; saturating counters; gearbox overflow flag. |
+| **MAC_25G** | IEEE sync-header order; AXI-Stream store-and-forward FIFO, so `tvalid` bubbles no longer cause underruns; **IEEE 802.3x PAUSE** RX/TX; `GEN_COUNT = 0` safe; `WSTRB`, `SLVERR`, `tkeep` errors; reliable command timeout; saturating counters. |
+| **MAC_10G** | GT mapping updated to IEEE order; **802.3x PAUSE** with RX FIFO; `WSTRB` and `SLVERR`; a timed-out command is killed instead of executed later; CDC power-on reset; saturating counters. |
+| **ECC_Scrubber** | A second scrub start is now served (the done state was a trap); CPU stores no longer dropped during DMA; `REGION_BASE` / `REGION_LEN` / `PERIOD` actually used for periodic scrubbing; DMA burst-length fix. |
+
+**What is still open** (tracked per core): board re-validation of the v2.0
+RTL; SPW at 400 Mbit/s verified only in zero-delay simulation (pad and skew
+budgets are physical); MIL-STD-1553 bus-B pin assignment; PTP
+`ptp_axil_master.vhd` to be restored; PQC side-channel evaluation before
+flight use with long-term keys.
 
 ### v1.1 — `cpu_pipeline` forwarding-during-stall fix
 
@@ -137,7 +206,7 @@ returned to a direct read (896 → 612 bytes). Full write-up:
 
 ### v1.0 — initial release
 
-The 22 IP cores listed above, each taken from RTL to **silicon pass** on the
+The 22 IP cores of the first release, each taken from RTL to **silicon pass** on the
 TE0950 (AMD Versal), driven by the RV32 soft core.
 
 ## Getting started in five minutes
@@ -195,6 +264,6 @@ reflects the v1.1 re-validation pass.
 | ETH   | +3.133   | Boot OK        | Boot-level; own bring-up pending |
 | DSP   | +0.867   | Boot OK        | Boot-level (no bring-up recipe yet) |
 
-Long-cycle cores (ADC, RV32IMA, PTP, TSN, MIPI, PCS, PQC, ECC): v1.1
+Long-cycle cores (ADC, PTP, TSN, MIPI, PCS, PQC, ECC): v1.1
 re-validation deferred to the next campaign. See `rv32i/README.md` for the
 bug description, the fix and the family-wide lessons learned.

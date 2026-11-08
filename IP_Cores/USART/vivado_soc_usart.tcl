@@ -35,10 +35,11 @@ foreach f {riscv_pkg.vhd alu.vhd regfile.vhd muldiv.vhd immgen.vhd control.vhd
            csr.vhd dp_ram.vhd cpu_pipeline.vhd dma_burst.vhd axil_soc.vhd} {
   add_files -norecurse [file join $RV_DIR $f]
 }
-add_files -norecurse [file join $SPI_DIR byte_fifo.vhd]
+# audit 2026-11: the USART now ships its private FIFO (usart_byte_fifo.vhd);
+# the shared ~/spi_ip/byte_fifo.vhd is no longer used.
 
 # fuentes del IP USART + SoC extendido
-foreach f {usart_engine.vhd usart_mmio.vhd usart_dma.vhd usart_axi_top.vhd
+foreach f {usart_byte_fifo.vhd usart_engine.vhd usart_mmio.vhd usart_dma.vhd usart_axi_top.vhd
            mem_subsys_usart.vhd soc_top_usart.vhd} {
   add_files -norecurse [file join $RTL_DIR $f]
 }

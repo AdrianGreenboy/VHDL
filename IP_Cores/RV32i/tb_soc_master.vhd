@@ -14,6 +14,9 @@ use std.textio.all;
 use work.riscv_pkg.all;
 
 entity tb_soc_master is
+  generic (
+    SYNC_MEM : boolean := false   -- 1-cycle synchronous IMEM/DMEM (ASIC SRAM mode)
+  );
 end entity tb_soc_master;
 
 architecture sim of tb_soc_master is
@@ -67,7 +70,7 @@ begin
 
   dut : entity work.soc_top_master
     generic map (ADDR_W => SAW, DEPTH => 256, IMEM_INIT => "",
-                 DONE_WORD => 127, AXI_AW => AXI_AW)
+                 DONE_WORD => 127, AXI_AW => AXI_AW, SYNC_MEM => SYNC_MEM)
     port map (
       aclk => aclk, aresetn => aresetn,
       s_axi_awaddr => s_awaddr, s_axi_awvalid => s_awvalid, s_axi_awready => s_awready,

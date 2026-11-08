@@ -65,6 +65,9 @@ remove_files [get_files -quiet {*rv32i/mem_subsys_dma.vhd *rv32i/soc_top_master.
 add_files -norecurse [list \
   $env(HOME)/vhdl_repo/IP_Cores/TSN/tsn_pkg.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_pkg.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_cdc_sync.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_async_fifo.vhd \
+  $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_mii_cdc.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_rx_mii.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/ETH/rtl/eth_tx_mii.vhd \
   $env(HOME)/vhdl_repo/IP_Cores/TSN/tsn_fifo.vhd \

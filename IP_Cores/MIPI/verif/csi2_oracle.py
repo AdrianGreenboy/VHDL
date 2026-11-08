@@ -215,6 +215,66 @@ def rx_parse(stream, expected_vcs):
     return fb
 
 # ----------------------------------------------------------------------------
+# AUDIT 2026-11: burst-level receiver model (one HS transmission per entry).
+# Mirrors the RTL contract of csi2_packet_rx / csi2_dual_rx exactly:
+#   * every burst starts a new packet (SoT resync);
+#   * multi_pkt=False: only the first packet of a burst is parsed, the rest
+#     (e.g. D-PHY trailer bytes) is ignored; True: back-to-back packets;
+#   * uncorrectable header -> packet aborted, rest of burst ignored, pkt_err;
+#   * burst ends inside a long packet (truncation) -> dropped, pkt_err;
+#   * CRC mismatch -> dropped (no pkt_err);
+#   * a long packet that does not fit in the VC framebuffer (fb_depth) ->
+#     dropped, fb_ovf (the RTL clamps the pointer and rolls back at the CRC);
+#   * FS (short, DT 0x00) on VC0/VC1 rewinds that VC's framebuffer to 0;
+#     FE (DT 0x01) counts a frame event.
+# Returns (fb dict vc->bytearray, counters dict).
+# ----------------------------------------------------------------------------
+def rx_parse_bursts(bursts, fb_depth, multi_pkt=False, vcs=(0, 1)):
+    fb = {vc: bytearray() for vc in vcs}
+    cnt = {"pkt_err": 0, "fb_ovf": 0, "frame": 0, "crc_drop": 0, "ecc_fix": 0}
+    for burst in bursts:
+        i = 0
+        n = len(burst)
+        while True:
+            if i >= n:
+                break
+            if i + 4 > n:                      # truncated header
+                cnt["pkt_err"] += 1
+                break
+            hdr = burst[i:i+4]
+            data_id, wc, err = ecc_correct(hdr)
+            if err:
+                cnt["pkt_err"] += 1
+                break                          # resync at next SoT
+            if (data_id, wc) != (hdr[0], hdr[1] | (hdr[2] << 8)):
+                cnt["ecc_fix"] += 1
+            vc = (data_id >> 6) & 0x3
+            dt = data_id & 0x3F
+            if dt in (DT_FS, DT_FE, DT_LS, DT_LE):
+                if dt == DT_FS and vc in fb:
+                    fb[vc] = bytearray()
+                if dt == DT_FE:
+                    cnt["frame"] += 1
+                i += 4
+            else:
+                if i + 4 + wc + 2 > n:         # truncated payload / CRC
+                    cnt["pkt_err"] += 1
+                    break
+                payload = burst[i+4:i+4+wc]
+                crc_rx = burst[i+4+wc] | (burst[i+4+wc+1] << 8)
+                if crc16_csi2(payload) != crc_rx:
+                    cnt["crc_drop"] += 1
+                elif vc in fb:
+                    if len(fb[vc]) + wc > fb_depth:
+                        cnt["fb_ovf"] += 1
+                    else:
+                        fb[vc] += payload
+                i += 4 + wc + 2
+            if not multi_pkt:
+                break
+    return fb, cnt
+
+# ----------------------------------------------------------------------------
 # FNV-1a 32-bit over the concatenated framebuffers (FB0 then FB1).
 # ----------------------------------------------------------------------------
 def fnv1a_32(data):

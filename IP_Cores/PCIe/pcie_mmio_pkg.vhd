@@ -29,6 +29,12 @@ package pcie_mmio_pkg is
   constant REG_MSI_ADDR  : integer := 16#30#;
   constant REG_MSI_DATA  : integer := 16#34#;
   constant REG_FC_STAT   : integer := 16#38#;   -- creditos de flow control
+  -- audit 2026-11: link / transaction error status (RO)
+  --   [15:0] completion timeouts, [23:16] Naks sent (low 8 bits),
+  --   [24] RX FIFO overflow (sticky), [25] TX FIFO overflow (sticky)
+  constant REG_ERR_STAT  : integer := 16#3C#;
+  --   [15:0] TLPs dropped by the DLL RX, [31:16] replays
+  constant REG_LINK_ERR  : integer := 16#40#;
   constant REG_DBG_STATE : integer := 16#44#;   -- patron DBG_STATE de la familia
 
   -- CONTROL bits
@@ -46,11 +52,13 @@ package pcie_mmio_pkg is
   constant I_CPL_RX  : integer := 1;
   constant I_MSI_TX  : integer := 2;
   constant I_REPLAY  : integer := 3;
+  constant I_CPL_TMO : integer := 4;   -- audit 2026-11: completion timeout
 
   -- TX_CTRL bits
   constant T_PUSHLAST : integer := 0;  -- escribir '1' marca el ultimo byte
 
   -- RX_CTRL bits
   constant R_EMPTY : integer := 0;
+  constant R_OVF   : integer := 1;     -- audit 2026-11: RX FIFO overflowed (sticky)
 
 end package;

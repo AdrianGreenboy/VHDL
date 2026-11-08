@@ -5,11 +5,17 @@
 -- Bloque de los PCS66 del Core 20 (mac25g_pcs66_tx/rx):
 --   blk(65:2) = payload aleatorizado (bit i del payload = blk(2+i), el bit
 --               0 es el primero en el cable segun 802.3)
---   blk(1:0)  = cabecera con la convencion del Core 19/20: datos = "01"
---               (blk(1)='0', blk(0)='1'), control = "10".
+--   blk(1:0)  = cabecera en orden IEEE (audit 2026-11, fix A2 of Core
+--               19/20): blk(0) is the first header bit on the wire;
+--               datos = "10" (blk(0)='0', blk(1)='1'), control = "01".
+--               Before the audit Core 19/20 stored the header inverted and
+--               this map compensated with wire0 = blk(1); the PCS66 now
+--               produces the IEEE order itself, so the map is the identity
+--               and the bits on the wire are EXACTLY the same as the
+--               silicon-validated build (ConnectX-3 Pro, flags 0).
 -- Orden en el cable segun IEEE 802.3 (fig. 49-7), wire(0) primero:
---   wire(0..1) = cabecera (datos: 0,1 ; control: 1,0)  -> wire0 = blk(1),
---                                                         wire1 = blk(0)
+--   wire(0..1) = cabecera (datos: 0,1 ; control: 1,0)  -> wire0 = blk(0),
+--                                                         wire1 = blk(1)
 --   wire(2+i)  = payload bit i
 --
 -- Hipotesis por defecto sobre el GT (flags a 0): transmite txheader(0),
@@ -42,8 +48,8 @@ begin
   g: for i in 0 to 63 generate
     txdata(i) <= pl(63 - i) when bit_rev = '1' else pl(i);
   end generate;
-  txheader(0) <= blk(0) when hdr_swap = '1' else blk(1);
-  txheader(1) <= blk(1) when hdr_swap = '1' else blk(0);
+  txheader(0) <= blk(1) when hdr_swap = '1' else blk(0);
+  txheader(1) <= blk(0) when hdr_swap = '1' else blk(1);
 end architecture rtl;
 
 
@@ -65,7 +71,7 @@ begin
   g: for i in 0 to 63 generate
     blk(2 + i) <= rxdata(63 - i) when bit_rev = '1' else rxdata(i);
   end generate;
-  -- wire0 -> blk(1), wire1 -> blk(0)
-  blk(1) <= rxheader(1) when hdr_swap = '1' else rxheader(0);
-  blk(0) <= rxheader(0) when hdr_swap = '1' else rxheader(1);
+  -- wire0 -> blk(0), wire1 -> blk(1)
+  blk(0) <= rxheader(1) when hdr_swap = '1' else rxheader(0);
+  blk(1) <= rxheader(0) when hdr_swap = '1' else rxheader(1);
 end architecture rtl;

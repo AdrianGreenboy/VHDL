@@ -40,6 +40,8 @@ architecture sim of tb_m1553_l2 is
   constant A_RXD    : std_logic_vector(7 downto 0) := x"18";
   constant A_IRQEN  : std_logic_vector(7 downto 0) := x"1C";
   constant A_RESULT : std_logic_vector(7 downto 0) := x"20";
+  constant A_RTFL   : std_logic_vector(7 downto 0) := x"24";
+  constant A_RTBUS  : std_logic_vector(7 downto 0) := x"28";
 
 begin
 
@@ -50,7 +52,8 @@ begin
       clk => clk, rst => rst,
       sel => sel, we => we, addr => addr, wdata => wdata, rdata => rdata,
       irq => irq,
-      bus_rx_i => bus_rx, bus_tx_o => bus_tx, bus_txen_o => bus_txen);
+      bus_rx_a_i => bus_rx, bus_tx_a_o => bus_tx, bus_txen_a_o => bus_txen,
+      bus_rx_b_i => bus_rx, bus_tx_b_o => open, bus_txen_b_o => open);
 
   stim : process
     -- BFM
@@ -195,12 +198,23 @@ begin
     rd(A_RESULT, r);
     assert r(15 downto 0) = x"4800" and r(31 downto 16) = x"2800"
       report "FALLO RT->RT: statuses en RESULT" severity failure;
-    -- RT0 recibio 2 datos de fuente RT0 (01)
+    -- RT0 recibio 2 datos (fuente 01) y el BC los monitorizo (fuente 00) en
+    -- el MISMO ciclo: la cola de escritura serializa ambas copias (audit
+    -- 2026-11; antes la copia del BC se perdia por colision)
     for i in 0 to 1 loop
       rd(A_RXD, r);
       assert r(31) = '1' and r(17 downto 16) = "01"
+             and r(15 downto 0) = std_logic_vector(to_unsigned(16#F300# + i, 16))
         report "FALLO RT->RT: RXD fuente/valid" severity failure;
+      rd(A_RXD, r);
+      assert r(31) = '1' and r(17 downto 16) = "00"
+             and r(15 downto 0) = std_logic_vector(to_unsigned(16#F300# + i, 16))
+        report "FALLO RT->RT: copia del BC perdida (colision de escritura RX)"
+        severity failure;
     end loop;
+    rd(A_RXD, r);
+    assert r(31) = '0'
+      report "FALLO RT->RT: entradas RX de mas" severity failure;
     wr(A_STAT, x"FFFFFFFF");
     wait for 20 us;
 
@@ -249,6 +263,61 @@ begin
     assert irq = '0'
       report "FALLO IRQ: no cayo tras limpiar DONE" severity failure;
     wr(A_IRQEN, x"00000000");
+    wait for 5 us;
+
+    ------------------------------------------------ audit 2026-11
+    -- STAT stickies are W1C per bit
+    wr(A_MSG, msgw('0','1',"00101","00000","00010","00000","00000")); -- TxStatus RT0
+    run_msg("W1C");
+    rd(A_STAT, r);
+    assert r(16) = '1' and r(17) = '1' and r(21) = '1'
+      report "FALLO W1C: stickies DONE/OK/RT0_CMD no activos" severity failure;
+    wr(A_STAT, x"00000000");              -- writing 0 clears nothing
+    rd(A_STAT, r);
+    assert r(16) = '1' and r(17) = '1'
+      report "FALLO W1C: una escritura de 0 limpio stickies" severity failure;
+    wr(A_STAT, x"00010000");              -- clear DONE only
+    rd(A_STAT, r);
+    assert r(16) = '0' and r(17) = '1' and r(21) = '1'
+      report "FALLO W1C: la limpieza no es por bit" severity failure;
+    wr(A_STAT, x"FFFFFFFF");
+    rd(A_STAT, r);
+    -- (b26/b27 RTx_BCR re-set at once: they follow the RT's BCR flag,
+    -- which Transmit Status preserves)
+    assert r(25 downto 16) = "0000000000" and r(28) = '0'
+      report "FALLO W1C: 0xFFFFFFFF no limpio todo" severity failure;
+    wait for 10 us;
+
+    -- RTFLAGS -> status word bits; MSG.BUS = B; RTBUS / STAT.BC_BUS
+    wr(A_RTFL, x"00000507");              -- RT0 Busy|SSF|TF, RT1 Busy|TF
+    rd(A_RTFL, r);
+    assert r = x"00000507"
+      report "FALLO RTFLAGS: readback incorrecto" severity failure;
+    wr(A_MSG, msgw('0','1',"00101","00000","00010","00000","00000")
+              or x"08000000");           -- TxStatus RT0 on bus B
+    run_msg("BUS-B");
+    rd(A_RESULT, r);
+    -- (b4 BCR is preserved from the earlier broadcast by Transmit Status)
+    assert r(15 downto 5) = "00101000000" and r(3 downto 0) = x"D"
+      report "FALLO BUS-B: status de RT0 sin Busy/SSF/TF" severity failure;
+    rd(A_STAT, r);
+    assert r(17) = '1' and r(2) = '1' and r(1) = '0'
+      report "FALLO BUS-B: OK/BC_BUS/FS_FAULT incorrectos" severity failure;
+    rd(A_RTBUS, r);
+    assert r(0) = '1' and r(6 downto 4) = "000"
+      report "FALLO BUS-B: RT0 no registro el bus B" severity failure;
+    wr(A_STAT, x"FFFFFFFF");
+    wait for 10 us;
+    wr(A_MSG, msgw('0','1',"01001","00000","00010","00000","00000")); -- RT1, bus A
+    run_msg("BUS-A");
+    rd(A_RESULT, r);
+    assert r(15 downto 5) = "01001000000" and r(3 downto 0) = x"9"
+      report "FALLO BUS-A: status de RT1 sin Busy/TF" severity failure;
+    rd(A_RTBUS, r);
+    assert r(1) = '0' and r(0) = '1'
+      report "FALLO BUS-A: buses de RT0/RT1 incorrectos" severity failure;
+    wr(A_RTFL, x"00000000");
+    wr(A_STAT, x"FFFFFFFF");
     wait for 5 us;
 
     report "M1553 CAPA 2 PASS";

@@ -27,7 +27,9 @@ use work.ntt_tables_pkg.all;
 entity tb_ntt is
   generic (
     G_KFILE : string := "ntt_k_vectors.txt";
-    G_DFILE : string := "ntt_d_vectors.txt");
+    -- Layer 1 vectors; ntt_d_vectors.txt was later reused by the L3B tb_ntt_d
+    -- with a different format (audit 2026-11: split into its own file)
+    G_DFILE : string := "ntt_d_l1_vectors.txt");
 end entity tb_ntt;
 
 architecture sim of tb_ntt is

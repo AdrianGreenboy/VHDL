@@ -11,6 +11,14 @@
 --
 --  mtime se incrementa cada ciclo (timer rapido para simulacion). La linea
 --  timer_irq se activa cuando mtime >= mtimecmp; soft_irq = msip(0).
+--
+--  64-bit access on RV32 (audit-2026-11, documentation only): the two
+--  halves are read in separate instructions while mtime keeps counting, so
+--  a carry from the low into the high word can occur between them. Software
+--  must use the standard hi-lo-hi sequence:
+--      loop: lw t1, 0xBFFC ; lw t0, 0xBFF8 ; lw t2, 0xBFFC ; bne t1, t2, loop
+--  To program mtimecmp without a spurious interrupt, write the high word to
+--  all ones first, then the low word, then the real high word.
 -- =============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
