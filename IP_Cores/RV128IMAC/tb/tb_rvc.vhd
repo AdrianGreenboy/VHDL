@@ -1,4 +1,5 @@
--- tb_rvc: Capa 1, decompresor RV128C exhaustivo contra el ISS (49152 casos).
+-- tb_rvc: Capa 1, decompresor RVC exhaustivo (49152 casos) contra el ISS del modo:
+-- XLEN64=false -> iss128.expand_c (RV128C); XLEN64=true -> iss64.expand_c (RV64C).
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -7,7 +8,7 @@ use ieee.std_logic_textio.all;
 use work.rv128_pkg.all;
 
 entity tb_rvc is
-  generic (VECTORS : string := "rvc_vectors.txt");
+  generic (VECTORS : string := "rvc_vectors.txt"; XLEN64 : boolean := false);
 end entity;
 
 architecture sim of tb_rvc is
@@ -24,7 +25,7 @@ begin
     while not endfile(f) loop
       readline(f, l);
       hread(l, c); read(l, bad); hread(l, exp);
-      got := expand_c(c);
+      if XLEN64 then got := expand_c(c, '1'); else got := expand_c(c, '0'); end if;
       if (got(32) = '1') /= (bad = 1) or (bad = 0 and got(31 downto 0) /= exp) then
         errs := errs + 1;
         if errs < 10 then
@@ -35,7 +36,7 @@ begin
       n := n + 1;
     end loop;
     if errs = 0 then
-      report "tb_rvc PASS casos=" & integer'image(n);
+      report "tb_rvc PASS casos=" & integer'image(n) & " xlen64=" & boolean'image(XLEN64);
     else
       report "tb_rvc FAIL errores=" & integer'image(errs) severity failure;
     end if;

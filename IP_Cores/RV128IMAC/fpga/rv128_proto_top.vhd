@@ -182,15 +182,15 @@ begin
   rst_soc <= rst_sync(1);
 
   core_u : entity work.rv128_core port map (
-    clk => clk, rst => rst_soc,
+    clk => clk, rst => rst_soc, m64 => '0',
     i_req_valid => i_req_valid, i_req_ready => i_req_ready, i_req_addr => i_req_addr,
     i_rsp_valid => i_rsp_valid, i_rsp_data => i_rsp_data, i_rsp_err => i_rsp_err,
     d_req_valid => d_req_valid, d_req_ready => d_req_ready, d_req_addr => d_req_addr,
     d_req_kind => d_req_kind, d_req_amo_op => d_req_amo_op, d_req_size => d_req_size,
     d_req_wdata => d_req_wdata, d_req_wstrb => d_req_wstrb,
     d_rsp_valid => d_rsp_valid, d_rsp_rdata => d_rsp_rdata, d_rsp_err => d_rsp_err,
-    mtip => mtip, msip => msip, meip => '0', time_i => std_logic_vector(mtime),
-    fencei_o => open,
+    mtip => mtip, msip => msip, meip => '0', seip => '0', time_i => std_logic_vector(mtime),
+    fencei_o => open, sfence_o => open,
     rvfi_valid => rvfi_valid, rvfi_pc => rvfi_pc, rvfi_insn => open, rvfi_rd => open,
     rvfi_rd_wdata => open, rvfi_trap => rvfi_trap, rvfi_cause => open, rvfi_tval => open,
     rvfi_mem_addr => rvfi_mem_addr, rvfi_mem_wstrb => rvfi_mem_wstrb,

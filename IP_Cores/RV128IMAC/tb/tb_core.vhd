@@ -24,7 +24,8 @@ entity tb_core is
     MAXLAT   : integer := 1;
     SEED     : integer := 1;
     TIMEOUT  : integer := 2000000;
-    TIME_DIV : integer := 4
+    TIME_DIV : integer := 4;
+    XLEN64   : boolean := false             -- true: el core arranca en modo RV64
   );
 end entity;
 
@@ -33,6 +34,7 @@ architecture sim of tb_core is
   subtype w128 is std_logic_vector(127 downto 0);
   constant Z128 : w128 := (others => '0');
   signal clk : std_logic := '0';
+  signal m64 : std_logic := '0';
   signal rst : std_logic := '1';
   signal fin : boolean := false;
 
@@ -65,19 +67,20 @@ architecture sim of tb_core is
   signal rnd_i, rnd_d   : std_logic := '1';
 begin
   clk <= not clk after 5 ns when not fin;
+  m64 <= '1' when XLEN64 else '0';
 
   dut : entity work.rv128_core
     generic map (RESET_PC => std_logic_vector(unsigned(DRAM) + to_unsigned(ENTRY, XLEN)))
     port map (
-      clk => clk, rst => rst,
+      clk => clk, rst => rst, m64 => m64,
       i_req_valid => i_req_valid, i_req_ready => i_req_ready, i_req_addr => i_req_addr,
       i_rsp_valid => i_rsp_valid, i_rsp_data => i_rsp_data, i_rsp_err => i_rsp_err,
       d_req_valid => d_req_valid, d_req_ready => d_req_ready, d_req_addr => d_req_addr,
       d_req_kind => d_req_kind, d_req_amo_op => d_req_amo_op, d_req_size => d_req_size,
       d_req_wdata => d_req_wdata, d_req_wstrb => d_req_wstrb,
       d_rsp_valid => d_rsp_valid, d_rsp_rdata => d_rsp_rdata, d_rsp_err => d_rsp_err,
-      mtip => mtip, msip => msip, meip => '0', time_i => mtime,
-      fencei_o => fencei,
+      mtip => mtip, msip => msip, meip => '0', seip => '0', time_i => mtime,
+      fencei_o => fencei, sfence_o => open,
       rvfi_valid => rvfi_valid, rvfi_pc => rvfi_pc, rvfi_insn => rvfi_insn, rvfi_rd => rvfi_rd,
       rvfi_rd_wdata => rvfi_rd_wdata, rvfi_trap => rvfi_trap, rvfi_cause => rvfi_cause,
       rvfi_tval => rvfi_tval, rvfi_mem_addr => rvfi_mem_addr, rvfi_mem_wstrb => rvfi_mem_wstrb,
@@ -222,6 +225,8 @@ begin
             if idx = TOHOST / 16 then
               if (TOHOST mod 16) = 0 then htif(ram(idx)(63 downto 0)); else htif(ram(idx)(127 downto 64)); end if;
             end if;
+          elsif d_req_kind = "11" then
+            d_data_r <= old;                                 -- Zicbom: sin caches, sin efecto
           else
             -- AMO sobre el carril (W: 32 bit, D: 64 bit, Q: 128 bit)
             sh := shift_right(unsigned(old), 8 * lane);

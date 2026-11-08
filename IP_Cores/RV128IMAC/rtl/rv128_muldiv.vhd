@@ -1,6 +1,7 @@
 -- rv128_muldiv.vhd - unidad M iterativa del RV128IMAC, portable a ASIC (sin DSP).
 -- Derivada de rv64_muldiv.vhd, misma arquitectura y protocolo.
---   Multiplicacion radix-4: 64 iteraciones (128 bit), 32 (MULD), 16 (MULW).
+--   Multiplicacion radix-4: 64 iteraciones (128 bit), 32 (MULD y todo el modo RV64,
+--   incluidos MULH/MULHSU/MULHU de 64 bit con wsel = W_D), 16 (MULW).
 --   Division con restauracion radix-2: 128 iteraciones, 64 (variantes D), 32 (W).
 -- Protocolo: 'start' con la unidad libre captura operandos; 'done' se mantiene
 -- con 'result' estable hasta 'ack'. 'kill' aborta en cualquier momento.
@@ -54,6 +55,7 @@ begin
     variable r2           : unsigned(128 downto 0);
     variable prod         : unsigned(255 downto 0);
     variable q, rem_v     : unsigned(127 downto 0);
+    variable p128         : unsigned(127 downto 0);
     variable outv         : xword;
   begin
     if rising_edge(clk) then
@@ -67,12 +69,24 @@ begin
               op_w  <= wsel;
               if f3(2) = '0' then
                 -- multiplicacion: signo segun la variante (solo 128 bit tiene MULH*)
-                sa := '0'; sb := '0';
-                if (f3 = "001" or f3 = "010") then sa := a(127); end if;  -- MULH, MULHSU
-                if f3 = "001" then sb := b(127); end if;                    -- MULH
-                ma := unsigned(a); mb := unsigned(b);
-                if sa = '1' then ma := unsigned(-signed(a)); end if;
-                if sb = '1' then mb := unsigned(-signed(b)); end if;
+                -- W_D (MULD y modo RV64): operandos de 64 bit extendidos segun el signo
+                if wsel = W_D then
+                  av := (127 downto 64 => '0') & a(63 downto 0);
+                  bv := (127 downto 64 => '0') & b(63 downto 0);
+                  sa := '0'; sb := '0';
+                  if (f3 = "001" or f3 = "010") then sa := a(63); end if;
+                  if f3 = "001" then sb := b(63); end if;
+                  if sa = '1' then av := sext(a(63 downto 0), 64); end if;
+                  if sb = '1' then bv := sext(b(63 downto 0), 64); end if;
+                else
+                  av := a; bv := b;
+                  sa := '0'; sb := '0';
+                  if (f3 = "001" or f3 = "010") then sa := a(127); end if;  -- MULH, MULHSU
+                  if f3 = "001" then sb := b(127); end if;                    -- MULH
+                end if;
+                ma := unsigned(av); mb := unsigned(bv);
+                if sa = '1' then ma := unsigned(-signed(av)); end if;
+                if sb = '1' then mb := unsigned(-signed(bv)); end if;
                 neg_q <= sa xor sb;
                 ua    <= ma;
                 ua3   <= ('0' & ma & '0') + ("00" & ma);
@@ -148,8 +162,13 @@ begin
               if neg_q = '1' then prod := unsigned(-signed(p)); end if;
               if op_w = W_W then
                 outv := sext(std_logic_vector(p(127 downto 96)), 32);   -- MULW: 16 iteraciones
+              elsif op_w = W_D and op_f3 = "000" then
+                outv := sext(std_logic_vector(p(127 downto 64)), 64);   -- MULD / MUL RV64: 32 iteraciones
               elsif op_w = W_D then
-                outv := sext(std_logic_vector(p(127 downto 64)), 64);   -- MULD: 32 iteraciones
+                -- MULH* de 64 bit: tras 32 iteraciones el producto de 128 bit esta en p(191:64)
+                p128 := p(191 downto 64);
+                if neg_q = '1' then p128 := unsigned(-signed(p128)); end if;
+                outv := sext(std_logic_vector(p128(127 downto 64)), 64);
               elsif op_f3 = "000" then
                 outv := std_logic_vector(prod(127 downto 0));
               else

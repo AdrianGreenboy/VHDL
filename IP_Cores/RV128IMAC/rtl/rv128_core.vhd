@@ -1,23 +1,27 @@
--- rv128_core.vhd - pipeline RV128IMAC en orden, 5 etapas: F / D / X / M / W.
--- Experimental. Derivado de rv64_core.vhd (verificado en lockstep hasta Linux):
--- misma estructura de pipeline, hazards, forwarding y protocolo de puertos.
--- Recortes para hacerlo compacto: solo modo M, sin MMU/TLB/PTW, sin Zicbom.
+-- rv128_core.vhd - pipeline RV128IMAC / RV64IMAC (core dual) en orden, 5 etapas.
+-- Derivado de rv64_core.vhd (verificado en lockstep hasta Linux): misma estructura,
+-- ensanchado a 128 bit. El modo se fija en el reset con la entrada m64:
+--   m64 = '0'  RV128IMAC (M/S/U; paginacion Bare: no existe esquema RV128)
+--   m64 = '1'  RV64IMAC + Zicbom + Sv39, binariamente igual que el rv64_core. Todo valor
+--              (registros, pc, direcciones, CSRs) se mantiene extendido en signo desde el bit 63.
 --
 --  F  buffer de 4 medias palabras (instrucciones de 16 y 32 bit, cruces de palabra)
---  D  decompresor RV128C + decodificador + lectura del banco + hazards,
+--  D  decompresor + decodificador + lectura del banco de registros + hazards,
 --     inyeccion de interrupciones (re-validadas en W)
---  X  ALU 128 bit, saltos (redirect en X), mul/div iterativo, direccion, PMA,
+--  X  ALU, saltos (redirect en X), mul/div iterativo, direccion, PMA,
 --     emision de la peticion de datos
---  M  espera de la respuesta de datos, extraccion de carril (16 carriles)
---  W  commit unico: banco de registros, CSRs, traps, MRET, WFI, serializacion
+--  M  espera de la respuesta de datos, extraccion de carril
+--  W  commit unico: banco de registros, CSRs, traps, xRET, WFI, serializacion
 --
--- Puerto de instrucciones: 32 bit (igual que el RV64). Puerto de datos: 128 bit,
--- de modo que LQ/SQ/AMO.Q son una sola transaccion. Peticion valid/ready, una
--- respuesta por peticion en orden, sin backpressure. Direcciones fisicas.
+-- Interfaces de memoria: peticion valid/ready, una respuesta por peticion en orden,
+-- respuesta sin backpressure. Datos de 128 bit (16 carriles): LQ/SQ/AMO.Q en una peticion.
+-- Paso 5: MMU Sv39 (Svade). I-TLB en F, D-TLB en X, un PTW compartido que usa el
+-- puerto de datos. Las direcciones de los puertos son fisicas.
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.rv128_pkg.all;
+use work.rv128_mmu_pkg.all;
 
 entity rv128_core is
   generic (
@@ -25,6 +29,7 @@ entity rv128_core is
   );
   port (
     clk, rst      : in  std_logic;
+    m64           : in  std_logic;                     -- 1: modo RV64 (estable mientras rst = '0')
     -- instrucciones
     i_req_valid   : out std_logic;
     i_req_ready   : in  std_logic;
@@ -45,10 +50,11 @@ entity rv128_core is
     d_rsp_rdata   : in  xword;                         -- por carriles
     d_rsp_err     : in  std_logic;
     -- interrupciones y tiempo
-    mtip, msip, meip : in std_logic;
+    mtip, msip, meip, seip : in std_logic;
     time_i        : in  std_logic_vector(63 downto 0);
-    -- mantenimiento
+    -- mantenimiento (caches/TLB en pasos posteriores)
     fencei_o      : out std_logic;
+    sfence_o      : out std_logic;
     -- traza de retiro (lockstep)
     rvfi_valid    : out std_logic;
     rvfi_pc       : out xword;
@@ -58,10 +64,11 @@ entity rv128_core is
     rvfi_trap     : out std_logic;
     rvfi_cause    : out xword;
     rvfi_tval     : out xword;
+    -- escritura a memoria del retiro (RVFI): direccion fisica, carriles y datos
     rvfi_mem_addr  : out xword;
     rvfi_mem_wstrb : out std_logic_vector(15 downto 0);
     rvfi_mem_wdata : out xword;
-    rvfi_mip       : out std_logic_vector(11 downto 0)
+    rvfi_mip       : out std_logic_vector(11 downto 0)  -- mip en el retiro (lineas de irq)
   );
 end entity;
 
@@ -92,7 +99,8 @@ architecture rtl of rv128_core is
     mop     : mem_t;
     msize   : std_logic_vector(2 downto 0);
     munsign : std_logic;
-    maddr   : xword;
+    maddr   : xword;                                   -- virtual (tval)
+    paddr   : xword;                                   -- fisica (reserva LR/SC)
     wdata   : xword;                                   -- datos de store por carriles (RVFI)
     wstrb   : std_logic_vector(15 downto 0);
     issued  : std_logic;
@@ -108,7 +116,7 @@ architecture rtl of rv128_core is
 
   constant IDEX_NOP : idex_t := ('0', XZERO, x"00000000", '0', DEC_NOP, XZERO, XZERO, '0', '0', "00000", XZERO);
   constant EXMEM_NOP : exmem_t := ('0', XZERO, x"00000000", '0', '0', "00000", XZERO, M_NONE, "000", '0',
-                                   XZERO, XZERO, x"0000", '0', S_NONE, "000", x"000", '0', '0', '0', "00000", XZERO);
+                                   XZERO, XZERO, XZERO, x"0000", '0', S_NONE, "000", x"000", '0', '0', '0', "00000", XZERO);
 
   signal idex  : idex_t;
   signal exmem : exmem_t;
@@ -118,11 +126,13 @@ architecture rtl of rv128_core is
   type hw_arr is array (0 to 3) of std_logic_vector(15 downto 0);
   signal fq_hw   : hw_arr;
   signal fq_err  : std_logic_vector(3 downto 0);
+  signal fq_pf   : std_logic_vector(3 downto 0);       -- 1: page fault, 0: access fault
   signal fq_cnt  : unsigned(2 downto 0);
   signal fq_pc   : xword;
   signal f_addr  : xword;
   signal f_out   : std_logic;                          -- peticion real en vuelo
-  signal f_self  : std_logic;                          -- fallo local (PMA) en vuelo
+  signal f_self  : std_logic;                          -- fallo local (PMA/MMU) en vuelo
+  signal f_self_pf : std_logic;
   signal f_drop  : std_logic;
   signal f_skip  : std_logic;
 
@@ -134,7 +144,7 @@ architecture rtl of rv128_core is
   signal d_out   : std_logic;
   signal d_drop  : std_logic;
 
-  -- reserva LR/SC (granulo de 64 B, como el RV64)
+  -- reserva LR/SC
   signal resv_v    : std_logic;
   signal resv_line : std_logic_vector(121 downto 0);
 
@@ -159,6 +169,31 @@ architecture rtl of rv128_core is
   signal redirect      : std_logic;
   signal redirect_pc   : xword;
   signal f_fault       : std_logic;                    -- fetch resuelto localmente como fallo
+  signal f_fault_pf    : std_logic;
+  signal f_go          : std_logic;                    -- peticion real aceptada este ciclo
+
+  -- MMU
+  signal itlb_hit, dtlb_hit : std_logic;
+  signal itlb_e, dtlb_e     : tlbe_t;
+  signal ptw_i_req, ptw_d_req : std_logic;
+  signal ptw_i_fill, ptw_d_fill, ptw_i_fault, ptw_d_fault, ptw_fault_acc, ptw_busy : std_logic;
+  signal ptw_fill_e         : tlbe_t;
+  signal ptw_fault_vpn      : std_logic_vector(26 downto 0);
+  signal ptw_m_valid, ptw_m_ready, ptw_rsp_valid : std_logic;
+  signal ptw_m_addr         : xword;
+  signal ptw_grant          : std_logic;
+  signal d_owner_ptw        : std_logic;
+  signal core_req_valid     : std_logic;
+  signal core_req_addr      : xword;
+  signal i_pfr_v, i_pfr_acc : std_logic;              -- fallo de caminata pendiente (fetch)
+  signal i_pfr_vpn          : std_logic_vector(26 downto 0);
+  signal d_pfr_v, d_pfr_acc : std_logic;              -- idem (datos)
+  signal d_pfr_vpn          : std_logic_vector(26 downto 0);
+  signal i_vpn, d_vpn       : std_logic_vector(26 downto 0);
+  signal tlb_flush          : std_logic;
+  signal sfence_int         : std_logic;
+  signal core_req_size      : std_logic_vector(2 downto 0);
+  signal core_req_kind      : std_logic_vector(1 downto 0);
   signal f_fill_n      : unsigned(2 downto 0);
   signal f_consume_n   : unsigned(2 downto 0);
 
@@ -169,12 +204,18 @@ architecture rtl of rv128_core is
   -- csr
   signal csr_wr_intent, csr_illegal, csr_we, csr_retire : std_logic;
   signal csr_rdata, csr_wdata : xword;
-  signal csr_trap, csr_trap_irq, csr_mret : std_logic;
+  signal csr_trap, csr_trap_irq, csr_mret, csr_sret : std_logic;
   signal csr_trap_code : std_logic_vector(4 downto 0);
-  signal csr_trap_tval, csr_trap_target, csr_mepc : xword;
+  signal csr_trap_tval, csr_trap_target, csr_mepc, csr_sepc : xword;
   signal irq_pending, wfi_wake : std_logic;
   signal mip_trace : std_logic_vector(11 downto 0);
   signal irq_code : std_logic_vector(4 downto 0);
+  signal priv : std_logic_vector(1 downto 0);
+  signal st_tvm, st_tw, st_tsr, st_mprv, st_sum, st_mxr : std_logic;
+  signal st_mpp : std_logic_vector(1 downto 0);
+  signal satp : xword;
+  signal cbie_m, cbie_s : std_logic_vector(1 downto 0);
+  signal cbcfe_m, cbcfe_s : std_logic;
 
   function is_late(m : mem_t) return boolean is
   begin
@@ -188,30 +229,63 @@ architecture rtl of rv128_core is
 
 begin
 
-  -- ============================================================ CSR / M
+  -- ============================================================ CSR
   csr_u : entity work.rv128_csr port map (
-    clk => clk, rst => rst,
+    clk => clk, rst => rst, m64 => m64,
     addr => memwb.csr_addr, wr_intent => csr_wr_intent, rdata => csr_rdata, illegal => csr_illegal,
     we => csr_we, wdata => csr_wdata, retire => csr_retire,
     trap => csr_trap, trap_irq => csr_trap_irq, trap_code => csr_trap_code, trap_tval => csr_trap_tval,
     trap_pc => memwb.pc, trap_target => csr_trap_target,
-    do_mret => csr_mret, mepc_o => csr_mepc,
-    mtip => mtip, msip => msip, meip => meip, time_i => time_i,
-    irq_pending => irq_pending, irq_code => irq_code, wfi_wake => wfi_wake, mip_o => mip_trace);
+    do_mret => csr_mret, do_sret => csr_sret, mepc_o => csr_mepc, sepc_o => csr_sepc,
+    mtip => mtip, msip => msip, meip => meip, seip => seip, time_i => time_i,
+    irq_pending => irq_pending, irq_code => irq_code, wfi_wake => wfi_wake, mip_o => mip_trace,
+    priv => priv, st_tvm => st_tvm, st_tw => st_tw, st_tsr => st_tsr,
+    st_mprv => st_mprv, st_sum => st_sum, st_mxr => st_mxr, st_mpp => st_mpp, satp_o => satp,
+    cbie_m => cbie_m, cbie_s => cbie_s, cbcfe_m => cbcfe_m, cbcfe_s => cbcfe_s);
 
   md_u : entity work.rv128_muldiv port map (
     clk => clk, rst => rst, start => md_start, kill => wb_flush, ack => md_ack,
     f3 => idex.d.md_f3, wsel => idex.d.wsel, a => ex_fa, b => ex_fb,
     busy => md_busy, done => md_done, result => md_res);
 
+  -- ============================================================ MMU
+  tlb_flush <= sfence_int;
+  itlb_u : entity work.rv128_tlb generic map (N => 8) port map (
+    clk => clk, rst => rst, flush => tlb_flush, vpn => i_vpn, asid => satp(59 downto 44),
+    hit => itlb_hit, e => itlb_e, fill => ptw_i_fill, fill_e => ptw_fill_e);
+  dtlb_u : entity work.rv128_tlb generic map (N => 8) port map (
+    clk => clk, rst => rst, flush => tlb_flush, vpn => d_vpn, asid => satp(59 downto 44),
+    hit => dtlb_hit, e => dtlb_e, fill => ptw_d_fill, fill_e => ptw_fill_e);
+  ptw_u : entity work.rv128_ptw port map (
+    clk => clk, rst => rst, kill => wb_flush, satp => satp,
+    i_req => ptw_i_req, i_vpn => i_vpn, d_req => ptw_d_req, d_vpn => d_vpn,
+    i_fill => ptw_i_fill, d_fill => ptw_d_fill, fill_e => ptw_fill_e,
+    i_fault => ptw_i_fault, d_fault => ptw_d_fault, fault_vpn => ptw_fault_vpn,
+    fault_access => ptw_fault_acc, busy => ptw_busy,
+    m_req_valid => ptw_m_valid, m_req_ready => ptw_m_ready, m_req_addr => ptw_m_addr,
+    m_rsp_valid => ptw_rsp_valid, m_rsp_data => d_rsp_rdata, m_rsp_err => d_rsp_err);
+
+  -- puerto de datos: el core tiene prioridad; el PTW lo usa con el puerto libre
+  ptw_grant   <= '1' when core_req_valid = '0' and ptw_m_valid = '1' and d_out = '0' and rst = '0' else '0';
+  d_req_valid <= core_req_valid or ptw_grant;
+  d_req_addr  <= ptw_m_addr when ptw_grant = '1' else core_req_addr;
+  d_req_size  <= "011" when ptw_grant = '1' else core_req_size;         -- PTE: 8 bytes
+  d_req_kind  <= "00" when ptw_grant = '1' else core_req_kind;
+  ptw_m_ready <= d_req_ready and ptw_grant;
+  ptw_rsp_valid <= d_rsp_valid and d_owner_ptw;
+
   -- ============================================================ F: peticiones
   redirect    <= wb_flush or ex_redirect;
   redirect_pc <= wb_target when wb_flush = '1' else ex_target;
 
+  i_vpn <= f_addr(38 downto 12);
+
   process (all)
-    variable cnt_next : unsigned(2 downto 0);
-    variable fill     : unsigned(2 downto 0);
-    variable want, ok : boolean;
+    variable fill, cnt_next : unsigned(2 downto 0);
+    variable want           : boolean;
+    variable tr_on          : boolean;
+    variable pa             : xword;
+    variable ok, flt, pf, walk : boolean;
   begin
     fill := (others => '0');
     if (i_rsp_valid = '1' and f_drop = '0') or f_self = '1' then
@@ -219,13 +293,40 @@ begin
     end if;
     f_fill_n <= fill;
     cnt_next := fq_cnt - f_consume_n + fill;
-    -- el termino rst es necesario (ver rv64_core: peticiones durante el reset)
+    -- audit-2026-11: the rst term is load-bearing, NOT redundant. Without it
+    -- the core issues fetches during reset; a responder that is not reset by
+    -- the same rst (tb_core's memory model, or any slave on another reset
+    -- domain) answers after reset and the core takes that stale response as
+    -- the reply to its first real fetch (lockstep mismatch at retire 2 of
+    -- csr_sweep / irq_race / cbo_test). Kept on purpose.
     want := rst = '0' and redirect = '0' and (f_out = '0' or i_rsp_valid = '1') and f_self = '0'
             and cnt_next <= 2;
-    ok := pma_dram(f_addr) or pma_rom(f_addr);           -- PMA: solo DRAM/ROM ejecutable
+    -- traduccion: pagina -> PMA (mismo orden que el ISS)
+    tr_on := satp(63 downto 60) = "1000" and priv /= PRV_M;
+    pa := f_addr; ok := false; flt := false; pf := false; walk := false;
+    if not tr_on then
+      ok := true;
+    elsif not va_canonical(f_addr) then
+      flt := true; pf := true;
+    elsif itlb_hit = '1' then
+      if tlb_perm_ok(itlb_e, ACC_FETCH, priv, st_sum, st_mxr) then
+        ok := true; pa := tlb_pa(itlb_e, f_addr);
+      else
+        flt := true; pf := true;
+      end if;
+    elsif i_pfr_v = '1' and i_pfr_vpn = f_addr(38 downto 12) then
+      flt := true; pf := i_pfr_acc = '0';
+    else
+      walk := true;
+    end if;
+    if ok and not (pma_dram(pa) or pma_rom(pa)) then
+      ok := false; flt := true; pf := false;
+    end if;
     i_req_valid <= '1' when want and ok else '0';
-    i_req_addr  <= f_addr(127 downto 2) & "00";
-    f_fault     <= '1' when want and not ok else '0';
+    i_req_addr  <= pa(127 downto 2) & "00";
+    f_fault     <= '1' when want and flt else '0';
+    f_fault_pf  <= '1' when pf else '0';
+    ptw_i_req   <= '1' when want and walk and ptw_busy = '0' else '0';
   end process;
 
   -- ============================================================ D: decodificacion
@@ -258,14 +359,15 @@ begin
     if fq_cnt >= 1 and fq_err(0) = '1' then
       avail := true;
       r.exc := '1'; r.tval := fq_pc;
-      r.code := std_logic_vector(to_unsigned(C_IACCESS, 5));
+      if fq_pf(0) = '1' then r.code := std_logic_vector(to_unsigned(C_IPAGE, 5));
+      else r.code := std_logic_vector(to_unsigned(C_IACCESS, 5)); end if;
       r.len4 := '0';
     elsif fq_cnt >= 1 and not is32 then
       avail := true;
       r.len4 := '0';
       raw := x"0000" & hw0;
-      exp := expand_c(hw0);
-      d := decode(exp(31 downto 0));
+      exp := expand_c(hw0, m64);
+      d := decode(exp(31 downto 0), m64);
       if exp(32) = '1' then d := DEC_NOP; d.illegal := '1'; end if;
       r.insn := raw; r.d := d;
     elsif fq_cnt >= 2 then
@@ -273,12 +375,13 @@ begin
       r.len4 := '1';
       if fq_err(1) = '1' then
         r.exc := '1';
-        r.code := std_logic_vector(to_unsigned(C_IACCESS, 5));
-        r.tval := std_logic_vector(unsigned(fq_pc) + 2);
+        if fq_pf(1) = '1' then r.code := std_logic_vector(to_unsigned(C_IPAGE, 5));
+        else r.code := std_logic_vector(to_unsigned(C_IACCESS, 5)); end if;
+        r.tval := xf(std_logic_vector(unsigned(fq_pc) + 2), m64);
       else
         raw := hw1 & hw0;
         r.insn := raw;
-        r.d := decode(raw);
+        r.d := decode(raw, m64);
       end if;
     end if;
     if r.exc = '0' and r.d.illegal = '1' then
@@ -333,7 +436,12 @@ begin
     variable lanes    : integer range 0 to 15;
     variable strb     : std_logic_vector(15 downto 0);
     variable late_dep : boolean;
-    variable is_ld    : boolean;
+    variable effp     : std_logic_vector(1 downto 0);
+    variable tr_on    : boolean;
+    variable acc      : std_logic_vector(1 downto 0);
+    variable pa       : xword;
+    variable walk     : boolean;
+    variable pf_code, af_code : natural range 0 to 31;
   begin
     -- forwarding: M antes que W
     fa := idex.a; fb := idex.b;
@@ -364,6 +472,7 @@ begin
 
     if idex.len4 = '1' then link := std_logic_vector(unsigned(idex.pc) + 4);
     else link := std_logic_vector(unsigned(idex.pc) + 2); end if;
+    link := xf(link, m64);
 
     -- resultado
     if idex.d.br = BR_JAL or idex.d.br = BR_JALR then
@@ -394,12 +503,14 @@ begin
     else
       tgt := std_logic_vector(unsigned(idex.pc) + unsigned(idex.d.imm));
     end if;
+    tgt := xf(tgt, m64);
     ex_target <= tgt;
     if taken then ex_taken <= '1'; else ex_taken <= '0'; end if;
 
-    -- memoria: direccion, alineacion, PMA (orden del ISS). AMO/LR/SC: direccion = rs1.
-    addr := std_logic_vector(unsigned(fa) + unsigned(idex.d.imm));
+    -- memoria: direccion, alineacion, traduccion, PMA (orden del ISS)
+    addr := xf(std_logic_vector(unsigned(fa) + unsigned(idex.d.imm)), m64);
     o.maddr := addr;
+    d_vpn <= addr(38 downto 12);
     case idex.d.msize is
       when "000"  => mis := false;
       when "001"  => mis := addr(0) = '1';
@@ -407,25 +518,59 @@ begin
       when "011"  => mis := addr(2 downto 0) /= "000";
       when others => mis := addr(3 downto 0) /= "0000";
     end case;
-    is_ld := idex.d.mem = M_LOAD or idex.d.mem = M_LR;
-    if idex.v = '1' and idex.exc = '0' and idex.d.mem /= M_NONE then
+    if idex.d.mem = M_LOAD or idex.d.mem = M_LR then
+      acc := ACC_LOAD; pf_code := C_LPAGE; af_code := C_LACCESS;
+    elsif idex.d.mem = M_CBO then
+      acc := ACC_LOAD; pf_code := C_SPAGE; af_code := C_SACCESS;   -- Zicbom: como Spike
+      mis := false;
+    else
+      acc := ACC_STORE; pf_code := C_SPAGE; af_code := C_SACCESS;
+    end if;
+    effp := priv;
+    if st_mprv = '1' and priv = PRV_M then effp := st_mpp; end if;
+    tr_on := satp(63 downto 60) = "1000" and effp /= PRV_M;
+    pa := addr; walk := false;
+    ptw_d_req <= '0';
+    -- Zicbom: habilitacion por menvcfg/senvcfg (CBIE para inval, CBCFE para clean/flush)
+    if idex.v = '1' and idex.exc = '0' and idex.d.mem = M_CBO and priv /= PRV_M then
+      if (idex.d.amo_op(1 downto 0) = "00" and (cbie_m = "00" or (priv = PRV_U and cbie_s = "00"))) or
+         (idex.d.amo_op(1 downto 0) /= "00" and (cbcfe_m = '0' or (priv = PRV_U and cbcfe_s = '0'))) then
+        o.exc := '1'; o.code := std_logic_vector(to_unsigned(C_ILLEGAL, 5));
+        o.tval := tval_insn(idex.insn);
+      end if;
+    end if;
+    if idex.v = '1' and idex.exc = '0' and o.exc = '0' and idex.d.mem /= M_NONE then
       if mis then
         o.exc := '1'; o.tval := addr;
-        if is_ld then o.code := std_logic_vector(to_unsigned(C_LMISAL, 5));
+        if acc = ACC_LOAD then o.code := std_logic_vector(to_unsigned(C_LMISAL, 5));
         else o.code := std_logic_vector(to_unsigned(C_SMISAL, 5)); end if;
-      else
-        if idex.d.mem = M_LOAD or idex.d.mem = M_STORE then
-          pma_ok := pma_dram(addr) or pma_io(addr) or (idex.d.mem = M_LOAD and pma_rom(addr));
+      elsif tr_on and not va_canonical(addr) then
+        o.exc := '1'; o.tval := addr; o.code := std_logic_vector(to_unsigned(pf_code, 5));
+      elsif tr_on and dtlb_hit = '1' and not tlb_perm_ok(dtlb_e, acc, effp, st_sum, st_mxr) then
+        o.exc := '1'; o.tval := addr; o.code := std_logic_vector(to_unsigned(pf_code, 5));
+      elsif tr_on and dtlb_hit = '0' then
+        if d_pfr_v = '1' and d_pfr_vpn = addr(38 downto 12) then
+          o.exc := '1'; o.tval := addr;
+          if d_pfr_acc = '1' then o.code := std_logic_vector(to_unsigned(af_code, 5));
+          else o.code := std_logic_vector(to_unsigned(pf_code, 5)); end if;
         else
-          pma_ok := pma_dram(addr);                      -- atomicos solo en DRAM
+          walk := true;
+          if ptw_busy = '0' and wb_flush = '0' then ptw_d_req <= '1'; end if;
+        end if;
+      end if;
+      if tr_on and dtlb_hit = '1' then pa := tlb_pa(dtlb_e, addr); end if;
+      if o.exc = '0' and not walk and idex.d.mem /= M_CBO then
+        if idex.d.mem = M_LOAD or idex.d.mem = M_STORE then
+          pma_ok := pma_dram(pa) or pma_io(pa) or (idex.d.mem = M_LOAD and pma_rom(pa));
+        else
+          pma_ok := pma_dram(pa);
         end if;
         if not pma_ok then
-          o.exc := '1'; o.tval := addr;
-          if is_ld then o.code := std_logic_vector(to_unsigned(C_LACCESS, 5));
-          else o.code := std_logic_vector(to_unsigned(C_SACCESS, 5)); end if;
+          o.exc := '1'; o.tval := addr; o.code := std_logic_vector(to_unsigned(af_code, 5));
         end if;
       end if;
     end if;
+    o.paddr := pa;
 
     -- dependencia de un resultado tardio (load/LR/SC/AMO) que sigue en M: esperar a
     -- que llegue a W y adelantar desde alli. Evita el camino respuesta -> ALU.
@@ -438,9 +583,10 @@ begin
     end if;
 
     -- SC: requiere M y W vacias (la reserva se fija en W) y reserva valida
-    sc_ok := resv_v = '1' and resv_line = addr(127 downto 6);
-    need_req := idex.v = '1' and o.exc = '0' and idex.d.mem /= M_NONE and not late_dep;
-    wait_v := late_dep;
+    sc_ok := resv_v = '1' and resv_line = pa(127 downto 6);
+    need_req := idex.v = '1' and o.exc = '0' and idex.d.mem /= M_NONE and not late_dep and not walk
+                and not (idex.d.mem = M_CBO and not pma_dram(pa));
+    wait_v := late_dep or walk;
     if need_req and idex.d.mem = M_SC then
       if exmem.v = '1' or memwb.v = '1' then
         wait_v := true; need_req := false;
@@ -450,7 +596,8 @@ begin
       end if;
     end if;
 
-    side := idex.d.mem = M_STORE or idex.d.mem = M_AMO or idex.d.mem = M_SC or not pma_dram(addr);
+    side := idex.d.mem = M_STORE or idex.d.mem = M_AMO or idex.d.mem = M_SC or idex.d.mem = M_CBO
+            or not pma_dram(pa);
     older_ok := true;
     if exmem.v = '1' then
       if exmem.exc = '1' or exmem.sys /= S_NONE then older_ok := false;
@@ -460,23 +607,24 @@ begin
     if memwb.v = '1' and (memwb.exc = '1' or memwb.sys /= S_NONE) then older_ok := false; end if;
     free := d_out = '0' or d_rsp_valid = '1';
 
-    if rst = '0' and need_req and free and (not side or older_ok) and wb_flush = '0' then
-      d_req_valid <= '1';
+    if rst = '0' and need_req and free and (not side or older_ok) and wb_flush = '0' then  -- rst: see 'want'
+      core_req_valid <= '1';
     else
-      d_req_valid <= '0';
+      core_req_valid <= '0';
     end if;
     if need_req and not (free and (not side or older_ok) and wb_flush = '0' and d_req_ready = '1') then
       wait_v := true;
     end if;
     if need_req then o.issued := '1'; else o.issued := '0'; end if;
 
-    d_req_addr   <= addr;
-    d_req_size   <= idex.d.msize;
+    core_req_addr <= pa;
+    core_req_size <= idex.d.msize;
     d_req_amo_op <= idex.d.amo_op;
     case idex.d.mem is
-      when M_STORE | M_SC => d_req_kind <= "01";
-      when M_AMO          => d_req_kind <= "10";
-      when others         => d_req_kind <= "00";
+      when M_STORE | M_SC => core_req_kind <= "01";
+      when M_AMO          => core_req_kind <= "10";
+      when M_CBO          => core_req_kind <= "11";              -- d_req_amo_op(1:0) = operacion
+      when others         => core_req_kind <= "00";
     end case;
     lanes := to_integer(unsigned(addr(3 downto 0)));
     case idex.d.msize is
@@ -509,7 +657,7 @@ begin
   ex_redirect <= '1' when ex_adv = '1' and idex.exc = '0' and ex_taken = '1' else '0';
 
   -- ============================================================ M: respuesta de datos
-  mem_rsp <= d_rsp_valid and not d_drop;
+  mem_rsp <= d_rsp_valid and not d_drop and not d_owner_ptw;
   process (all)
     variable o      : exmem_t;
     variable sh     : xword;
@@ -559,10 +707,11 @@ begin
     tgt := XZERO; code := memwb.code; tval := memwb.tval;
     rf_we := false; rd_val := memwb.res;
     csr_wr_intent <= '0'; csr_we <= '0'; csr_wdata <= XZERO; csr_retire <= '0';
-    csr_mret <= '0';
-    fencei_o <= '0';
+    csr_mret <= '0'; csr_sret <= '0';
+    fencei_o <= '0'; sfence_int <= '0';
     if memwb.len4 = '1' then next_pc := std_logic_vector(unsigned(memwb.pc) + 4);
     else next_pc := std_logic_vector(unsigned(memwb.pc) + 2); end if;
+    next_pc := xf(next_pc, m64);
 
     if memwb.csr_f3(1 downto 0) = "01" or memwb.csr_rs1z = '0' then csr_wr_intent <= '1'; end if;
 
@@ -579,17 +728,28 @@ begin
         case memwb.sys is
           when S_ECALL =>
             trap := true; tval := XZERO;
-            code := std_logic_vector(to_unsigned(C_ECALL_M, 5));
+            code := std_logic_vector(to_unsigned(8 + to_integer(unsigned(priv)), 5));
           when S_EBREAK =>
             trap := true; code := std_logic_vector(to_unsigned(C_BREAK, 5)); tval := memwb.pc;
           when S_MRET =>
-            commit := true; csr_mret <= '1'; flush := true; tgt := csr_mepc;
+            if priv /= PRV_M then trap := true; code := std_logic_vector(to_unsigned(C_ILLEGAL, 5)); tval := tval_insn(memwb.insn);
+            else commit := true; csr_mret <= '1'; flush := true; tgt := csr_mepc; end if;
+          when S_SRET =>
+            if priv = PRV_U or (priv = PRV_S and st_tsr = '1') then
+              trap := true; code := std_logic_vector(to_unsigned(C_ILLEGAL, 5)); tval := tval_insn(memwb.insn);
+            else commit := true; csr_sret <= '1'; flush := true; tgt := csr_sepc; end if;
           when S_WFI =>
-            if wfi_wake = '0' then
+            if priv = PRV_U or (priv = PRV_S and st_tw = '1') then
+              trap := true; code := std_logic_vector(to_unsigned(C_ILLEGAL, 5)); tval := tval_insn(memwb.insn);
+            elsif wfi_wake = '0' then
               hold := true;
             else
               commit := true; flush := true; tgt := next_pc;
             end if;
+          when S_SFENCE =>
+            if priv = PRV_U or (priv = PRV_S and st_tvm = '1') then
+              trap := true; code := std_logic_vector(to_unsigned(C_ILLEGAL, 5)); tval := tval_insn(memwb.insn);
+            else commit := true; flush := true; tgt := next_pc; sfence_int <= '1'; end if;
           when S_FENCEI =>
             commit := true; flush := true; tgt := next_pc; fencei_o <= '1';
           when S_CSR =>
@@ -640,7 +800,8 @@ begin
     rvfi_trap <= '1' when trap else '0';
     rvfi_cause <= (others => '0');
     rvfi_cause(4 downto 0) <= code;
-    if irq then rvfi_cause(127) <= '1'; end if;
+    if irq and m64 = '1' then rvfi_cause(127 downto 63) <= (others => '1');
+    elsif irq then rvfi_cause(127) <= '1'; end if;
     rvfi_tval <= tval;
     if rf_we and memwb.rd /= "00000" then
       rvfi_rd <= memwb.rd; rvfi_rd_wdata <= rd_val;
@@ -648,19 +809,22 @@ begin
       rvfi_rd <= "00000"; rvfi_rd_wdata <= XZERO;
     end if;
     -- escritura del retiro: store, AMO y SC con exito (un SC fallido no emite peticion)
-    rvfi_mem_addr <= memwb.maddr; rvfi_mem_wdata <= memwb.wdata; rvfi_mem_wstrb <= x"0000";
+    rvfi_mem_addr <= memwb.paddr; rvfi_mem_wdata <= memwb.wdata; rvfi_mem_wstrb <= x"0000";
     if commit and memwb.sys = S_NONE and (memwb.mop = M_STORE or memwb.mop = M_AMO or
                                           (memwb.mop = M_SC and memwb.issued = '1')) then
       rvfi_mem_wstrb <= memwb.wstrb;
     end if;
   end process;
 
+  sfence_o <= sfence_int;
   rvfi_mip <= mip_trace;
 
   -- ============================================================ registros
   process (clk)
     variable buf  : hw_arr;
     variable berr : std_logic_vector(3 downto 0);
+    variable bpf  : std_logic_vector(3 downto 0);
+    variable pfv  : std_logic;
     variable cnt  : integer range 0 to 7;
     variable n    : integer range 0 to 2;
     variable rsp  : boolean;
@@ -672,7 +836,8 @@ begin
         idex <= IDEX_NOP; exmem <= EXMEM_NOP; memwb <= EXMEM_NOP;
         fq_cnt <= "000"; fq_pc <= RESET_PC; f_addr <= RESET_PC(127 downto 2) & "00";
         f_out <= '0'; f_self <= '0'; f_drop <= '0'; f_skip <= RESET_PC(1);
-        d_out <= '0'; d_drop <= '0'; resv_v <= '0';
+        d_out <= '0'; d_drop <= '0'; resv_v <= '0'; d_owner_ptw <= '0';
+        i_pfr_v <= '0'; d_pfr_v <= '0';
       else
         -- ---------------------------------------------- fetch
         if redirect = '1' then
@@ -685,7 +850,7 @@ begin
           elsif f_drop = '1' and i_rsp_valid = '0' then f_drop <= '1';
           else f_drop <= '0'; f_out <= '0'; end if;
         else
-          buf := fq_hw; berr := fq_err;
+          buf := fq_hw; berr := fq_err; bpf := fq_pf;
           cnt := to_integer(fq_cnt);
           n := to_integer(f_consume_n);
           -- consumir
@@ -693,26 +858,27 @@ begin
             if k <= n then
               buf(0) := buf(1); buf(1) := buf(2); buf(2) := buf(3);
               berr := '0' & berr(3 downto 1);
+              bpf  := '0' & bpf(3 downto 1);
             end if;
           end loop;
           cnt := cnt - n;
-          if n = 2 then fq_pc <= std_logic_vector(unsigned(fq_pc) + 4);
-          elsif n = 1 then fq_pc <= std_logic_vector(unsigned(fq_pc) + 2); end if;
+          if n = 2 then fq_pc <= xf(std_logic_vector(unsigned(fq_pc) + 4), m64);
+          elsif n = 1 then fq_pc <= xf(std_logic_vector(unsigned(fq_pc) + 2), m64); end if;
           -- llenar
           rsp := (i_rsp_valid = '1' and f_drop = '0') or f_self = '1';
-          if f_self = '1' then data := x"00000000"; err := '1';
-          else data := i_rsp_data; err := i_rsp_err; end if;
+          if f_self = '1' then data := x"00000000"; err := '1'; pfv := f_self_pf;
+          else data := i_rsp_data; err := i_rsp_err; pfv := '0'; end if;
           if rsp then
             if f_skip = '1' then
-              buf(cnt) := data(31 downto 16); berr(cnt) := err; cnt := cnt + 1;
+              buf(cnt) := data(31 downto 16); berr(cnt) := err; bpf(cnt) := pfv; cnt := cnt + 1;
               f_skip <= '0';
             else
-              buf(cnt) := data(15 downto 0); berr(cnt) := err;
-              buf(cnt + 1) := data(31 downto 16); berr(cnt + 1) := err;
+              buf(cnt) := data(15 downto 0); berr(cnt) := err; bpf(cnt) := pfv;
+              buf(cnt + 1) := data(31 downto 16); berr(cnt + 1) := err; bpf(cnt + 1) := pfv;
               cnt := cnt + 2;
             end if;
           end if;
-          fq_hw <= buf; fq_err <= berr;
+          fq_hw <= buf; fq_err <= berr; fq_pf <= bpf;
           fq_cnt <= to_unsigned(cnt, 3);
           -- estado de peticiones
           if i_rsp_valid = '1' then
@@ -722,20 +888,33 @@ begin
           f_self <= '0';
           if i_req_valid = '1' and i_req_ready = '1' then
             f_out <= '1';
-            f_addr <= std_logic_vector(unsigned(f_addr) + 4);
+            f_addr <= xf(std_logic_vector(unsigned(f_addr) + 4), m64);
           elsif f_fault = '1' then
-            f_self <= '1';
-            f_addr <= std_logic_vector(unsigned(f_addr) + 4);
+            f_self <= '1'; f_self_pf <= f_fault_pf;
+            f_addr <= xf(std_logic_vector(unsigned(f_addr) + 4), m64);
           end if;
+        end if;
+
+        -- ---------------------------------------------- fallos de caminata
+        if redirect = '1' then
+          i_pfr_v <= '0';
+        elsif ptw_i_fault = '1' then
+          i_pfr_v <= '1'; i_pfr_vpn <= ptw_fault_vpn; i_pfr_acc <= ptw_fault_acc;
+        end if;
+        if wb_flush = '1' or ex_adv = '1' then
+          d_pfr_v <= '0';
+        elsif ptw_d_fault = '1' then
+          d_pfr_v <= '1'; d_pfr_vpn <= ptw_fault_vpn; d_pfr_acc <= ptw_fault_acc;
         end if;
 
         -- ---------------------------------------------- datos en vuelo
         if d_rsp_valid = '1' then
           d_out <= '0';
-          if d_drop = '1' then d_drop <= '0'; end if;
+          if d_drop = '1' and d_owner_ptw = '0' then d_drop <= '0'; end if;
         end if;
         if d_req_valid = '1' and d_req_ready = '1' then
           d_out <= '1';
+          d_owner_ptw <= ptw_grant;
         end if;
         if wb_flush = '1' and exmem.v = '1' and exmem.issued = '1' and mem_rsp = '0' then
           d_drop <= '1';
@@ -751,7 +930,7 @@ begin
           resv_v <= '0';
         elsif csr_retire = '1' then
           if memwb.mop = M_LR then
-            resv_v <= '1'; resv_line <= memwb.maddr(127 downto 6);
+            resv_v <= '1'; resv_line <= memwb.paddr(127 downto 6);
           elsif memwb.mop = M_SC then
             resv_v <= '0';
           end if;

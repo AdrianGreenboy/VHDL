@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Capa 1: vectores exhaustivos del decompresor RV128C desde el ISS (49152 casos)."""
+"""Capa 1: vectores exhaustivos del decompresor RVC (49152 casos).
+  gen_rvc_vectors.py <salida>           RV128C, oraculo iss128.expand_c
+  gen_rvc_vectors.py <salida> --rv64    RV64C, oraculo iss64.expand_c (../RV64IMAC)"""
+import os
 import sys
-sys.path.insert(0, sys.path[0] + '/..')
-from iss128 import expand_c
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, '..'))
+sys.path.insert(0, os.path.join(HERE, '..', '..', 'RV64IMAC'))
+if '--rv64' in sys.argv:
+    from iss64 import expand_c
+else:
+    from iss128 import expand_c
 with open(sys.argv[1], 'w') as f:
     for c in range(1 << 16):
         if c & 3 == 3:

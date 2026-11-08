@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""iss128.py - ISS de referencia RV128IMAC_Zicsr_Zifencei, solo modo M (experimental).
+"""iss128.py - ISS de referencia RV128IMAC_Zicsr_Zifencei, M/S/U (experimental).
 
 Oraculo del core RV128IMAC. Derivado de iss64.py (verificado contra Spike) con
 la misma API (Bus, Hart.step, wlog, mip_hw, irq_forced) para que compare128.py
 funcione igual que compare.py. Codificaciones: doc/RV128IMAC_ISA.md.
 
+Modo RV128 del core dual (el modo RV64 se verifica contra iss64.py sin cambios).
+Privilegios y CSRs con la misma semantica que iss64.py (Priv. 1.12), ensanchados:
 Decisiones de implementacion (deben coincidir con el RTL):
-  * Solo modo M. misa fijo (MXL=3, A C I M), escrituras ignoradas.
-  * mstatus: solo MIE y MPIE escribibles; MPP lee siempre 11.
-  * CSRs no listados -> instruccion ilegal (sin PMP, sin triggers, sin S/U).
+  * M/S/U con medeleg/mideleg, MPRV/SUM/MXR, TVM/TW/TSR, mcounteren/scounteren.
+  * misa fijo (MXL=3, A C I M S U), escrituras ignoradas. SXL = UXL = 3.
+  * Paginacion: no existe esquema RV128 -> satp lee 0 y las escrituras se ignoran (Bare).
+  * Sin Zicbom: MISC-MEM f3=010 es LQ en RV128.
+  * PMP con 0 entradas y triggers a 0, como iss64.py. Causa de irq en el bit 127.
   * mcycle/minstret/time de 64 bit, extendidos con ceros al leer.
   * Desalineados -> excepcion 4/6 (LR: 4; SC/AMO: 6).
   * Reserva LR/SC con granulo de 64 B; se borra en cualquier SC y en cualquier trap.
@@ -39,16 +43,27 @@ def s128(v):
 
 EXC_IACCESS, EXC_ILLEGAL, EXC_BREAK = 1, 2, 3
 EXC_LMISALIGN, EXC_LACCESS, EXC_SMISALIGN, EXC_SACCESS = 4, 5, 6, 7
-EXC_ECALL_M = 11
+EXC_ECALL_U, EXC_ECALL_S, EXC_ECALL_M = 8, 9, 11
 IRQ_BIT = 1 << 127
+PRV_U, PRV_S, PRV_M = 0, 1, 3
 
-MS_MIE, MS_MPIE = 1 << 3, 1 << 7
-MS_MPP = 3 << 11
-MISA = (3 << 126) | (1 << 0) | (1 << 2) | (1 << 8) | (1 << 12)
+MS_SIE, MS_MIE, MS_SPIE, MS_MPIE = 1 << 1, 1 << 3, 1 << 5, 1 << 7
+MS_SPP = 1 << 8
+MS_MPP_SH = 11
+MS_MPRV, MS_SUM, MS_MXR = 1 << 17, 1 << 18, 1 << 19
+MS_TVM, MS_TW, MS_TSR = 1 << 20, 1 << 21, 1 << 22
+MS_UXL_SXL = (3 << 32) | (3 << 34)
+MSTATUS_WMASK = (MS_SIE | MS_MIE | MS_SPIE | MS_MPIE | MS_SPP | (3 << MS_MPP_SH)
+                 | MS_MPRV | MS_SUM | MS_MXR | MS_TVM | MS_TW | MS_TSR)
+SSTATUS_MASK = MS_SIE | MS_SPIE | MS_SPP | MS_SUM | MS_MXR | (3 << 32)
+SSTATUS_WMASK = MS_SIE | MS_SPIE | MS_SPP | MS_SUM | MS_MXR
+MISA = (3 << 126) | (1 << 0) | (1 << 2) | (1 << 8) | (1 << 12) | (1 << 18) | (1 << 20)
 
-MSIP, MTIP, MEIP = 1 << 3, 1 << 7, 1 << 11
-ALL_INTS = MSIP | MTIP | MEIP
-IRQ_PRIO = (11, 3, 7)
+SSIP, MSIP, STIP, MTIP, SEIP, MEIP = 1 << 1, 1 << 3, 1 << 5, 1 << 7, 1 << 9, 1 << 11
+S_INTS = SSIP | STIP | SEIP
+ALL_INTS = S_INTS | MSIP | MTIP | MEIP
+IRQ_PRIO = (11, 3, 7, 9, 1, 5)          # MEI MSI MTI SEI SSI STI
+MEDELEG_MASK = sum(1 << b for b in (1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 15))
 
 ROM_BASE, ROM_SIZE = 0x0000_1000, 0x1000
 CLINT_BASE, CLINT_SIZE = 0x0200_0000, 0x1_0000
@@ -342,26 +357,35 @@ class Hart:
         self.bus = bus
         self.x = [0] * 32
         self.pc = pc
+        self.priv = PRV_M
         self.time_div = time_div
         self.steps = 0
-        self.mstatus = MS_MPP
-        self.mie = 0
-        self.mtvec = 0
-        self.mscratch = self.mepc = self.mcause = self.mtval = 0
+        self.mstatus = MS_UXL_SXL
+        self.medeleg = self.mideleg = 0
+        self.mie = self.mip_sw = 0
+        self.mtvec = self.stvec = 0
+        self.mscratch = self.sscratch = 0
+        self.mepc = self.sepc = 0
+        self.mcause = self.scause = 0
+        self.mtval = self.stval = 0
+        self.mcounteren = self.scounteren = 0
         self.mcountinhibit = 0
+        self.menvcfg = self.senvcfg = 0
         self.mcycle = self.minstret = 0
-        self.meip = 0
+        self.meip = self.seip_hw = 0
         self.resv = None                     # linea reservada (pa >> 6)
         self.irq_forced = False              # lockstep: solo irq que dicte el RTL
         self.wlog = None                     # ultima escritura del paso: (pa, bytes, valor)
-        self.mip_hw = None                   # lockstep: MTIP/MSIP/MEIP dictados por el RTL
+        self.mip_hw = None                   # lockstep: lineas dictadas por el RTL
         self._instret_written = False
 
     # ------------------------------------------------ interrupciones
     def mip(self):
         if self.mip_hw is not None:
-            return self.mip_hw & ALL_INTS
-        v = 0
+            return (self.mip_sw & S_INTS) | (self.mip_hw & (MSIP | MTIP | MEIP | SEIP))
+        v = self.mip_sw & S_INTS
+        if self.seip_hw:
+            v |= SEIP
         if self.bus.msip:
             v |= MSIP
         if self.bus.mtime >= self.bus.mtimecmp:
@@ -372,23 +396,44 @@ class Hart:
 
     def pending_irq(self):
         pend = self.mip() & self.mie
-        if not pend or not (self.mstatus & MS_MIE):
+        if not pend:
             return None
+        m_en = self.priv < PRV_M or (self.mstatus & MS_MIE)
+        s_en = self.priv < PRV_S or (self.priv == PRV_S and (self.mstatus & MS_SIE))
+        m_pend = pend & ~self.mideleg
+        s_pend = pend & self.mideleg
         for cause in IRQ_PRIO:
-            if (pend >> cause) & 1:
+            if m_en and (m_pend >> cause) & 1:
+                return cause
+        for cause in IRQ_PRIO:
+            if s_en and (s_pend >> cause) & 1 and self.priv <= PRV_S:
                 return cause
         return None
 
     def take_trap(self, cause, tval, is_irq):
         self.resv = None
-        self.mepc, self.mcause, self.mtval = self.pc, (IRQ_BIT | cause) if is_irq else cause, tval & MX
-        ms = self.mstatus
-        ms = (ms & ~MS_MPIE) | (MS_MPIE if ms & MS_MIE else 0)
-        self.mstatus = ms & ~MS_MIE
-        base, mode = self.mtvec & ~3, self.mtvec & 1
-        self.pc = (base + 4 * cause) & MX if (is_irq and mode) else base
+        deleg = self.mideleg if is_irq else self.medeleg
+        cause_v = (IRQ_BIT | cause) if is_irq else cause
+        tval &= MX
+        if self.priv <= PRV_S and (deleg >> cause) & 1:
+            self.sepc, self.scause, self.stval = self.pc, cause_v, tval
+            ms = self.mstatus
+            ms = (ms & ~MS_SPIE) | (MS_SPIE if ms & MS_SIE else 0)
+            ms = (ms & ~MS_SPP) | (MS_SPP if self.priv == PRV_S else 0)
+            self.mstatus = ms & ~MS_SIE
+            self.priv = PRV_S
+            base, mode = self.stvec & ~3, self.stvec & 1
+        else:
+            self.mepc, self.mcause, self.mtval = self.pc, cause_v, tval
+            ms = self.mstatus
+            ms = (ms & ~MS_MPIE) | (MS_MPIE if ms & MS_MIE else 0)
+            ms = (ms & ~(3 << MS_MPP_SH)) | (self.priv << MS_MPP_SH)
+            self.mstatus = ms & ~MS_MIE
+            self.priv = PRV_M
+            base, mode = self.mtvec & ~3, self.mtvec & 1
+        self.pc = (base + 4 * cause) & MX if (is_irq and mode) else base & MX
 
-    # ------------------------------------------------ memoria
+    # ------------------------------------------------ memoria (paginacion Bare)
     def mem_load(self, a, size):
         if a & (size - 1):
             raise Trap(EXC_LMISALIGN, a)
@@ -411,43 +456,117 @@ class Hart:
             raise Trap(EXC_IACCESS, a)
         return self.bus.load(a, 2)
 
-    # ------------------------------------------------ CSRs
+    # ------------------------------------------------ CSRs (como iss64.py)
     def csr_read(self, a):
+        p = self.priv
+        if ((a >> 8) & 3) > p:
+            raise Trap(EXC_ILLEGAL)
+        if 0xC00 <= a <= 0xC1F:
+            bit = 1 << (a & 31)
+            if (p < PRV_M and not self.mcounteren & bit) or (p == PRV_U and not self.scounteren & bit):
+                raise Trap(EXC_ILLEGAL)
+            return (self.mcycle, self.bus.mtime, self.minstret)[a & 31] if (a & 31) < 3 else 0
         if a == 0x300: return self.mstatus
         if a == 0x301: return MISA
+        if a == 0x302: return self.medeleg
+        if a == 0x303: return self.mideleg
         if a == 0x304: return self.mie
         if a == 0x305: return self.mtvec
+        if a == 0x306: return self.mcounteren
+        if a == 0x30A: return self.menvcfg
         if a == 0x320: return self.mcountinhibit
+        if 0x323 <= a <= 0x33F: return 0
         if a == 0x340: return self.mscratch
         if a == 0x341: return self.mepc
         if a == 0x342: return self.mcause
         if a == 0x343: return self.mtval
         if a == 0x344: return self.mip()
-        if a in (0xB00, 0xC00): return self.mcycle
-        if a in (0xB02, 0xC02): return self.minstret
-        if a == 0xC01: return self.bus.mtime
-        if 0xF11 <= a <= 0xF15: return 0
+        if 0x3A0 <= a <= 0x3AF:
+            if a & 1:
+                raise Trap(EXC_ILLEGAL)
+            return 0
+        if 0x3B0 <= a <= 0x3EF: return 0
+        if 0x7A0 <= a <= 0x7A3: return 0
+        if a == 0xB00: return self.mcycle
+        if a == 0xB02: return self.minstret
+        if 0xB03 <= a <= 0xB1F: return 0
+        if a in (0xF11, 0xF12, 0xF13, 0xF14, 0xF15): return 0
+        if a == 0x100: return self.mstatus & SSTATUS_MASK
+        if a == 0x104: return self.mie & self.mideleg
+        if a == 0x105: return self.stvec
+        if a == 0x106: return self.scounteren
+        if a == 0x10A: return self.senvcfg
+        if a == 0x140: return self.sscratch
+        if a == 0x141: return self.sepc
+        if a == 0x142: return self.scause
+        if a == 0x143: return self.stval
+        if a == 0x144: return self.mip() & self.mideleg
+        if a == 0x180:
+            if p == PRV_S and self.mstatus & MS_TVM:
+                raise Trap(EXC_ILLEGAL)
+            return 0                                      # RV128: solo Bare
         raise Trap(EXC_ILLEGAL)
 
     def csr_write(self, a, v):
         v &= MX
         if (a >> 10) == 3:
             raise Trap(EXC_ILLEGAL)
-        if a == 0x300: self.mstatus = MS_MPP | (v & (MS_MIE | MS_MPIE))
-        elif a in (0x301, 0x344): pass
+        if a == 0x300:
+            old_mpp = (self.mstatus >> MS_MPP_SH) & 3
+            ms = (self.mstatus & ~MSTATUS_WMASK) | (v & MSTATUS_WMASK)
+            if ((ms >> MS_MPP_SH) & 3) == 2:
+                ms = (ms & ~(3 << MS_MPP_SH)) | (old_mpp << MS_MPP_SH)
+            self.mstatus = ms
+        elif a == 0x301: pass
+        elif a == 0x302: self.medeleg = v & MEDELEG_MASK
+        elif a == 0x303: self.mideleg = v & S_INTS
         elif a == 0x304: self.mie = v & ALL_INTS
-        elif a == 0x305: self.mtvec = (v & ~3 & MX) | (v & 1)
+        elif a == 0x305: self.mtvec = self._tvec(v)
+        elif a == 0x306: self.mcounteren = v & M32
+        elif a == 0x30A: self.menvcfg = self._envcfg(v)
         elif a == 0x320: self.mcountinhibit = v & 5
+        elif 0x323 <= a <= 0x33F: pass
         elif a == 0x340: self.mscratch = v
-        elif a == 0x341: self.mepc = v & ~1 & MX
+        elif a == 0x341: self.mepc = v & ~1
         elif a == 0x342: self.mcause = v
         elif a == 0x343: self.mtval = v
+        elif a == 0x344: self.mip_sw = (self.mip_sw & ~S_INTS) | (v & S_INTS)
+        elif 0x3A0 <= a <= 0x3EF: pass
+        elif 0x7A0 <= a <= 0x7A3: pass
         elif a == 0xB00: self.mcycle = v & M64
         elif a == 0xB02:
             self.minstret = v & M64
             self._instret_written = True
+        elif 0xB03 <= a <= 0xB1F: pass
+        elif a == 0x100:
+            self.mstatus = (self.mstatus & ~SSTATUS_WMASK) | (v & SSTATUS_WMASK)
+        elif a == 0x104:
+            self.mie = (self.mie & ~self.mideleg) | (v & self.mideleg)
+        elif a == 0x105: self.stvec = self._tvec(v)
+        elif a == 0x106: self.scounteren = v & M32
+        elif a == 0x10A: self.senvcfg = self._envcfg(v)
+        elif a == 0x140: self.sscratch = v
+        elif a == 0x141: self.sepc = v & ~1
+        elif a == 0x142: self.scause = v
+        elif a == 0x143: self.stval = v
+        elif a == 0x144:
+            m = self.mideleg & SSIP
+            self.mip_sw = (self.mip_sw & ~m) | (v & m)
+        elif a == 0x180:
+            pass                                          # RV128: satp fijo a 0 (Bare)
         else:
             raise Trap(EXC_ILLEGAL)
+
+    @staticmethod
+    def _envcfg(v):
+        v &= 0x71
+        if (v >> 4) & 3 == 2:
+            v &= ~0x30
+        return v
+
+    @staticmethod
+    def _tvec(v):
+        return (v & ~3 & MX) | (v & 1)
 
     # ------------------------------------------------ paso
     def step(self, force_irq=None):
@@ -643,17 +762,42 @@ class Hart:
         return so
 
     def _system(self, i, raw, f3, rd, rs1, a, npc, ill):
+        p = self.priv
         if f3 == 0:
+            if rd != 0:
+                raise ill
+            f7 = i >> 25
             if i == 0x00000073:
-                raise Trap(EXC_ECALL_M)
+                raise Trap((EXC_ECALL_U, EXC_ECALL_S, None, EXC_ECALL_M)[p])
             if i == 0x00100073:
                 raise Trap(EXC_BREAK, self.pc)
             if i == 0x30200073:                             # MRET
+                if p != PRV_M:
+                    raise ill
                 ms = self.mstatus
+                mpp = (ms >> MS_MPP_SH) & 3
                 ms = (ms & ~MS_MIE) | (MS_MIE if ms & MS_MPIE else 0)
-                self.mstatus = ms | MS_MPIE
+                ms = (ms | MS_MPIE) & ~(3 << MS_MPP_SH)
+                if mpp != PRV_M:
+                    ms &= ~MS_MPRV
+                self.mstatus, self.priv = ms, mpp
                 return None, self.mepc, 0
+            if i == 0x10200073:                             # SRET
+                if p == PRV_U or (p == PRV_S and self.mstatus & MS_TSR):
+                    raise ill
+                ms = self.mstatus
+                spp = PRV_S if ms & MS_SPP else PRV_U
+                ms = (ms & ~MS_SIE) | (MS_SIE if ms & MS_SPIE else 0)
+                ms = (ms | MS_SPIE) & ~MS_SPP & ~MS_MPRV
+                self.mstatus, self.priv = ms, spp
+                return None, self.sepc, 0
             if i == 0x10500073:                             # WFI
+                if p == PRV_U or (p == PRV_S and self.mstatus & MS_TW):
+                    raise ill
+                return None, npc, 0
+            if f7 == 0x09:                                  # SFENCE.VMA
+                if p == PRV_U or (p == PRV_S and self.mstatus & MS_TVM):
+                    raise ill
                 return None, npc, 0
             raise ill
         if f3 == 4:
@@ -668,7 +812,12 @@ class Hart:
             old = self.csr_read(csr)
         except Trap:
             raise ill
-        new = src if op == 1 else (old | src) if op == 2 else (old & ~src)
+        if op == 1:
+            new = src
+        elif op == 2:
+            new = old | src
+        else:
+            new = old & ~src
         if writes:
             try:
                 self.csr_write(csr, new)

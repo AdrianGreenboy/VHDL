@@ -12,7 +12,7 @@ file mkdir $out
 create_project -in_memory -part xcve2302-sfva784-1LP-e-S
 switch -- $top {
   core128 {
-    foreach f {rv128_pkg rv128_muldiv rv128_csr rv128_core} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
+    foreach f {rv128_pkg rv128_mmu_pkg rv128_tlb rv128_ptw rv128_muldiv rv128_csr rv128_core} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
     set ent rv128_core
   }
   core64 {
@@ -20,7 +20,7 @@ switch -- $top {
     set ent rv64_core
   }
   proto {
-    foreach f {rv128_pkg rv128_muldiv rv128_csr rv128_core} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
+    foreach f {rv128_pkg rv128_mmu_pkg rv128_tlb rv128_ptw rv128_muldiv rv128_csr rv128_core} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
     read_vhdl -vhdl2008 $root/fpga/rv128_proto_top.vhd
     set ent rv128_proto_top
   }
@@ -34,10 +34,10 @@ report_timing_summary -max_paths 20 -file $out/timing.rpt
 report_utilization -file $out/util.rpt
 report_utilization -hierarchical -file $out/util_hier.rpt
 set wns [get_property SLACK [get_timing_paths -max_paths 1 -nworst 1 -setup]]
-set lut  [llength [get_cells -hier -quiet -filter {PRIMITIVE_GROUP == LUT}]]
+set lut  [llength [get_cells -hier -quiet -filter {REF_NAME =~ LUT*}]]
 set ff   [llength [get_cells -hier -quiet -filter {PRIMITIVE_GROUP == REGISTER}]]
 set dsp  [llength [get_cells -hier -quiet -filter {PRIMITIVE_GROUP == ARITHMETIC}]]
 set bram [llength [get_cells -hier -quiet -filter {PRIMITIVE_GROUP == BLOCKRAM}]]
-set lram [llength [get_cells -hier -quiet -filter {PRIMITIVE_GROUP == DISTRIBUTED_MEMORY}]]
+set lram [llength [get_cells -hier -quiet -filter {REF_NAME =~ RAM32* || REF_NAME =~ RAM64* || REF_NAME =~ RAM16* || REF_NAME =~ RAM128* || REF_NAME =~ RAM256*}]]
 set fmax [format %.1f [expr {1000.0 / ($period - $wns)}]]
 puts "RESULT top=$top LUT=$lut FF=$ff LUTRAM=$lram DSP=$dsp BRAM=$bram period=$period WNS=$wns fmax=${fmax}MHz"

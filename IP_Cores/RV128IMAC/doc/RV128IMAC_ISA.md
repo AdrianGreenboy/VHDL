@@ -1,5 +1,19 @@
 # RV128IMAC — ISA definition used by this core (experimental)
 
+## 0. Dual-XLEN core (v0.3)
+
+`misa.MXL` is fixed at reset by the `m64` input of `rv128_core` (stable while running):
+
+| m64 | Mode | Contents | Oracle |
+|---|---|---|---|
+| 0 | RV128 | RV128IMAC (this document) + M/S/U, Zicsr, Zifencei; paging **Bare** only (no RV128 paging scheme exists); no Zicbom (MISC-MEM f3=010 is LQ) | `iss128.py` |
+| 1 | RV64 | RV64IMAC + Zicbom + Sv39, binary-identical to `rv64_core` (Linux, OpenSBI, RTOSes, standard RV64 toolchains) | `iss64.py`, unmodified |
+
+In RV64 mode every register, pc, address and CSR value is kept as the sign extension of its
+low 64 bits (checked on every retirement by `compare64.py`). The structure keeps the MMU,
+S/U modes and the RVC/decoder paths parametrised by mode so a future RV128 paging scheme
+or RV128 operating system can be added without reworking the core.
+
 Status: **experimental**. RV128I is a *draft* base ISA (v1.7) that the RISC-V
 manual removed after release 20240411 ("removal of unratified content,
 including the sketch of the RV128I base ISA"). This document pins every
@@ -101,32 +115,23 @@ As RV64C with these RV128C changes:
 C.LD/C.SD/C.LDSP/C.SDSP/C.ADDIW/C.ADDW/C.SUBW are retained.
 There is no compressed form of the `*D` instructions.
 
-## 5. Privileged subset (M-mode only)
+## 5. Privileged architecture
 
-Only machine mode exists (no S/U, no MMU, no PMP). Any CSR not listed is an
-illegal instruction; writes to read-only CSRs (addr[11:10]=11) are illegal.
+M, S and U with the same CSR set and semantics as RV64IMAC (Privileged 1.12): `medeleg`,
+`mideleg`, MPRV/SUM/MXR, TVM/TW/TSR, `mcounteren`/`scounteren`, `menvcfg`/`senvcfg`,
+PMP with 0 entries, triggers reading 0. Differences in RV128 mode:
 
-| CSR | Addr | Implementation |
-|---|---|---|
-| mstatus | 300 | MIE(3), MPIE(7) writable; MPP(12:11) reads 11; rest 0 |
-| misa | 301 | MXL=3 (bits 127:126), extensions A, C, I, M; writes ignored |
-| mie | 304 | MSIE(3), MTIE(7), MEIE(11) |
-| mtvec | 305 | BASE + MODE (bit 0: vectored; bit 1 reads 0) |
-| mcountinhibit | 320 | CY(0), IR(2) |
-| mscratch | 340 | 128-bit |
-| mepc | 341 | 128-bit, bit 0 forced 0 |
-| mcause | 342 | interrupt flag = bit 127 |
-| mtval | 343 | 128-bit |
-| mip | 344 | MSIP/MTIP/MEIP from the input lines, writes ignored |
-| mcycle / minstret | B00 / B02 | 64-bit counters, zero-extended on read, write sets the low 64 bits |
-| cycle / time / instret | C00 / C01 / C02 | read-only |
-| mvendorid..mconfigptr | F11-F15 | read 0 |
-
-A write to minstret suppresses that instruction's own increment (as RV64IMAC).
+| CSR | RV128 mode |
+|---|---|
+| misa | MXL=3 (bits 127:126), extensions A C I M S U |
+| mstatus | SXL = UXL = 3 (bits 35:32 = 0xF) |
+| satp | reads 0, writes ignored (paging Bare: no RV128 scheme exists) |
+| mcause/scause | interrupt flag in bit 127 |
+| counters | 64-bit, zero-extended |
 
 Traps: instruction access fault (1), illegal instruction (2), breakpoint (3),
 load misaligned (4), load access fault (5), store/AMO misaligned (6),
-store/AMO access fault (7), ECALL-M (11). mtval: illegal -> instruction bits,
+store/AMO access fault (7), ECALL from U/S/M (8/9/11), page faults (12/13/15, RV64 mode). mtval: illegal -> instruction bits,
 ebreak -> pc, memory faults -> address, ecall/irq -> 0.
 MRET; WFI waits in W until (mip & mie) /= 0 (the ISS executes it as a nop);
 FENCE is a no-op; FENCE.I serializes and pulses `fencei_o`.

@@ -11,7 +11,7 @@ asi el mismo binario vale para el lockstep (tohost) y para QEMU x-rv128 (sifive_
 Grupos (QEMU = tambien sirve para validar el ISS contra QEMU):
   rv128ui_alu  rv128ui_w  rv128ui_d  rv128ui_mem  rv128ui_ctrl  rv128um  rv128uc  rv128ua   (QEMU)
   rv128ua_q    AMO/LR/SC .Q (codificacion propia, QEMU no la tiene)
-  rv128mi_csr  rv128mi_trap  rv128mi_irq   (dependientes de la implementacion)
+  rv128mi_csr  rv128mi_trap  rv128mi_irq  rv128mi_priv   (dependientes de la implementacion)
 
 Uso: gen_isa_tests.py <dir_salida> [semilla]
 """
@@ -218,8 +218,11 @@ class T:
             '',
             '# trap: s8=1 excepcion esperada (s10 causa, s11 tval, s7 mepc, s9 longitud)',
             '#       s8=2 interrupcion esperada (s10 causa completa); s6 cuenta interrupciones',
+            '#       s8=3 volver a modo M y seguir en s7',
             '.align 2',
             'trap_vec:',
+            '    li t5, 3',
+            '    beq s8, t5, trap_gom',
             '    li t5, 1',
             '    beq s8, t5, trap_exc',
             '    li t5, 2',
@@ -247,8 +250,31 @@ class T:
             '    sd t3, 0(t4)',
             '    li s8, 0',
             '    mret',
+            'trap_gom:',
+            '    li t5, 0x1800',
+            '    csrs mstatus, t5',
+            '    csrw mepc, s7',
+            '    li s8, 0',
+            '    mret',
             'trap_bad:',
             '    j fail',
+            '# manejador de S (stvec): mismo protocolo; s8=3 sube a M con ecall',
+            '.align 2',
+            's_vec:',
+            '    li t5, 3',
+            '    beq s8, t5, s_to_m',
+            '    csrr t5, scause',
+            '    bne t5, s10, trap_bad',
+            '    csrr t5, stval',
+            '    bne t5, s11, trap_bad',
+            '    csrr t5, sepc',
+            '    bne t5, s7, trap_bad',
+            '    add t5, t5, s9',
+            '    csrw sepc, t5',
+            '    li s8, 0',
+            '    sret',
+            's_to_m:',
+            '    ecall',
             '',
             '.align 6',
             'tohost:',
@@ -554,19 +580,22 @@ def g_amo(t, widths):
 
 def g_csr(t):
     t.case(); t.L('    csrr a1, misa')
-    t.check('a1', (3 << 126) | (1 << 0) | (1 << 2) | (1 << 8) | (1 << 12))
+    t.check('a1', (3 << 126) | (1 << 0) | (1 << 2) | (1 << 8) | (1 << 12) | (1 << 18) | (1 << 20))
     for v in (M, 0x0123456789ABCDEF_FEDCBA9876543210, 0):
         t.case(); t.ld_tab('a1', v); t.L('    csrw mscratch, a1'); t.L('    csrr a2, mscratch'); t.check('a2', v)
     t.case(); t.ld_tab('a1', M); t.L('    csrrw a2, mtval, a1'); t.L('    csrr a2, mtval'); t.check('a2', M)
     t.case(); t.ld_tab('a1', M); t.L('    csrw mepc, a1'); t.L('    csrr a2, mepc'); t.check('a2', M - 1)
     t.case(); t.ld_tab('a1', M); t.L('    csrw mtvec, a1'); t.L('    csrr a2, mtvec'); t.check('a2', M - 2)
     t.L('    la t0, trap_vec'); t.L('    csrw mtvec, t0')
-    t.case(); t.L('    li a1, -1'); t.L('    csrw mie, a1'); t.L('    csrr a2, mie'); t.check_imm('a2', 0x888)
+    t.case(); t.L('    li a1, -1'); t.L('    csrw mie, a1'); t.L('    csrr a2, mie'); t.check_imm('a2', 0xAAA)
     t.L('    csrw mie, zero')
+    wmask = (1 << 1) | (1 << 3) | (1 << 5) | (1 << 7) | (1 << 8) | (3 << 11) | (0x3F << 17)
     t.case(); t.L('    li a1, -9'); t.L('    csrw mstatus, a1'); t.L('    csrr a2, mstatus')
-    t.check_imm('a2', 0x1880)                                  # MIE no (bit 3 a 0), MPIE, MPP=11
+    t.check('a2', (0xF << 32) | (wmask & ~8))                 # SXL=UXL=3 (RO), todo menos MIE
     t.L('    csrw mstatus, zero')
-    t.case(); t.L('    csrr a2, mstatus'); t.check_imm('a2', 0x1800)
+    t.case(); t.L('    csrr a2, mstatus'); t.check('a2', 0xF << 32)
+    t.case(); t.L('    csrr a2, sstatus'); t.check('a2', 3 << 32)            # UXL = 3
+    t.case(); t.ld_tab('a1', M); t.L('    csrw satp, a1'); t.L('    csrr a2, satp'); t.check_imm('a2', 0)
     t.case(); t.L('    csrsi mscratch, 5'); t.L('    csrci mscratch, 1'); t.L('    csrr a2, mscratch')
     t.check_imm('a2', 4)
     t.case(); t.L('    csrr a2, mhartid'); t.check_imm('a2', 0)
@@ -579,7 +608,7 @@ def g_csr(t):
     t.check_imm('a3', 1)
     # accesos ilegales: CSR inexistente, escritura a solo lectura, S-mode inexistente
     for enc, what in ((0x7C0025F3, 'csrr a1, 0x7c0'), (0xF1101073, 'csrw mvendorid, zero'),
-                      (0x180025F3, 'csrr a1, satp'), (0x100025F3, 'csrr a1, sstatus'),
+                      (0x600025F3, 'csrr a1, hstatus'), (0x7C1025F3, 'csrr a1, 0x7c1'),
                       (0xC0101073, 'csrw time, zero')):
         trap_case(t, 2, enc, f'.word {enc:#010x}', 4)
 
@@ -617,7 +646,7 @@ def g_trap(t):
     ok = t.label('ok'); t.L(f'    beqz s8, {ok}'); t.L('    j fail'); t.L(f'{ok}:')
     # ilegales: opcode reservado, SRET/SFENCE (no hay S), RV64 cbo.clean (MISC-MEM f3=010 es LQ
     # aqui: con rd=0 es un LQ legal, asi que se usa f3=011), f3 reservados, RVC reservados
-    for enc in (0x0000007F, 0x000000F3, 0x10200073, 0x12000073, 0x00004073, 0x0000300F, 0x0000500F,
+    for enc in (0x0000007F, 0x000000F3, 0x00004073, 0x0000300F, 0x0000500F,
                 0x00007023, 0x00005023, 0x0000502F, 0xC0001033, 0x0200203B, 0x0000203B, 0x0000207B,
                 0x0400105B, 0x0000205B, 0x40001013):
         trap_case(t, 2, enc, f'    .word {enc:#010x}', 4)
@@ -699,11 +728,69 @@ def g_irq(t):
         t.lines.append('    j trap_vec' if k == 7 else '    j fail')
 
 
+def g_priv(t):
+    """M/S/U en modo RV128: mret a S/U, ecall por modo, CSRs prohibidos, contadores,
+    WFI en U, delegacion a S con medeleg, sret, TSR. Paginacion Bare (no existe RV128)."""
+    def to_mode(mpp, lbl):
+        t.L(f'    la t0, {lbl}'); t.L('    csrw mepc, t0')
+        t.L('    li t0, 0x1800'); t.L('    csrc mstatus, t0')
+        if mpp:
+            t.L(f'    li t0, {mpp << 11:#x}'); t.L('    csrs mstatus, t0')
+        t.L('    mret'); t.L(f'{lbl}:')
+
+    def to_m(lbl):
+        t.L(f'    la s7, {lbl}'); t.L('    li s8, 3'); t.L('    ecall'); t.L(f'{lbl}:')
+
+    t.L('    csrw mcounteren, zero'); t.L('    csrw scounteren, zero'); t.L('    csrw medeleg, zero')
+    # --- S
+    to_mode(1, 's_mode1')
+    trap_case(t, 9, 0, '    ecall', 4)
+    trap_case(t, 2, 0x300025F3, '    .word 0x300025f3', 4)               # csrr a1, mstatus
+    trap_case(t, 2, 0xC00025F3, '    .word 0xc00025f3', 4)               # csrr a1, cycle (mcounteren=0)
+    trap_case(t, 2, 0x30200073, '    mret', 4)
+    t.case(); t.L('    csrr a1, sstatus'); t.check('a1', 3 << 32)
+    t.case(); t.L('    li a1, 0x5a'); t.L('    csrw sscratch, a1'); t.L('    csrr a2, sscratch'); t.check_imm('a2', 0x5A)
+    to_m('back_m1')
+    # mcounteren concede cycle a S
+    t.L('    li t0, 1'); t.L('    csrw mcounteren, t0')
+    to_mode(1, 's_mode2')
+    t.case(); t.L('    csrr a1, cycle'); t.L('    csrr a2, cycle'); t.L('    sltu a3, a1, a2'); t.check_imm('a3', 1)
+    to_m('back_m2')
+    t.L('    csrw mcounteren, zero')
+    # --- U
+    to_mode(0, 'u_mode1')
+    trap_case(t, 8, 0, '    ecall', 4)
+    trap_case(t, 2, 0x100025F3, '    .word 0x100025f3', 4)               # csrr a1, sstatus
+    trap_case(t, 2, 0x10500073, '    wfi', 4)
+    trap_case(t, 2, 0x10200073, '    sret', 4)
+    t.case(); t.L('    li a1, 7'); t.L('    addi a1, a1, 1'); t.check_imm('a1', 8)
+    to_m('back_m3')
+    # --- delegacion: ecall de U -> S (medeleg bit 8), sret de vuelta a U
+    t.L('    la t0, s_vec'); t.L('    csrw stvec, t0'); t.L('    li t0, 0x100'); t.L('    csrw medeleg, t0')
+    to_mode(0, 'u_mode2')
+    trap_case(t, 8, 0, '    ecall', 4)
+    t.case(); t.L('    li a1, 3'); t.check_imm('a1', 3)
+    to_m('back_m4')
+    t.L('    csrw medeleg, zero')
+    t.case(); t.L('    csrr a1, mcause'); t.check_imm('a1', 9)        # el ultimo trap a M fue el ecall de S
+    # --- TSR: sret en S es ilegal
+    t.L('    li t0, 0x400000'); t.L('    csrs mstatus, t0')
+    to_mode(1, 's_mode3')
+    trap_case(t, 2, 0x10200073, '    sret', 4)
+    to_m('back_m5')
+    t.L('    li t0, 0x400000'); t.L('    csrc mstatus, t0')
+    # --- sret desde M con SPP=S vuelve a S
+    t.L('    la t0, s_mode4'); t.L('    csrw sepc, t0'); t.L('    li t0, 0x100'); t.L('    csrs mstatus, t0')
+    t.L('    sret'); t.L('s_mode4:')
+    trap_case(t, 9, 0, '    ecall', 4)
+    to_m('back_m6')
+
+
 GROUPS = {
     'rv128ui_alu': g_alu, 'rv128ui_w': g_w, 'rv128ui_d': g_d, 'rv128ui_mem': g_mem,
     'rv128ui_ctrl': g_ctrl, 'rv128um': g_m, 'rv128uc': g_c,
     'rv128ua': lambda t: g_amo(t, ('w',)), 'rv128ua_d': lambda t: g_amo(t, ('d',)), 'rv128ua_q': lambda t: g_amo(t, ('q',)),
-    'rv128mi_csr': g_csr, 'rv128mi_trap': g_trap, 'rv128mi_irq': g_irq,
+    'rv128mi_csr': g_csr, 'rv128mi_trap': g_trap, 'rv128mi_irq': g_irq, 'rv128mi_priv': g_priv,
 }
 
 

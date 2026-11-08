@@ -1,5 +1,9 @@
--- rv128_pkg.vhd - tipos, constantes, decodificador, decompresor RV128C y ALU del
--- core RV128IMAC experimental (derivado de rv64_pkg.vhd).
+-- rv128_pkg.vhd - tipos, constantes, decodificador, decompresor RVC y ALU del
+-- core RV128IMAC (derivado de rv64_pkg.vhd).
+-- Core dual: misa.MXL se fija en el reset con la entrada m64 del core.
+--   m64 = '0'  RV128 (RV128I borrador 1.7, RV128C, AMO .Q, sin Zicbom: MISC-MEM f3=010 es LQ)
+--   m64 = '1'  RV64IMAC exacto (Zicbom incluido). Invariante: todo registro y todo
+--              CSR contiene el valor de 64 bit extendido en signo hasta el bit 127.
 -- VHDL-2008 portable (GHDL/Yosys/Vivado). Sin tablas indexadas: el decodificador
 -- y el decompresor son logica pura (leccion Vivado 2025.2.1, ver RV64IMAC spec sec. 8).
 -- Codificaciones: doc/RV128IMAC_ISA.md.
@@ -12,6 +16,11 @@ package rv128_pkg is
   subtype xword is std_logic_vector(127 downto 0);
   constant XZERO : xword := (others => '0');
 
+  -- privilegios
+  constant PRV_U : std_logic_vector(1 downto 0) := "00";
+  constant PRV_S : std_logic_vector(1 downto 0) := "01";
+  constant PRV_M : std_logic_vector(1 downto 0) := "11";
+
   -- causas
   constant C_IACCESS  : natural := 1;
   constant C_ILLEGAL  : natural := 2;
@@ -20,7 +29,11 @@ package rv128_pkg is
   constant C_LACCESS  : natural := 5;
   constant C_SMISAL   : natural := 6;
   constant C_SACCESS  : natural := 7;
+  constant C_ECALL_U  : natural := 8;
   constant C_ECALL_M  : natural := 11;
+  constant C_IPAGE    : natural := 12;
+  constant C_LPAGE    : natural := 13;
+  constant C_SPAGE    : natural := 15;
 
   -- anchura de operacion de la ALU / unidad M
   constant W_Q : std_logic_vector(1 downto 0) := "00";   -- 128 bit
@@ -32,8 +45,8 @@ package rv128_pkg is
   type asel_t is (A_RS1, A_PC, A_ZERO);
   type bsel_t is (B_RS2, B_IMM);
   type br_t is (BR_NONE, BR_EQ, BR_NE, BR_LT, BR_GE, BR_LTU, BR_GEU, BR_JAL, BR_JALR);
-  type mem_t is (M_NONE, M_LOAD, M_STORE, M_AMO, M_LR, M_SC);
-  type sys_t is (S_NONE, S_ECALL, S_EBREAK, S_MRET, S_WFI, S_FENCEI, S_CSR);
+  type mem_t is (M_NONE, M_LOAD, M_STORE, M_AMO, M_LR, M_SC, M_CBO);   -- M_CBO: Zicbom (solo RV64)
+  type sys_t is (S_NONE, S_ECALL, S_EBREAK, S_MRET, S_SRET, S_WFI, S_SFENCE, S_FENCEI, S_CSR);
 
   type dec_t is record
     illegal  : std_logic;
@@ -68,9 +81,11 @@ package rv128_pkg is
     csr_f3 => "000", csr_addr => (others => '0'));
 
   function sext(v : std_logic_vector; n : natural) return xword;
-  function decode(i : std_logic_vector(31 downto 0)) return dec_t;
-  -- Decompresor RV128C: devuelve 33 bits, bit 32 = '1' si la codificacion es ilegal.
-  function expand_c(c : std_logic_vector(15 downto 0)) return std_logic_vector;
+  -- ajusta un valor a la anchura del modo: en RV64 extiende en signo desde el bit 63
+  function xf(v : xword; m64 : std_logic) return xword;
+  function decode(i : std_logic_vector(31 downto 0); m64 : std_logic) return dec_t;
+  -- Decompresor RVC (RV128C o RV64C segun m64): 33 bits, bit 32 = '1' si es ilegal.
+  function expand_c(c : std_logic_vector(15 downto 0); m64 : std_logic) return std_logic_vector;
   function alu(op : alu_op_t; a, b : xword; wsel : std_logic_vector(1 downto 0)) return xword;
   -- ajusta un resultado a la anchura de la operacion (sext 31 o 63 -> 127)
   function wfix(r : xword; wsel : std_logic_vector(1 downto 0)) return xword;
@@ -92,6 +107,11 @@ package body rv128_pkg is
   begin
     t := nv(n - 1 downto 0);
     return std_logic_vector(resize(signed(t), XLEN));
+  end function;
+
+  function xf(v : xword; m64 : std_logic) return xword is
+  begin
+    if m64 = '1' then return sext(v(63 downto 0), 64); else return v; end if;
   end function;
 
   function wfix(r : xword; wsel : std_logic_vector(1 downto 0)) return xword is
@@ -159,7 +179,7 @@ package body rv128_pkg is
   end function;
 
   -- ------------------------------------------------------------- decode
-  function decode(i : std_logic_vector(31 downto 0)) return dec_t is
+  function decode(i : std_logic_vector(31 downto 0); m64 : std_logic) return dec_t is
     variable d    : dec_t := DEC_NOP;
     variable op   : std_logic_vector(6 downto 0) := i(6 downto 0);
     variable f3   : std_logic_vector(2 downto 0) := i(14 downto 12);
@@ -167,6 +187,8 @@ package body rv128_pkg is
     variable f5   : std_logic_vector(4 downto 0) := i(31 downto 27);
     variable immi, imms, immb, immu, immj : xword;
     variable ws   : std_logic_vector(1 downto 0);
+    variable nar  : boolean;                         -- opcode *W / *D (no base)
+    variable wb   : std_logic_vector(1 downto 0);    -- anchura de las ops base del modo
   begin
     immi := sext(i(31 downto 20), 12);
     imms := sext(i(31 downto 25) & i(11 downto 7), 12);
@@ -182,15 +204,16 @@ package body rv128_pkg is
     d.msize := '0' & f3(1 downto 0);
     d.munsign := f3(2);
     d.amo_op := f5;
-    -- anchura por opcode: x011011 -> W (OP-IMM-32/OP-32), x111011 / 1011011 -> D
-    if op = "0011011" or op = "0111011" then ws := W_W;
-    elsif op = "1011011" or op = "1111011" then ws := W_D;
-    else ws := W_Q; end if;
+    -- anchura: base = 128 (RV128) o 64 (RV64); *W = 32; *D = 64 (solo RV128)
+    if m64 = '1' then wb := W_D; else wb := W_Q; end if;
+    if op = "0011011" or op = "0111011" then ws := W_W; nar := true;
+    elsif op = "1011011" or op = "1111011" then ws := W_D; nar := true;
+    else ws := wb; nar := false; end if;
     case op is
       when "0110111" =>                                      -- LUI
-        d.rd_we := '1'; d.asel := A_ZERO; d.bsel := B_IMM; d.imm := immu;
+        d.rd_we := '1'; d.asel := A_ZERO; d.bsel := B_IMM; d.imm := immu; d.wsel := wb;
       when "0010111" =>                                      -- AUIPC
-        d.rd_we := '1'; d.asel := A_PC; d.bsel := B_IMM; d.imm := immu;
+        d.rd_we := '1'; d.asel := A_PC; d.bsel := B_IMM; d.imm := immu; d.wsel := wb;
       when "1101111" =>                                      -- JAL
         d.rd_we := '1'; d.br := BR_JAL; d.imm := immj;
       when "1100111" =>                                      -- JALR
@@ -209,19 +232,21 @@ package body rv128_pkg is
         end case;
       when "0000011" =>                                      -- LOAD (f3=111: LDU)
         d.rd_we := '1'; d.use_rs1 := '1'; d.mem := M_LOAD; d.imm := immi;
+        if m64 = '1' and f3 = "111" then d.illegal := '1'; end if;        -- LDU: solo RV128
       when "0100011" =>                                      -- STORE (f3=100: SQ)
         d.use_rs1 := '1'; d.use_rs2 := '1'; d.mem := M_STORE; d.imm := imms;
         d.msize := f3; d.munsign := '0';
-        if f3(2) = '1' and f3(1 downto 0) /= "00" then d.illegal := '1'; end if;
+        if f3(2) = '1' and (f3(1 downto 0) /= "00" or m64 = '1') then d.illegal := '1'; end if;
       when "0010011" | "0011011" | "1011011" =>              -- OP-IMM / -32 / -64
         d.rd_we := '1'; d.use_rs1 := '1'; d.bsel := B_IMM; d.imm := immi; d.wsel := ws;
+        if m64 = '1' and op = "1011011" then d.illegal := '1'; end if;      -- *D: solo RV128
         case f3 is
           when "000" => d.alu := ALU_ADD;
-          when "010" => d.alu := ALU_SLT;  if ws /= W_Q then d.illegal := '1'; end if;
-          when "011" => d.alu := ALU_SLTU; if ws /= W_Q then d.illegal := '1'; end if;
-          when "100" => d.alu := ALU_XOR;  if ws /= W_Q then d.illegal := '1'; end if;
-          when "110" => d.alu := ALU_OR;   if ws /= W_Q then d.illegal := '1'; end if;
-          when "111" => d.alu := ALU_AND;  if ws /= W_Q then d.illegal := '1'; end if;
+          when "010" => d.alu := ALU_SLT;  if nar then d.illegal := '1'; end if;
+          when "011" => d.alu := ALU_SLTU; if nar then d.illegal := '1'; end if;
+          when "100" => d.alu := ALU_XOR;  if nar then d.illegal := '1'; end if;
+          when "110" => d.alu := ALU_OR;   if nar then d.illegal := '1'; end if;
+          when "111" => d.alu := ALU_AND;  if nar then d.illegal := '1'; end if;
           when "001" =>
             d.alu := ALU_SLL;
             if ws = W_Q then
@@ -239,19 +264,20 @@ package body rv128_pkg is
         end case;
       when "0110011" | "0111011" | "1111011" =>              -- OP / OP-32 / OP-64
         d.rd_we := '1'; d.use_rs1 := '1'; d.use_rs2 := '1'; d.wsel := ws;
+        if m64 = '1' and op = "1111011" then d.illegal := '1'; end if;      -- *D: solo RV128
         if f7 = "0000001" then
           d.md := '1';
-          if ws /= W_Q and (f3 = "001" or f3 = "010" or f3 = "011") then d.illegal := '1'; end if;
+          if nar and (f3 = "001" or f3 = "010" or f3 = "011") then d.illegal := '1'; end if;
         elsif f7 = "0000000" then
           case f3 is
             when "000" => d.alu := ALU_ADD;
             when "001" => d.alu := ALU_SLL;
-            when "010" => d.alu := ALU_SLT;  if ws /= W_Q then d.illegal := '1'; end if;
-            when "011" => d.alu := ALU_SLTU; if ws /= W_Q then d.illegal := '1'; end if;
-            when "100" => d.alu := ALU_XOR;  if ws /= W_Q then d.illegal := '1'; end if;
+            when "010" => d.alu := ALU_SLT;  if nar then d.illegal := '1'; end if;
+            when "011" => d.alu := ALU_SLTU; if nar then d.illegal := '1'; end if;
+            when "100" => d.alu := ALU_XOR;  if nar then d.illegal := '1'; end if;
             when "101" => d.alu := ALU_SRL;
-            when "110" => d.alu := ALU_OR;   if ws /= W_Q then d.illegal := '1'; end if;
-            when others => d.alu := ALU_AND; if ws /= W_Q then d.illegal := '1'; end if;
+            when "110" => d.alu := ALU_OR;   if nar then d.illegal := '1'; end if;
+            when others => d.alu := ALU_AND; if nar then d.illegal := '1'; end if;
           end case;
         elsif f7 = "0100000" and f3 = "000" then
           d.alu := ALU_SUB;
@@ -263,7 +289,7 @@ package body rv128_pkg is
       when "0101111" =>                                      -- AMO (.W .D .Q)
         d.rd_we := '1'; d.use_rs1 := '1'; d.use_rs2 := '1';
         d.msize := f3; d.munsign := '0';
-        if f3 /= "010" and f3 /= "011" and f3 /= "100" then d.illegal := '1'; end if;
+        if f3 /= "010" and f3 /= "011" and (f3 /= "100" or m64 = '1') then d.illegal := '1'; end if;
         case f5 is
           when "00010" => d.mem := M_LR; d.use_rs2 := '0';
                           if i(24 downto 20) /= "00000" then d.illegal := '1'; end if;
@@ -274,17 +300,25 @@ package body rv128_pkg is
         end case;
       when "0001111" =>                                      -- MISC-MEM
         if f3 = "001" then d.sys := S_FENCEI;
-        elsif f3 = "010" then                                -- LQ
+        elsif f3 = "010" and m64 = '1' then                  -- RV64: Zicbom cbo.inval/clean/flush
+          d.mem := M_CBO; d.use_rs1 := '1'; d.imm := XZERO;
+          d.amo_op := "000" & i(21 downto 20);               -- 00 inval, 01 clean, 10 flush
+          if i(11 downto 7) /= "00000" or i(31 downto 22) /= "0000000000" or i(21 downto 20) = "11" then
+            d.illegal := '1';
+          end if;
+        elsif f3 = "010" then                                -- RV128: LQ
           d.rd_we := '1'; d.use_rs1 := '1'; d.mem := M_LOAD; d.imm := immi;
           d.msize := "100"; d.munsign := '0';
         elsif f3 /= "000" then d.illegal := '1'; end if;
-      when "1110011" =>                                      -- SYSTEM (solo M)
+      when "1110011" =>                                      -- SYSTEM
         if f3 = "000" then
           if i = x"00000073" then d.sys := S_ECALL;
           elsif i = x"00100073" then d.sys := S_EBREAK;
           elsif i = x"30200073" then d.sys := S_MRET;
+          elsif i = x"10200073" then d.sys := S_SRET;
           elsif i = x"10500073" then d.sys := S_WFI;
-          else d.illegal := '1'; end if;                     -- SRET / SFENCE.VMA: no hay S
+          elsif f7 = "0001001" and i(11 downto 7) = "00000" then d.sys := S_SFENCE;
+          else d.illegal := '1'; end if;
         elsif f3 = "100" then
           d.illegal := '1';
         else
@@ -305,7 +339,7 @@ package body rv128_pkg is
   -- Cambios respecto a RV64C: C.LQ/C.SQ (cuadrante 0, f3 001/101), C.LQSP/C.SQSP
   -- (cuadrante 2, f3 001/101), C.SLLI con shamt 0 = 64, C.SRLI/C.SRAI con shamt
   -- extendido en signo y 0 = 64 (1-31, 64, 96-127).
-  function expand_c(c : std_logic_vector(15 downto 0)) return std_logic_vector is
+  function expand_c(c : std_logic_vector(15 downto 0); m64 : std_logic) return std_logic_vector is
     variable r     : std_logic_vector(31 downto 0) := (others => '0');
     variable bad   : std_logic := '0';
     variable q     : std_logic_vector(1 downto 0) := c(1 downto 0);
@@ -324,8 +358,10 @@ package body rv128_pkg is
   begin
     imm6 := (11 downto 5 => c(12)) & c(6 downto 2);
     sh   := c(12) & c(6 downto 2);
-    if sh = "000000" then
-      shl7 := "1000000"; shr7 := "1000000";                  -- 64
+    if m64 = '1' then
+      shl7 := '0' & sh; shr7 := '0' & sh;                    -- RV64C: 6 bit sin signo, 0 = HINT
+    elsif sh = "000000" then
+      shl7 := "1000000"; shr7 := "1000000";                  -- RV128C: 0 = 64
     else
       shl7 := '0' & sh; shr7 := sh(5) & sh;                  -- izq: zext; der: sext
     end if;
@@ -336,7 +372,8 @@ package body rv128_pkg is
             u := "00" & c(10 downto 7) & c(12 downto 11) & c(5) & c(6) & "00";
             if u = x"000" then bad := '1'; end if;
             r := u & "00010" & "000" & rs2p & "0010011";
-          when "001" =>                                      -- c.lq
+          when "001" =>                                      -- c.lq (RV64: c.fld, sin D)
+            if m64 = '1' then bad := '1'; end if;
             u := "000" & c(10) & c(6 downto 5) & c(12 downto 11) & "0000";
             r := u & rdp & "010" & rs2p & "0001111";
           when "010" =>                                      -- c.lw
@@ -345,7 +382,8 @@ package body rv128_pkg is
           when "011" =>                                      -- c.ld
             u := "0000" & c(6 downto 5) & c(12 downto 10) & "000";
             r := u & rdp & "011" & rs2p & "0000011";
-          when "101" =>                                      -- c.sq
+          when "101" =>                                      -- c.sq (RV64: c.fsd, sin D)
+            if m64 = '1' then bad := '1'; end if;
             u := "000" & c(10) & c(6 downto 5) & c(12 downto 11) & "0000";
             r := u(11 downto 5) & rs2p & rdp & "100" & u(4 downto 0) & "0100011";
           when "110" =>                                      -- c.sw
@@ -406,8 +444,8 @@ package body rv128_pkg is
         case f3 is
           when "000" =>                                      -- c.slli
             r := "00000" & shl7 & rd & "001" & rd & "0010011";
-          when "001" =>                                      -- c.lqsp
-            if rd = "00000" then bad := '1'; end if;
+          when "001" =>                                      -- c.lqsp (RV64: c.fldsp)
+            if rd = "00000" or m64 = '1' then bad := '1'; end if;
             u := "00" & c(5 downto 2) & c(12) & c(6) & "0000";
             r := u & "00010" & "010" & rd & "0001111";
           when "010" =>                                      -- c.lwsp
@@ -437,7 +475,8 @@ package body rv128_pkg is
                 r := "0000000" & rs2 & rd & "000" & rd & "0110011";
               end if;
             end if;
-          when "101" =>                                      -- c.sqsp
+          when "101" =>                                      -- c.sqsp (RV64: c.fsdsp)
+            if m64 = '1' then bad := '1'; end if;
             u := "00" & c(10 downto 7) & c(12 downto 11) & "0000";
             r := u(11 downto 5) & rs2 & "00010" & "100" & u(4 downto 0) & "0100011";
           when "110" =>                                      -- c.swsp

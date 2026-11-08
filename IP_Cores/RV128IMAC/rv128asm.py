@@ -30,7 +30,12 @@ CSRS = {
     "mstatus": 0x300, "misa": 0x301, "mie": 0x304, "mtvec": 0x305,
     "mscratch": 0x340, "mepc": 0x341, "mcause": 0x342, "mtval": 0x343,
     "mip": 0x344, "mcycle": 0xB00, "minstret": 0xB02,
-    "cycle": 0xC00, "instret": 0xC02,
+    "cycle": 0xC00, "time": 0xC01, "instret": 0xC02, "mconfigptr": 0xF15,
+    "medeleg": 0x302, "mideleg": 0x303, "mcounteren": 0x306, "menvcfg": 0x30A,
+    "mcountinhibit": 0x320,
+    "sstatus": 0x100, "sie": 0x104, "stvec": 0x105, "scounteren": 0x106, "senvcfg": 0x10A,
+    "sscratch": 0x140, "sepc": 0x141, "scause": 0x142, "stval": 0x143, "sip": 0x144,
+    "satp": 0x180,
 }
 
 OP_LOAD, OP_MISC, OP_IMM, OP_AUIPC, OP_IMM32 = 0x03, 0x0F, 0x13, 0x17, 0x1B
@@ -283,6 +288,12 @@ class Assembler:
             return w32(0x00100073)
         if mn == "mret":
             return w32(0x30200073)
+        if mn == "sret":
+            return w32(0x10200073)
+        if mn == "sfence.vma":
+            rs1 = R(ops[0]) if n > 0 else 0
+            rs2 = R(ops[1]) if n > 1 else 0
+            return w32((0x09 << 25) | (rs2 << 20) | (rs1 << 15) | OP_SYSTEM)
         if mn == "wfi":
             return w32(0x10500073)
         if mn == "fence":

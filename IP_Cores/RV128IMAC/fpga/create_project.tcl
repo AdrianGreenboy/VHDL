@@ -17,7 +17,7 @@ set proj rv128_proto_te0950
 create_project $proj $here/$proj -part $part -force
 set_property board_part $bp [current_project]
 set_property target_language VHDL [current_project]
-foreach f {rv128_pkg rv128_muldiv rv128_csr rv128_core} { add_files -norecurse $root/rtl/$f.vhd }
+foreach f {rv128_pkg rv128_mmu_pkg rv128_tlb rv128_ptw rv128_muldiv rv128_csr rv128_core} { add_files -norecurse $root/rtl/$f.vhd }
 add_files -norecurse $here/rv128_proto_top.vhd
 set_property file_type {VHDL 2008} [get_files -filter {FILE_TYPE == VHDL}]
 add_files -norecurse $here/rv128_proto_wrap.v

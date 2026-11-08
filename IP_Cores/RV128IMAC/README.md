@@ -1,6 +1,7 @@
 # RV128IMAC — experimental 128-bit RISC-V core for the IP_Cores family
 
-**Status: experimental, v0, not yet simulated.** RV128I is a draft base ISA
+**Status: experimental. v0.3: dual-XLEN core (RV128 / RV64 selected at reset) with
+M/S/U, Sv39 MMU (RV64 mode) and the full RV64IMAC CSR set; see `doc/RV128IMAC_ISA.md` §0.** RV128I is a draft base ISA
 (v1.7) that the RISC-V manual removed after release 20240411. This core is a
 research line next to the production RV64IMAC; it goes to production only if it
 proves something worth having.
