@@ -53,6 +53,7 @@ sw/gen_cache_stress.py cache stress for RV128 mode (layer 3b)
 tb/tb_cpu.vhd          layer 3b: CPU with caches vs a random-delay AXI4 slave
 tb/tb_soc.vhd          layer 4b: SoC from the boot ROM, real IP_Cores USART + DMA, AXI-Lite bank
 compare64.py           RV64 mode vs the unmodified iss64.py (--tb core|cpu|soc)
+lockstep_linux64.py    M3: OpenSBI + Linux (RV64IMAC images) on the SoC in RV64 mode, lockstep vs iss64
 tb/tb_rvc.vhd          layer 1: RV128C expander, exhaustive (49 152 encodings)
 tb/tb_muldiv.vhd       layer 1: M unit, Q/D/W, corner + random vectors
 tb/tb_core.vhd         layers 2/3: core with ideal / random-latency memory, CLINT, UART, HTIF
@@ -98,3 +99,17 @@ python3 sw/qemu_check.py sw/tests/rndq_1   # one program, ISS vs QEMU
 sim/build.sh
 python3 compare128.py --keep sw/tests/rv128uc   # lockstep, keeps sim/*.trace for debugging
 ```
+
+## M3: Linux in RV64 mode
+
+The RV64IMAC images run unchanged (OpenSBI 1.6 `fw_jump.bin`, Linux 6.6 `Image` from
+`RV64IMAC/sw/linux/build_linux.sh`); only the boot ROM / DTB is this tree's.
+
+```bash
+python3 lockstep_linux64.py --iss --sbi fw_jump.bin --kernel Image   # ISS only, minutes
+python3 lockstep_linux64.py --sbi fw_jump.bin --kernel Image         # RTL SoC in lockstep, hours
+```
+
+M3 result (2026-11-09): boot ROM -> OpenSBI 1.6 -> Linux 6.6 -> `/init` on the RTL SoC
+(rv128_soc, RV64 mode, 128-bit bus), 37 495 304 retirements identical to iss64.py,
+sign-extension invariant held on every line; 9380 s of GHDL simulation.
