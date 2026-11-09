@@ -113,3 +113,18 @@ python3 lockstep_linux64.py --sbi fw_jump.bin --kernel Image         # RTL SoC i
 M3 result (2026-11-09): boot ROM -> OpenSBI 1.6 -> Linux 6.6 -> `/init` on the RTL SoC
 (rv128_soc, RV64 mode, 128-bit bus), 37 495 304 retirements identical to iss64.py,
 sign-extension invariant held on every line; 9380 s of GHDL simulation.
+
+## M4: RTOS in RV64 mode
+
+`sw/freertos/`: FreeRTOS V11.1.0 (machine mode, CLINT tick, heap_4) with a self-checking
+test: queue, mutex, deterministic priority inheritance, counting semaphore, task
+notifications, auto-reload software timer, `xTaskDelayUntil` exactness, `ecall` yield.
+Report on the 16550, verdict through `tohost`. Layer 6 of the regression runs it on the
+ISS (three tick rates) and in lockstep on core, cpu and soc.
+
+```bash
+git clone --depth 1 --branch V11.1.0 https://github.com/FreeRTOS/FreeRTOS-Kernel.git ~/FreeRTOS-Kernel
+sw/freertos/build.sh
+python3 sw/freertos/run_iss.py sw/freertos/freertos_test
+python3 compare64.py --tb soc --timeout 20000000 sw/freertos/freertos_test
+```

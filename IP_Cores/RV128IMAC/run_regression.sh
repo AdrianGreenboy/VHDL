@@ -11,6 +11,9 @@
 #   Capa 5   modo RV64 del core dual: lockstep contra iss64.py (sin cambios) con los
 #            riscv-tests p/v y los dirigidos del RV64IMAC (necesita ../RV64IMAC/sw/tests,
 #            que genera la regresion del RV64IMAC), en core, cpu (caches) y soc
+#   Capa 6   RTOS en modo RV64 (M4): FreeRTOS V11.1.0 autoverificable en el ISS y en
+#            lockstep en core, cpu y soc (FREERTOS_KERNEL=<arbol V11.1.0>, por defecto
+#            ~/FreeRTOS-Kernel; si no esta, la capa se omite)
 # Uso: ./run_regression.sh [rapida]      Log completo: sim/regression.log
 set -u
 cd "$(dirname "$0")"
@@ -143,6 +146,26 @@ if ls $R64/sw/tests/rv64ui-p-add > /dev/null 2>&1; then
   fi
 else
   step "capa 5: OMITIDA (no hay riscv-tests compilados en $R64/sw/tests: corre antes la regresion del RV64IMAC)"
+fi
+
+FRK=${FREERTOS_KERNEL:-$HOME/FreeRTOS-Kernel}
+if [ -f $FRK/tasks.c ] && [ -f $R64/compare.py ]; then
+  step "capa 6: FreeRTOS (modo RV64) en ISS y lockstep core/cpu/soc"
+  FR=sw/freertos/freertos_test
+  FREERTOS_KERNEL=$FRK sw/freertos/build.sh >> $LOG 2>&1 || { echo "   build de FreeRTOS fallido (ver $LOG)" | tee -a $LOG; fail=1; }
+  if [ -f $FR ]; then
+    for d in 1 4 13; do
+      python3 sw/freertos/run_iss.py $FR --time-div $d > /tmp/r128_fr.txt 2>&1 || fail=1
+      cat /tmp/r128_fr.txt >> $LOG; echo "   ISS time_div=$d: $(tail -1 /tmp/r128_fr.txt)"
+    done
+    for c in core:1:1 core:7:21 cpu:1:1 cpu:6:5 soc:1:1 soc:6:7; do
+      IFS=: read tb lat seed <<< "$c"
+      python3 compare64.py --tb $tb --maxlat $lat --seed $seed --timeout 20000000 $FR > /tmp/r128_fr.txt 2>&1 || fail=1
+      cat /tmp/r128_fr.txt >> $LOG; echo "   $tb maxlat=$lat seed=$seed: $(head -1 /tmp/r128_fr.txt)"
+    done
+  fi
+else
+  step "capa 6: OMITIDA (sin FreeRTOS-Kernel en $FRK o sin ../RV64IMAC)"
 fi
 
 echo
