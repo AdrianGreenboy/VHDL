@@ -11,7 +11,10 @@ habilitada y de mayor prioridad en el ISS) y de vivacidad (LIVENESS retiros).
 Lecturas no deterministas (cycle/mcycle y loads de mtime/UART) se copian del
 RTL al ISS en vez de compararse.
 
-Uso: compare128.py [--maxlat N] [--seed S] [--keep] prog...
+Banco (--tb): core (memoria ideal/aleatoria, capas 2/3), cpu (I$/D$ + AXI4 de 128 bit,
+capa 3b) o soc (SoC completo arrancando desde la boot ROM, capa 4b).
+
+Uso: compare128.py [--tb core|cpu|soc] [--maxlat N] [--seed S] [--keep] prog...
 """
 import argparse
 import os
@@ -23,6 +26,7 @@ from iss128 import Bus, Hart, ExitSim, MX, M64
 
 HERE = os.environ.get('RV128_HOME', os.path.dirname(os.path.abspath(__file__)))
 SIM = os.environ.get('RV128_SIM', os.path.join(HERE, 'sim'))
+BOOTROM = os.path.join(HERE, 'sw', 'bootrom', 'bootrom.bin')
 MEM_KB = 8192
 NONDET_CSR = {0xC00, 0xB00}
 TSKEW = int(os.environ.get('RV128_TSKEW', '0'))
@@ -48,11 +52,13 @@ def write_hex(prog, path):
     return syms['tohost'] - 0x80000000, entry - 0x80000000
 
 
-def run_rtl(prog, maxlat, seed, tag, time_div=4, timeout=4000000):
+def run_rtl(prog, maxlat, seed, tag, time_div=4, timeout=4000000, tb='core'):
     hexf = os.path.join(SIM, f'{tag}.hex')
     trf = os.path.join(SIM, f'{tag}.trace')
     tohost, entry = write_hex(prog, hexf)
-    cmd = [os.path.join(SIM, 'tb_core'), f'-gHEX={hexf}', f'-gTRACE={trf}', f'-gTOHOST={tohost}',
+    if tb == 'soc' and entry:
+        sys.exit(f'{prog}: la boot ROM salta a 0x8000_0000 y el programa empieza en +{entry:#x}')
+    cmd = [os.path.join(SIM, 'tb_' + tb), f'-gHEX={hexf}', f'-gTRACE={trf}', f'-gTOHOST={tohost}',
            f'-gENTRY={entry}', f'-gMAXLAT={maxlat}', f'-gSEED={seed}', f'-gMEM_KB={MEM_KB}',
            f'-gTIME_DIV={time_div}', f'-gTIMEOUT={timeout}', '--ieee-asserts=disable']
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=SIM).stdout
@@ -104,8 +110,11 @@ def check_write(h, insn32, w):
     return None
 
 
-def lockstep(prog, trf):
+def lockstep(prog, trf, soc=False):
     bus, entry, _ = load(prog)
+    if soc:                                         # arranque desde la boot ROM del SoC
+        bus.rom = open(BOOTROM, 'rb').read().ljust(iss128.ROM_SIZE, b'\0')
+        entry = iss128.ROM_BASE
     h = Hart(bus, pc=entry)
     with open(trf) as f:
         return lockstep_stream(h, bus, f)
@@ -116,6 +125,13 @@ def lockstep_stream(h, bus, lines):
     h.time_div = 1 << 62
     n = starved = tskew = 0
     for line in lines:
+        if line.startswith('D '):                # escritura del DMA del TB (tb_soc): al ISS
+            _, a_, s_, d_ = line.split()
+            a_, s_, d_ = int(a_, 16), int(s_, 16), int(d_, 16)
+            for k in range(4):
+                if (s_ >> k) & 1 and bus.in_ram(a_ + k, 1):
+                    bus.ram[a_ + k - bus.ram_base] = (d_ >> (8 * k)) & 0xFF
+            continue
         r = parse(line)
         bus.mtime = r['time']
         h.mip_hw = r['mip']
@@ -177,13 +193,15 @@ def main():
     ap.add_argument('--keep', action='store_true')
     ap.add_argument('--time-div', type=int, default=4)
     ap.add_argument('--timeout', type=int, default=4000000)
+    ap.add_argument('--tb', choices=('core', 'cpu', 'soc'), default='core',
+                    help='core: memoria ideal/aleatoria; cpu: caches + AXI4; soc: SoC completo desde la boot ROM')
     a = ap.parse_args()
     fails = 0
     for prog in a.prog:
-        tag = os.path.basename(prog) + f'_l{a.maxlat}_s{a.seed}'
-        out, trf, hexf = run_rtl(prog, a.maxlat, a.seed, tag, a.time_div, a.timeout)
+        tag = os.path.basename(prog) + f'_l{a.maxlat}_s{a.seed}_{a.tb}'
+        out, trf, hexf = run_rtl(prog, a.maxlat, a.seed, tag, a.time_div, a.timeout, a.tb)
         verdict = 'PASS' if 'TOHOST PASS' in out else 'FAIL'
-        n, err = lockstep(prog, trf)
+        n, err = lockstep(prog, trf, a.tb == 'soc')
         if err:
             verdict = 'MISMATCH'
         if verdict != 'PASS':

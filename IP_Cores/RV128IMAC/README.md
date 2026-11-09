@@ -1,7 +1,10 @@
 # RV128IMAC — experimental 128-bit RISC-V core for the IP_Cores family
 
-**Status: experimental. v0.3: dual-XLEN core (RV128 / RV64 selected at reset) with
-M/S/U, Sv39 MMU (RV64 mode) and the full RV64IMAC CSR set; see `doc/RV128IMAC_ISA.md` §0.** RV128I is a draft base ISA
+**Status: experimental. v0.4: dual-XLEN core (RV128 / RV64 selected at reset) with
+M/S/U, Sv39 MMU (RV64 mode) and the full RV64IMAC CSR set; see `doc/RV128IMAC_ISA.md` §0.
+v0.4 adds the RV64IMAC memory system and SoC widened to 128 bit: I$/D$ (16 KiB, 2-way,
+64 B lines), a 128-bit AXI4 master, and the SoC (CLINT, PLIC, UART 16550, 16 MMIO slots,
+AXI4-Lite window, boot ROM), same map and same behaviour as the RV64IMAC SoC.** RV128I is a draft base ISA
 (v1.7) that the RISC-V manual removed after release 20240411. This core is a
 research line next to the production RV64IMAC; it goes to production only if it
 proves something worth having.
@@ -39,6 +42,17 @@ rtl/rv128_pkg.vhd      types, decoder, RV128C expander, ALU, PMAs
 rtl/rv128_core.vhd     5-stage pipeline
 rtl/rv128_csr.vhd      M-mode CSRs, traps, interrupts
 rtl/rv128_muldiv.vhd   iterative M unit
+rtl/rv128_icache.vhd   I$ 16 KiB 2-way, 64 B lines (512 x 128 data SRAM per way)
+rtl/rv128_dcache.vhd   D$ 16 KiB 2-way write-back, AMO W/D/Q, fence.i clean, Zicbom (RV64 mode)
+rtl/rv128_axi_master.vhd  AXI4 master, 128-bit data / 64-bit address, lines = 4 x 16 B INCR
+rtl/rv128_cpu.vhd      core + I$ + D$ + AXI4 master
+rtl/rv128_soc.vhd      SoC: CPU + crossbar + rv128_periph (CLINT, PLIC, UART, MMIO slots, AXI-Lite, ROM)
+rtl/rv128_periph.vhd   peripheral bridge: 128-bit AXI4 slave folded to the 64-bit RV64IMAC devices
+sw/bootrom/            boot ROM (same code as RV64IMAC, valid in both modes) + DTS (RV64 mode)
+sw/gen_cache_stress.py cache stress for RV128 mode (layer 3b)
+tb/tb_cpu.vhd          layer 3b: CPU with caches vs a random-delay AXI4 slave
+tb/tb_soc.vhd          layer 4b: SoC from the boot ROM, real IP_Cores USART + DMA, AXI-Lite bank
+compare64.py           RV64 mode vs the unmodified iss64.py (--tb core|cpu|soc)
 tb/tb_rvc.vhd          layer 1: RV128C expander, exhaustive (49 152 encodings)
 tb/tb_muldiv.vhd       layer 1: M unit, Q/D/W, corner + random vectors
 tb/tb_core.vhd         layers 2/3: core with ideal / random-latency memory, CLINT, UART, HTIF
@@ -57,9 +71,12 @@ sim/build.sh           GHDL build (llvm or gcc backend)
 | 1 | RV128C expander, all 49 152 encodings; M unit, Q/D/W | ISS |
 | 2 | lockstep, ideal memory: pc, insn, rd/value, trap/cause/tval, store addr/lanes/data, interrupt legality and liveness | ISS |
 | 3 | lockstep with random ready and 1–12 cycle latency | ISS |
+| 3b | lockstep through I$/D$ + AXI4 128 with random delays on all 5 channels; cache stress | ISS |
+| 4 | FPGA prototype top in simulation | ISS |
+| 4b | full SoC booting from the boot ROM (RV128 mode: all tests) | ISS |
+| 5 | RV64 mode vs `iss64.py`: riscv-tests p/v + RV64IMAC directed tests, on core, cpu (+ cache_stress) and soc (+ soc_usart/dma/timer/plic, cbo_test) | iss64 (RV64IMAC oracle) |
 
-Not done yet: mutation testing, caches + AXI4 wrapper, SoC integration with the
-IP_Cores MMIO slots, synthesis numbers.
+Not done yet: mutation testing, FPGA SoC top with DDR (M5).
 
 ## Running
 

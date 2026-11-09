@@ -1,6 +1,7 @@
 # ooc.tcl - out-of-context implementation on the VE2302 (TE0950): resources and timing.
 #   vivado -mode batch -source fpga/ooc/ooc.tcl -tclargs <top> [period_ns]
 #     top: core128 (rv128_core) | core64 (rv64_core, from ../RV64IMAC) | proto (rv128_proto_top)
+#          cpu128 (rv128_cpu: core + I$/D$ + AXI4 128) | cpu64 (rv64_cpu) | soc128 (rv128_soc)
 # Reports in fpga/ooc/<top>/; last line of the log: RESULT top=... LUT=... FF=... WNS=... fmax=...
 set top    [lindex $argv 0]
 set period [lindex $argv 1]
@@ -24,7 +25,22 @@ switch -- $top {
     read_vhdl -vhdl2008 $root/fpga/rv128_proto_top.vhd
     set ent rv128_proto_top
   }
-  default { error "top desconocido: $top (core128 | core64 | proto)" }
+  cpu128 - soc128 {
+    foreach f {rv128_pkg rv128_mmu_pkg rv128_tlb rv128_ptw rv128_muldiv rv128_csr rv128_core
+               sram_1rw rv128_axi_master rv128_dcache rv128_icache rv128_cpu} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
+    if {$top eq "soc128"} {
+      foreach f {rv128_bootrom_pkg rv128_clint rv128_plic rv128_uart rv128_periph rv128_soc} { read_vhdl -vhdl2008 $root/rtl/$f.vhd }
+      set ent rv128_soc
+    } else {
+      set ent rv128_cpu
+    }
+  }
+  cpu64 {
+    foreach f {rv64_pkg rv64_mmu_pkg rv64_tlb rv64_ptw rv64_muldiv rv64_csr rv64_core
+               sram_1rw rv64_axi_master rv64_dcache rv64_icache rv64_cpu} { read_vhdl -vhdl2008 $r64/$f.vhd }
+    set ent rv64_cpu
+  }
+  default { error "top desconocido: $top (core128 | core64 | proto | cpu128 | cpu64 | soc128)" }
 }
 synth_design -top $ent -mode out_of_context -flatten_hierarchy rebuilt
 create_clock -name clk -period $period [get_ports clk]

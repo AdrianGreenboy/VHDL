@@ -9,7 +9,10 @@ is RV64IMAC/compare.py, reused as is. Only the trace adapter is new:
     its low 64 bits (the RV64-mode invariant), otherwise the retirement is a mismatch;
   * 16-lane store records are folded to the 8-lane RV64 view.
 
-Usage: compare64.py [--maxlat N] [--seed S] [--time-div D] [--keep] elf...
+--tb cpu runs the cached CPU (tb_cpu, 128-bit AXI4) and --tb soc the full SoC from the boot
+ROM (tb_soc); the boot ROM image is this tree's sw/bootrom/bootrom.bin.
+
+Usage: compare64.py [--tb core|cpu|soc] [--maxlat N] [--seed S] [--time-div D] [--keep] elf...
 """
 import argparse
 import os
@@ -23,6 +26,7 @@ import iss64            # noqa: E402
 import compare as c64   # noqa: E402
 
 SIM = os.environ.get('RV128_SIM', os.path.join(HERE, 'sim'))
+c64.BOOTROM = os.path.join(HERE, 'sw', 'bootrom', 'bootrom.bin')
 M64 = (1 << 64) - 1
 M128 = (1 << 128) - 1
 
@@ -47,7 +51,7 @@ def run_rtl(elf, maxlat, seed, tag, time_div=4, timeout=4000000, tb='core'):
     hexf = os.path.join(SIM, f'{tag}.hex')
     trf = os.path.join(SIM, f'{tag}.trace')
     tohost, entry = write_hex(elf, hexf)
-    cmd = [os.path.join(SIM, 'tb_core'), f'-gHEX={hexf}', f'-gTRACE={trf}', f'-gTOHOST={tohost}',
+    cmd = [os.path.join(SIM, 'tb_' + tb), f'-gHEX={hexf}', f'-gTRACE={trf}', f'-gTOHOST={tohost}',
            f'-gENTRY={entry}', f'-gMAXLAT={maxlat}', f'-gSEED={seed}', f'-gMEM_KB={c64.MEM_KB}',
            f'-gTIME_DIV={time_div}', f'-gTIMEOUT={timeout}', '-gXLEN64=true', '--ieee-asserts=disable']
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=SIM).stdout
@@ -93,13 +97,14 @@ def main():
     ap.add_argument('--keep', action='store_true')
     ap.add_argument('--time-div', type=int, default=4)
     ap.add_argument('--timeout', type=int, default=4000000)
+    ap.add_argument('--tb', choices=('core', 'cpu', 'soc'), default='core')
     a = ap.parse_args()
     fails = 0
     for elf in a.elf:
-        tag = 'm64_' + os.path.basename(elf) + f'_l{a.maxlat}_s{a.seed}'
-        out, trf, hexf = run_rtl(elf, a.maxlat, a.seed, tag, a.time_div, a.timeout)
+        tag = 'm64_' + os.path.basename(elf) + f'_l{a.maxlat}_s{a.seed}_{a.tb}'
+        out, trf, hexf = run_rtl(elf, a.maxlat, a.seed, tag, a.time_div, a.timeout, a.tb)
         verdict = 'PASS' if 'TOHOST PASS' in out else 'FAIL'
-        n, err = c64.lockstep(elf, trf)
+        n, err = c64.lockstep(elf, trf, a.tb == 'soc')
         if err:
             verdict = 'MISMATCH'
         if verdict != 'PASS':

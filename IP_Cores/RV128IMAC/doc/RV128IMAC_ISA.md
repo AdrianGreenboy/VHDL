@@ -168,3 +168,24 @@ traps in W), with the MMU, S/U modes and Zicbom removed.
 | ALU | 128-bit add/sub/logic/compare, 128-bit barrel shifter |
 | M unit | iterative, no DSP: radix-4 multiply (64/32/16 cycles for Q/D/W), radix-2 divide (128/64/32) |
 | Register file | 31 x 128 bit |
+
+## 8. Memory system and SoC (v0.4, M2)
+
+The RV64IMAC memory system and SoC, widened to 128 bit. Same behaviour in both modes;
+only widths change.
+
+| Block | RV64IMAC | RV128IMAC |
+|---|---|---|
+| I$ | 16 KiB, 2-way, 64 B lines, 1024 x 64 data SRAM per way | same geometry, 512 x 128 data SRAM per way |
+| D$ | 16 KiB, 2-way, write-back, write-allocate, AMO in the cache | same; AMO W/D/Q on 16 lanes |
+| Line transfer | AXI4 INCR, 8 beats x 8 B | AXI4 INCR, 4 beats x 16 B (`arsize`/`awsize` = 4, `len` = 3) |
+| Uncached | one beat, 1/2/4/8 B | one beat, 1/2/4/8/16 B, data on the lanes of the address |
+| AXI4 master | 64-bit data, 64-bit address | 128-bit data, 64-bit address (PMA: PA[127:32] = 0) |
+| fence.i | full D$ clean, then I$ invalidate | same |
+| Zicbom | cbo.clean/flush/inval (inval as flush) | same, RV64 mode only (RV128 mode: MISC-MEM f3=010 is LQ) |
+| Peripherals | CLINT, PLIC, UART 16550, 16 MMIO slots, AXI4-Lite 32-bit, boot ROM | same devices (64-bit registers); the bridge folds the 128-bit bus to the half selected by addr(3) |
+| Boot ROM | 512 x 64 | 256 x 128, same bytes (code valid in both modes) |
+
+A 16-byte access to CLINT, PLIC, UART, MMIO slots or the AXI4-Lite window gets SLVERR
+(access fault), matching the ISS. The boot ROM accepts reads of any size.
+`m64` is a SoC input pin, sampled while reset is asserted.

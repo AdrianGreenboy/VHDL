@@ -1,5 +1,5 @@
 #!/bin/bash
-# Genera y ensambla las pruebas del RV128IMAC en sw/tests/.
+# Genera y ensambla las pruebas del RV128IMAC en sw/tests/ (y el estres de caches en sw/stress/).
 #   SEED  semilla de las dirigidas (1)    RND  numero de programas aleatorios (8)
 #   RNDN  instrucciones por programa aleatorio (3000)
 set -e
@@ -18,3 +18,8 @@ for f in $OUT/*.S; do
   n=$((n + 1))
 done
 echo "$n programas ensamblados en sw/$OUT"
+# estres de caches (capa 3b): aparte, no entra en las capas 0/2/3/4
+mkdir -p stress
+python3 gen_cache_stress.py stress/cache_stress.S
+python3 ../rv128asm.py stress/cache_stress.S -o stress/cache_stress.bin --sym stress/cache_stress.sym
+echo "estres de caches ensamblado en sw/stress"
