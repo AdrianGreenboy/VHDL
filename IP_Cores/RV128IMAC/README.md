@@ -198,3 +198,23 @@ multi-word arithmetic (~2x), 128-bit multiply (2x), and above all 128-bit atomic
 a pointer + tag in one AMO/LR/SC, which RV64 cannot do without a lock). It pays little
 for bulk copies (the D$ with one outstanding AXI transaction is the limit, worse with
 LPDDR4 latency) and nothing for 128-bit key compares when the low word discriminates.
+
+## RV128 Forth: native RV128 compute environment
+
+There is no C compiler for RV128, so `sw/forth/` provides its own: a Forth kernel generated
+in rv128asm. It has 128-bit cells and is subroutine-threaded, so definitions are real
+machine code.
+
+The compute library is written in assembly:
+
+- bignum on 128-bit limbs;
+- Q64.64 fixed point with sin/cos/sqrt and quaternions;
+- SHA-512 on the *D ops;
+- Poly1305;
+- a lock-free stack whose 128-bit pointer+tag head is updated with LR.Q/SC.Q, shared
+  between the main loop and a Forth-level timer ISR.
+
+All scripts check themselves through tohost. Every expected value comes from Python.
+Results (2026-11-10, ISS): 5/5 tests and 3/3 demos PASS (1007 digits of pi, 1000!).
+Lockstep and board runs are pending: they are layer 7 of `run_regression.sh` and the
+`forth_*` entries of `board_pack.sh`. Details are in `sw/forth/README.md`.

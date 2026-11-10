@@ -44,6 +44,18 @@ if [ -f $ROOT/sw/bench/out/bench128.bin ]; then
   echo "bench128 rv128 1 0x$(awk '$2 == "tohost" {print $1}' $ROOT/sw/bench/out/bench128.sym)" >> $OUT/list.txt
 fi
 [ -f $ROOT/sw/bench/out/bench64 ] && elf bench64 $ROOT/sw/bench/out/bench64
+# --- RV128 Forth: self-checking tests and demos (UART divisor 1) + interactive image (27)
+if python3 $ROOT/sw/forth/gen_tests.py $ROOT/sw/forth/tests > /dev/null &&
+   python3 $ROOT/sw/forth/build.py --no-run --out $ROOT/sw/forth/out \
+       $ROOT/sw/forth/tests/t_*.fs $ROOT/sw/forth/demos/*.fs > /dev/null; then
+  for f in $ROOT/sw/forth/tests/t_*.fs $ROOT/sw/forth/demos/*.fs; do
+    n=$(basename $f .fs)
+    cp $ROOT/sw/forth/out/$n.bin $OUT/forth_$n.bin
+    echo "forth_$n rv128 1 0x$(awk '$2 == "tohost" {print $1}' $ROOT/sw/forth/out/$n.sym)" >> $OUT/list.txt
+  done
+  python3 $ROOT/sw/forth/build.py --uart-div 27 --out $ROOT/sw/forth/out_board > /dev/null &&
+    cp $ROOT/sw/forth/out_board/forth.bin $OUT/forth.bin
+fi
 cp $H/rv128_soc_load.c $H/run_all.sh $OUT/
 # el PetaLinux de la placa no trae gcc: cargador estatico para aarch64 si hay compilador cruzado
 if command -v aarch64-linux-gnu-gcc > /dev/null; then

@@ -210,6 +210,20 @@ else
   step "capa 6c: OMITIDA (sin toolchain de RTEMS en $RP)"
 fi
 
+step "capa 7: RV128 Forth nativo (bignum, Q64.64, SHA-512, Poly1305, lock-free + IRQ) en ISS y lockstep"
+python3 sw/forth/gen_tests.py sw/forth/tests >> $LOG 2>&1
+python3 sw/forth/build.py sw/forth/tests/t_*.fs > /tmp/r128_f.txt 2>&1 || fail=1
+cat /tmp/r128_f.txt >> $LOG; sed 's/^/   ISS: /' /tmp/r128_f.txt | grep -E 'PASS|FAIL|TIMEOUT'
+FO=sw/forth/out
+for c in core:1:1:"t_core t_bignum t_fixed t_crypto t_conc" core:7:21:"t_core t_conc" \
+         cpu:1:1:"t_core t_crypto t_conc" cpu:6:5:"t_core t_conc" soc:1:1:"t_core t_conc" soc:6:7:"t_core"; do
+  IFS=: read tb lat seed ts <<< "$c"
+  for t in $ts; do
+    python3 compare128.py --tb $tb --maxlat $lat --seed $seed --timeout 60000000 $FO/$t > /tmp/r128_f.txt 2>&1 || fail=1
+    cat /tmp/r128_f.txt >> $LOG; echo "   $t $tb maxlat=$lat seed=$seed: $(head -1 /tmp/r128_f.txt)"
+  done
+done
+
 echo
 if [ $fail -eq 0 ]; then echo "REGRESION OK" | tee -a $LOG; else echo "REGRESION CON FALLOS" | tee -a $LOG; fi
 exit $fail

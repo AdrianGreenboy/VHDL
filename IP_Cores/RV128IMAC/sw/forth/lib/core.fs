@@ -1,0 +1,8 @@
+\ core.fs - formatting helpers shared by the libraries
+$FFFFFFFFFFFFFFFF CONSTANT MASK64
+10000000000000000000 CONSTANT E19
+: .N ( u -- ) DUP 10 < IF 48 + EMIT ELSE 10 /MOD RECURSE 48 + EMIT THEN ;
+: .0 ( u w -- ) DUP 0= IF 2DROP EXIT THEN 1- SWAP 10 /MOD ROT RECURSE 48 + EMIT ;
+: HEXDIG ( n -- c ) DUP 10 < IF 48 ELSE 87 THEN + ;
+: .B ( c -- ) DUP 4 RSHIFT HEXDIG EMIT 15 AND HEXDIG EMIT ;
+: .HEX ( addr n -- ) 0 DO DUP I + C@ .B LOOP DROP ;
