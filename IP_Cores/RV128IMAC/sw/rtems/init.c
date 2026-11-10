@@ -12,6 +12,7 @@
  */
 #include <rtems.h>
 #include <rtems/bspIo.h>
+#include <rtems/version.h>
 #include <stdlib.h>
 
 extern volatile uint64_t tohost;          /* bsps/riscv/riscv/console/htif.c */
@@ -31,7 +32,7 @@ extern volatile uint64_t tohost;          /* bsps/riscv/riscv/console/htif.c */
 #define PRIO_LOW      7
 
 static rtems_id q, mtx, sem, tmr, waiter_id, inh_high_id;
-static volatile uint32_t q_sum, q_count, q_done;
+static volatile uint32_t q_sum, q_count, q_done, q_full;
 static volatile uint32_t timer_count, sem_taken, events_got;
 static volatile uint32_t inh_prio_held, inh_prio_after, inh_done;
 static volatile uint32_t rate_ok, rate_rounds;
@@ -66,7 +67,14 @@ static rtems_task producer(rtems_task_argument a)
   (void) a;
   for (uint32_t i = 0; i < N_ITEMS; i++) {
     uint32_t v = i * 3U + 1U;
-    check(rtems_message_queue_send(q, &v, sizeof(v)), 10);
+    rtems_status_code sc;
+    /* rtems_message_queue_send never blocks: on a full queue (RTEMS_TOO_MANY) yield to
+     * the consumer, which has the same priority */
+    while ((sc = rtems_message_queue_send(q, &v, sizeof(v))) == RTEMS_TOO_MANY) {
+      q_full++;
+      rtems_task_wake_after(RTEMS_YIELD_PROCESSOR);
+    }
+    check(sc, 10);
     if ((i & 31U) == 0U) {
       rtems_task_wake_after(RTEMS_YIELD_PROCESSOR);
     }
@@ -201,6 +209,7 @@ static rtems_task checker(rtems_task_argument a)
   printk("\nRTEMS %s on RV128IMAC (RV64 mode)\n", rtems_version());
   line("queue items", q_count, N_ITEMS, ok_q);
   line("queue sum", q_sum, want_sum, ok_q);
+  line("queue full retries", q_full, q_full, 1);
   line("inherited priority", inh_prio_held, PRIO_HIGH, ok_i);
   line("priority after release", inh_prio_after, PRIO_LOW, ok_i);
   line("timer routines", timer_count, texp, ok_t);
@@ -251,6 +260,8 @@ static rtems_task Init(rtems_task_argument a)
 #define CONFIGURE_APPLICATION_DOES_NOT_NEED_CONSOLE_DRIVER
 #define CONFIGURE_MICROSECONDS_PER_TICK        10000   /* 10000 mtime ticks, as FreeRTOS */
 #define CONFIGURE_MAXIMUM_TASKS                10
+/* the test tasks use 2x the minimum stack: confdefs only reserves the minimum per task */
+#define CONFIGURE_EXTRA_TASK_STACKS            (8 * RTEMS_MINIMUM_STACK_SIZE)
 #define CONFIGURE_MAXIMUM_SEMAPHORES           4
 #define CONFIGURE_MAXIMUM_MESSAGE_QUEUES       2
 #define CONFIGURE_MAXIMUM_TIMERS               2
