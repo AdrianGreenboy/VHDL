@@ -63,11 +63,11 @@ connect_bd_net [get_bd_pins zero16/dout] [get_bd_pins rv128/irq_ip]
 # --- direcciones
 assign_bd_address -target_address_space /$CIPS/M_AXI_FPD [get_bd_addr_segs rv128/s_axi_ctrl/reg0] -range 64K -offset $CTRL_BASE
 assign_bd_address -target_address_space /rv128/m_axi_dram [get_bd_addr_segs $NOC/$si/C0_DDR_LOW0]
-# la entrada del NoC hereda el ancho de datos del module reference: comprobarlo
+validate_bd_design
+# la entrada del NoC hereda el ancho del module reference al propagar (validate): comprobarlo
 set dw [get_property CONFIG.DATA_WIDTH [get_bd_intf_pins $NOC/$si]]
 puts "NoC $si DATA_WIDTH = $dw"
 if {$dw ne "128"} { puts "AVISO: se esperaban 128 bit en $NOC/$si" }
-validate_bd_design
 save_bd_design
 
 # --- implementacion hasta PDI
@@ -80,3 +80,6 @@ open_run impl_1
 report_timing_summary -file [file dirname $xpr]/timing_summary.rpt
 report_utilization -file [file dirname $xpr]/utilization.rpt
 puts "PDI: [glob -nocomplain [file dirname $xpr]/*.runs/impl_1/*.pdi]"
+# XSA para PetaLinux (fija, con el PDI)
+write_hw_platform -fixed -include_bit -force [file dirname $xpr]/rv128_soc.xsa
+puts "XSA: [file dirname $xpr]/rv128_soc.xsa"

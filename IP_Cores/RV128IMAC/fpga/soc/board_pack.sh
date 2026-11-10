@@ -29,9 +29,18 @@ for b in $ROOT/sw/tests/*.bin; do
   echo "$n rv128 1 0x$th" >> $OUT/list.txt
 done
 # --- modo RV64
-for e in $(ls $R64/sw/tests/*-p-* 2>/dev/null | grep -v '\.'); do elf $(basename $e) $e; done
+for e in $R64/sw/tests/*-p-*; do                 # ELFs sin extension (no .dump/.hex)
+  n=$(basename $e); case $n in *.*) continue ;; esac
+  [ -f $e ] && elf $n $e
+done
 [ -f $ROOT/sw/freertos/freertos_test ] && elf freertos_test $ROOT/sw/freertos/freertos_test
 for z in queue common; do [ -f $ROOT/sw/zephyr/out/$z.elf ] && elf zephyr_$z $ROOT/sw/zephyr/out/$z.elf; done
 [ -f $ROOT/sw/rtems/rtems_test.exe ] && elf rtems_test $ROOT/sw/rtems/rtems_test.exe
 cp $H/rv128_soc_load.c $H/run_all.sh $OUT/
+# el PetaLinux de la placa no trae gcc: cargador estatico para aarch64 si hay compilador cruzado
+if command -v aarch64-linux-gnu-gcc > /dev/null; then
+  aarch64-linux-gnu-gcc -O2 -static -o $OUT/rv128_soc_load $H/rv128_soc_load.c
+else
+  echo "aviso: sin aarch64-linux-gnu-gcc (sudo apt install gcc-aarch64-linux-gnu): compila rv128_soc_load aparte" >&2
+fi
 echo "$(wc -l < $OUT/list.txt) programas en $OUT ($(grep -c ' rv128 ' $OUT/list.txt) RV128, $(grep -c ' rv64 ' $OUT/list.txt) RV64)"

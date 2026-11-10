@@ -10,6 +10,7 @@ ap.add_argument('--dts', default=os.path.join(H, 'rv128_soc.dts'), help='rv128_s
 ap.add_argument('--out', default=os.path.join(H, '..', '..', 'rtl', 'rv128_bootrom_pkg.vhd'))
 args = ap.parse_args()
 OUT_VHD = args.out
+os.makedirs(os.path.dirname(os.path.abspath(OUT_VHD)), exist_ok=True)
 dtb = os.path.join(H, os.path.splitext(os.path.basename(args.dts))[0] + '.dtb')
 subprocess.run(['dtc', '-I', 'dts', '-O', 'dtb', '-o', dtb, args.dts], check=True, stderr=subprocess.DEVNULL)
 elf = os.path.join(H, 'boot.elf')

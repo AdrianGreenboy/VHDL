@@ -77,7 +77,7 @@ sim/build.sh           GHDL build (llvm or gcc backend)
 | 4b | full SoC booting from the boot ROM (RV128 mode: all tests) | ISS |
 | 5 | RV64 mode vs `iss64.py`: riscv-tests p/v + RV64IMAC directed tests, on core, cpu (+ cache_stress) and soc (+ soc_usart/dma/timer/plic, cbo_test) | iss64 (RV64IMAC oracle) |
 
-Not done yet: mutation testing, FPGA SoC top with DDR (M5).
+Not done yet: mutation testing; the riscv-tests -p- batch on the board.
 
 ## Running
 
@@ -162,3 +162,9 @@ python3 sw/freertos/run_iss.py sw/rtems/rtems_test.exe
 `bd_insert.tcl` (NoC input at 128 bit), `rv128_soc_load.c` (A72 loader), `board_pack.sh`
 and `run_all.sh`. Same flow as the RV64IMAC SoC that boots Linux on the board; see
 `fpga/soc/BOARD_GUIDE.md`.
+
+M5 result (2026-11-10, TE0950 / VE2302, Vivado 2025.2.1, 50 MHz, WNS +1.83 ns, 26.3 k LUT,
+12.4 k FF, 8 BRAM36, 0 DSP; NoC input 128 bit): from the boot ROM and the LPDDR4 through
+I$/D$ and the 128-bit AXI4 master, 34/34 programs pass on silicon (30 in RV128 mode,
+FreeRTOS, Zephyr queue + common and RTEMS in RV64 mode), and OpenSBI 1.6 + Linux 6.6
+reach `/init` in 1.21 s with the console on ttyS0.
