@@ -168,3 +168,33 @@ M5 result (2026-11-10, TE0950 / VE2302, Vivado 2025.2.1, 50 MHz, WNS +1.83 ns, 2
 I$/D$ and the 128-bit AXI4 master, 34/34 programs pass on silicon (30 in RV128 mode,
 FreeRTOS, Zephyr queue + common and RTEMS in RV64 mode), and OpenSBI 1.6 + Linux 6.6
 reach `/init` in 1.21 s with the console on ttyS0.
+
+## Performance: CoreMark and RV128 vs RV64
+
+`sw/coremark/`: the RV64IMAC CoreMark port with the console on the 16550 (the board
+watcher would take an HTIF putchar for the end of the run). `sw/bench/`: the same five
+kernels written for RV128 mode (rv128asm) and RV64 mode (clang), same data and checksums,
+cycles from `rdcycle`: 4096-bit add, 64 KiB memcpy, 128-bit key search, 128-bit atomic
+counter, 128-bit LCG multiply. `run_bench.py` runs both on tb_cpu/tb_soc in lockstep and
+prints the cycles; `fpga/soc/board_pack.sh` stages them for the board.
+
+Results (2026-11-10). CoreMark 1.0 on the TE0950, RV64 mode, 50 MHz, 600 iterations,
+"Correct operation validated": 560 465 880 ticks, 53.5 iterations/s = **1.07 CoreMark/MHz**,
+the same as the RV64IMAC (the dual core costs nothing in RV64 mode). riscv-tests -p- on the
+board: 109/109 (pmpaddr and ma_data waived by the spec, as in the RV64IMAC).
+
+RV128 vs RV64 on the same silicon (cycles RV64 / cycles RV128; loops aligned to 64 B):
+
+| Kernel | RTL (tb_cpu) | Board (LPDDR4) |
+|---|---|---|
+| 4096-bit add | 1.93x | ~1.9x (RV64 line partly lost on the console) |
+| 64 KiB memcpy | 1.34x | 1.24x |
+| 128-bit key search | 1.00x | 1.00x |
+| 128-bit atomic counter (AMOADD.Q vs lock) | 3.33x | 3.32x |
+| 128-bit LCG multiply | 2.05x | 2.05x |
+
+RV128 pays where the data really is 128 bits wide and the work is arithmetic or atomic:
+multi-word arithmetic (~2x), 128-bit multiply (2x), and above all 128-bit atomics (3.3x:
+a pointer + tag in one AMO/LR/SC, which RV64 cannot do without a lock). It pays little
+for bulk copies (the D$ with one outstanding AXI transaction is the limit, worse with
+LPDDR4 latency) and nothing for 128-bit key compares when the low word discriminates.

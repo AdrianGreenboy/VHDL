@@ -99,10 +99,12 @@ static size_t load(const char *path, unsigned long off)
     return n;
 }
 
-static void drain(void)
+/* returns the number of bytes moved. No fflush per byte: stdout is a file in run_all.sh */
+static int drain(void)
 {
-    while (rd(HU(5)) & 1) putchar(rd(HU(0)) & 0xFF);   /* LSR.DR -> RBR */
-    fflush(stdout);
+    int n = 0;
+    while (rd(HU(5)) & 1) { putchar(rd(HU(0)) & 0xFF); n++; }   /* LSR.DR -> RBR */
+    return n;
 }
 
 int main(int argc, char **argv)
@@ -161,20 +163,24 @@ int main(int argc, char **argv)
     /* keep the reset with the mode set for a moment, then run (reset vector 0x1000) */
     wr(REG_CTRL, CTRL_RST | (m64 ? CTRL_M64 : 0));
     wr(REG_CTRL, CTRL_RUN | (m64 ? CTRL_M64 : 0));
-    usleep(1000);
-    fprintf(stderr, "RV128IMAC SoC running in %s mode%s\n", (rd(REG_STATUS) & ST_M64) ? "RV64" : "RV128",
+    /* no sleep here: at divisor 1 the first console bytes arrive within a millisecond */
+    fprintf(stderr, "RV128IMAC SoC running in %s mode%s\n", m64 ? "RV64" : "RV128",
             interactive ? " (Ctrl-C to stop)" : "");
 
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
+    /* Test mode busy-polls: the SoC UART runs at divisor 1 (3.125 Mbaud at 50 MHz) and the
+     * 16-byte RX FIFO of the host UART fills in ~50 us, less than one usleep() wake-up on
+     * PetaLinux, so any sleep loses console bytes. Interactive mode (115200) may sleep. */
+    unsigned idle = 0;
     for (;;) {
-        drain();
+        if (drain()) { idle = 0; } else if (++idle == 1000) { fflush(stdout); }
         if (interactive) {
             char c;
             if (read(0, &c, 1) == 1 && (rd(HU(5)) & 0x20)) wr(HU(0), (uint8_t)c);
         } else if (rd(REG_STATUS) & ST_TOHOST) {
-            usleep(20000);                                 /* let the UART finish the report */
-            drain();
+            for (int i = 0; i < 20000; i++) drain();      /* let the UART finish the report */
+            fflush(stdout);
             uint64_t v = rd64(REG_TH_LO);
             unsigned code = (unsigned)(v >> 1);
             fprintf(stderr, "code=%u retired=%llu cycles=%llu\n", code,
@@ -184,11 +190,12 @@ int main(int argc, char **argv)
         } else {
             clock_gettime(CLOCK_MONOTONIC, &t1);
             if ((unsigned)(t1.tv_sec - t0.tv_sec) >= timeout) {
+                fflush(stdout);
                 fprintf(stderr, "TIMEOUT retired=%llu pc=%08x\n", (unsigned long long)rd64(REG_RET_LO), rd(REG_PC));
                 wr(REG_CTRL, CTRL_RST);
                 return 2;
             }
         }
-        if (!(rd(HU(5)) & 1)) usleep(100);
+        if (interactive) { fflush(stdout); if (!(rd(HU(5)) & 1)) usleep(100); }
     }
 }

@@ -31,11 +31,19 @@ done
 # --- modo RV64
 for e in $R64/sw/tests/*-p-*; do                 # ELFs sin extension (no .dump/.hex)
   n=$(basename $e); case $n in *.*) continue ;; esac
+  case $n in *pmpaddr*|*ma_data*) continue ;; esac   # waived as in RV64IMAC: no PMP, misaligned traps
   [ -f $e ] && elf $n $e
 done
 [ -f $ROOT/sw/freertos/freertos_test ] && elf freertos_test $ROOT/sw/freertos/freertos_test
 for z in queue common; do [ -f $ROOT/sw/zephyr/out/$z.elf ] && elf zephyr_$z $ROOT/sw/zephyr/out/$z.elf; done
 [ -f $ROOT/sw/rtems/rtems_test.exe ] && elf rtems_test $ROOT/sw/rtems/rtems_test.exe
+# --- rendimiento: CoreMark (ITER >= 600 para la regla de 10 s a 50 MHz) y microbenchmarks
+for c in $ROOT/sw/coremark/coremark_*.elf; do [ -f $c ] && elf $(basename $c .elf) $c; done
+if [ -f $ROOT/sw/bench/out/bench128.bin ]; then
+  cp $ROOT/sw/bench/out/bench128.bin $OUT/
+  echo "bench128 rv128 1 0x$(awk '$2 == "tohost" {print $1}' $ROOT/sw/bench/out/bench128.sym)" >> $OUT/list.txt
+fi
+[ -f $ROOT/sw/bench/out/bench64 ] && elf bench64 $ROOT/sw/bench/out/bench64
 cp $H/rv128_soc_load.c $H/run_all.sh $OUT/
 # el PetaLinux de la placa no trae gcc: cargador estatico para aarch64 si hay compilador cruzado
 if command -v aarch64-linux-gnu-gcc > /dev/null; then
