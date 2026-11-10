@@ -4,6 +4,8 @@
 --  * Latencia aleatoria 1..MAXLAT por puerto y ready aleatorio (MAXLAT>1 = capa 3)
 --  * CLINT (msip/mtimecmp/mtime) y UART minima, con las mismas reglas de acceso
 --    que el Bus de iss128.py (CLINT 4/8 bytes, UART 1 byte; resto -> error)
+--  * PLIC (4 bytes), ranuras MMIO y ventana AXI-Lite (1..8 bytes) como stubs, igual que
+--    STUB_REGIONS de iss64/iss128: leen 0 y descartan escrituras (Zephyr programa el PLIC)
 --  * HTIF de riscv-tests en TOHOST: fin con codigo, putchar
 --  * Traza de retiro en TRACE para el comparador lockstep (compare128.py):
 --    pc insn rd val time mip [T cause tval] [W addr wstrb16 wdata]
@@ -291,6 +293,13 @@ begin
           elsif d_req_addr(11 downto 0) = x"000" then
             write(output, "" & character'val(to_integer(unsigned(d_req_wdata(7 downto 0)))));
           end if;
+        elsif d_req_addr(127 downto 32) = (127 downto 32 => '0') and (d_req_kind = "00" or d_req_kind = "01") and
+              ((unsigned(d_req_addr(31 downto 0)) >= x"0C000000" and unsigned(d_req_addr(31 downto 0)) < x"10000000" and sz = 4) or
+               (unsigned(d_req_addr(31 downto 0)) >= x"10010000" and unsigned(d_req_addr(31 downto 0)) < x"10110000" and sz <= 8) or
+               (unsigned(d_req_addr(31 downto 0)) >= x"20000000" and unsigned(d_req_addr(31 downto 0)) < x"30000000" and sz <= 8)) then
+          -- PLIC / MMIO slots / AXI-Lite: same stubs as the ISS STUB_REGIONS (reads 0, writes
+          -- dropped; the lockstep copies stub loads from the RTL)
+          null;
         else
           d_err_r <= '1';
         end if;

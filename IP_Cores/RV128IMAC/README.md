@@ -128,3 +128,29 @@ sw/freertos/build.sh
 python3 sw/freertos/run_iss.py sw/freertos/freertos_test
 python3 compare64.py --tb soc --timeout 20000000 sw/freertos/freertos_test
 ```
+
+`sw/zephyr/`: out-of-tree Zephyr module (v4.4.0, SDK 1.0.1) with the board `rv128imac_soc`
+and SoC `rv128imac` (machine mode, CLINT timer, PLIC, ns16550, 8 MiB, own `__reset` that
+clears the register file). ztest runs end through `tohost` (`TC_END_REPORT` override,
+`arch_system_halt` on fatal errors). Layer 6b builds `tests/kernel/common` and
+`tests/kernel/queue` and runs them on the ISS and in lockstep.
+
+```bash
+source /data/adrian/zephyrproject/.venv/bin/activate
+ZEPHYR_BASE=/data/adrian/zephyrproject/zephyr sw/zephyr/build.sh
+python3 sw/freertos/run_iss.py sw/zephyr/out/queue.elf
+python3 compare64.py --tb soc --timeout 200000000 sw/zephyr/out/queue.elf
+```
+
+`sw/rtems/`: RTEMS 6.2, BSP `riscv/rv64imac` configured for the SoC (`config.ini.in`):
+DTB compiled into the BSP (`rv128imac_soc_rtems.dts`), 8 MiB RAM, console at 6.25 Mbaud,
+`start.S` patched to clear the register file (`patch_start.py`). `init.c` is a
+self-checking Classic API test (message queue, priority inheritance, counting semaphore,
+events from a timer service routine, rate monotonic periods); a fatal extension turns
+`exit()` into the `tohost` verdict.
+
+```bash
+sw/rtems/build_toolchain.sh        # once: RSB 6/rtems-riscv into /data/adrian/rtems/6
+sw/rtems/build.sh                  # BSP (when its config changes) + rtems_test.exe
+python3 sw/freertos/run_iss.py sw/rtems/rtems_test.exe
+```

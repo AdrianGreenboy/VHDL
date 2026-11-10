@@ -1,0 +1,6 @@
+# RV128IMAC SoC (dual-XLEN core used in RV64 mode by Zephyr)
+config SOC_RV128IMAC
+	bool
+
+config SOC
+	default "rv128imac" if SOC_RV128IMAC

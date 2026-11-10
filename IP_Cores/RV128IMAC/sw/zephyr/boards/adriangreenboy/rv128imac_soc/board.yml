@@ -1,0 +1,6 @@
+board:
+  name: rv128imac_soc
+  full_name: RV128IMAC SoC (RV64 mode)
+  vendor: adriangreenboy
+  socs:
+    - name: rv128imac

@@ -1,0 +1,16 @@
+# RTEMS 6.2 BSP riscv/rv64imac for the RV128IMAC SoC (core in RV64 mode), M4.
+# build_bsp.sh fills @DTB_HEADER@ and copies this to <rtems tree>/config.ini.
+[riscv/rv64imac]
+# device tree compiled into the BSP (tb_core/tb_cpu start without a boot ROM, so a1 holds no FDT)
+BSP_DTB_IS_SUPPORTED = True
+BSP_DTB_HEADER_PATH = @DTB_HEADER@
+BSP_START_COPY_FDT_FROM_U_BOOT = False
+# 8 MiB at 0x8000_0000: default DRAM of tb_core/tb_cpu/tb_soc and iss64
+RISCV_RAM_REGION_BEGIN = 0x80000000
+RISCV_RAM_REGION_SIZE = 0x00800000
+# 100 MHz / 16 / 6.25 Mbaud = divisor 1 (fast console in simulation, as Linux)
+BSP_CONSOLE_BAUD = 6250000
+# HTIF code stays in: it owns the tohost/fromhost symbols the testbenches watch; the DTB
+# has no ucb,htif0 node, so the console is the 16550
+RISCV_ENABLE_HTIF_SUPPORT = True
+BUILD_TESTS = False

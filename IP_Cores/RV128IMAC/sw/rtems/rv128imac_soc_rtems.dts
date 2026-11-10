@@ -1,0 +1,75 @@
+/dts-v1/;
+/* RV128IMAC SoC, RV64 mode, for RTEMS (embedded in the BSP as system_dtb).
+   Same map as sw/bootrom/rv128_soc.dts; 8 MiB of RAM (default DRAM of the testbenches
+   and iss64), explicit stdout-path, no kernel command line. */
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	compatible = "adriangreenboy,rv128imac-soc";
+	model = "RV128IMAC SoC (modo RV64)";
+
+	chosen {
+		stdout-path = "/soc/serial@10000000";
+	};
+	aliases { serial0 = &uart0; };
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <1000000>;
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			compatible = "riscv";
+			riscv,isa = "rv64imac_zicsr_zifencei_zicntr_zicbom";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "c", "zicsr", "zifencei", "zicntr", "zicbom";
+			riscv,cbom-block-size = <64>;
+			mmu-type = "riscv,sv39";
+			status = "okay";
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x00800000>;          /* 8 MiB */
+	};
+
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "simple-bus";
+		ranges;
+		dma-noncoherent;              /* DMA de las IP_Cores: coherencia por Zicbom */
+
+		clint@2000000 {
+			compatible = "riscv,clint0";
+			reg = <0x0 0x2000000 0x0 0x10000>;
+			interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
+		};
+		plic: interrupt-controller@c000000 {
+			compatible = "riscv,plic0";
+			#interrupt-cells = <1>;
+			#address-cells = <0>;
+			interrupt-controller;
+			reg = <0x0 0xc000000 0x0 0x4000000>;
+			interrupts-extended = <&cpu0_intc 11 &cpu0_intc 9>;
+			riscv,ndev = <31>;
+		};
+		uart0: serial@10000000 {
+			compatible = "ns16550a";
+			reg = <0x0 0x10000000 0x0 0x1000>;
+			clock-frequency = <100000000>;
+			current-speed = <6250000>;                    /* divisor 1: UART rapida en simulacion */
+			reg-shift = <0>;
+			reg-io-width = <1>;
+			interrupt-parent = <&plic>;
+			interrupts = <1>;
+		};
+	};
+};

@@ -1,0 +1,11 @@
+identifier: rv128imac_soc
+name: RV128IMAC SoC (RV64 mode)
+type: mcu
+arch: riscv
+toolchain:
+  - zephyr
+ram: 8192
+testing:
+  ignore_tags:
+    - net
+    - bluetooth

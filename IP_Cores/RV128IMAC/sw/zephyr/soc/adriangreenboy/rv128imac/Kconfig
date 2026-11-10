@@ -1,0 +1,10 @@
+config SOC_RV128IMAC
+	select RISCV
+	select RISCV_PRIVILEGED
+	select RISCV_HAS_PLIC
+	select RISCV_SOC_HAS_GP_RELATIVE_ADDRESSING
+	select ATOMIC_OPERATIONS_BUILTIN
+	help
+	  RV128IMAC SoC: dual RV128/RV64 core started in RV64 mode, I$/D$, 128-bit AXI4,
+	  CLINT, PLIC (31 sources), UART 16550. Machine mode only, no PMP.
+	  Own __reset (soc.S): the register file has no reset value.

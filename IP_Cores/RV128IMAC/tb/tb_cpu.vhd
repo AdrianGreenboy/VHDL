@@ -5,6 +5,8 @@
 --   * CLINT y UART por el bus (mismas reglas de tamano que el ISS); DECERR fuera
 --   * HTIF: los stores a tohost se observan en la interfaz core -> D$ (con
 --     write-back nunca llegarian al bus), via nombres externos VHDL-2008
+--   * PLIC / ranuras MMIO / AXI-Lite como stubs (leen 0, descartan escrituras), igual
+--     que STUB_REGIONS de los ISS
 --   * Traza de retiro identica a tb_core (compare128.py / compare64.py --tb cpu)
 --   * .hex: addr64 data128 (como tb_core)
 library ieee;
@@ -154,6 +156,10 @@ begin
           when others => c := DZERO;
         end case;
         if a(3) = '1' then d := c & DZERO; else d := DZERO & c; end if;
+      elsif (a >= x"000000000C000000" and a < x"0000000010000000" and sz = 4) or
+            (a >= x"0000000010010000" and a < x"0000000010110000" and sz <= 8) or
+            (a >= x"0000000020000000" and a < x"0000000030000000" and sz <= 8) then
+        null;                                 -- PLIC / MMIO / AXI-Lite stubs (as the ISS)
       elsif a >= x"0000000010000000" and a < x"0000000010001000" and sz = 1 then
         if a(11 downto 0) = x"005" then
           d := std_logic_vector(shift_left(to_unsigned(16#60#, 128), 8 * to_integer(a(3 downto 0))));
@@ -189,6 +195,10 @@ begin
           when 16#17FF# => mtime_v := unsigned(nw);
           when others => null;
         end case;
+      elsif (a >= x"000000000C000000" and a < x"0000000010000000" and sz = 4) or
+            (a >= x"0000000010010000" and a < x"0000000010110000" and sz <= 8) or
+            (a >= x"0000000020000000" and a < x"0000000030000000" and sz <= 8) then
+        null;                                 -- PLIC / MMIO / AXI-Lite stubs (as the ISS)
       elsif a >= x"0000000010000000" and a < x"0000000010001000" and sz = 1 then
         if a(11 downto 0) = x"000" then
           write(output, "" & character'val(to_integer(unsigned(d(7 downto 0)))));

@@ -1,0 +1,82 @@
+/* RV128IMAC SoC, core in RV64 mode: same map as the RV64IMAC SoC and the boot ROM DTS
+ * (sw/bootrom/rv128_soc.dts). Machine mode only. */
+/dts-v1/;
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "adriangreenboy,rv128imac-soc";
+	model = "RV128IMAC SoC (RV64 mode)";
+
+	chosen {
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,sram = &ram0;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			status = "okay";
+			compatible = "adriangreenboy,rv128imac", "riscv";
+			riscv,isa-base = "rv64i";
+			riscv,isa-extensions = "i", "m", "a", "c", "zicsr", "zifencei";
+			hlic0: interrupt-controller {
+				compatible = "riscv,cpu-intc";
+				#address-cells = <0>;
+				#interrupt-cells = <1>;
+				interrupt-controller;
+			};
+		};
+	};
+
+	ram0: memory@80000000 {
+		device_type = "memory";
+		reg = <0x80000000 0x00800000>;          /* 8 MiB: default DRAM of tb_core/tb_cpu/tb_soc and iss64 */
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		ranges;
+
+		plic: interrupt-controller@c000000 {
+			compatible = "sifive,plic-1.0.0";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			reg = <0x0c000000 0x04000000>;
+			interrupts-extended = <&hlic0 11 &hlic0 9>;
+			riscv,max-priority = <7>;
+			riscv,ndev = <31>;
+		};
+
+		clint: clint@2000000 {
+			compatible = "sifive,clint0";
+			reg = <0x2000000 0x10000>;
+			interrupts-extended = <&hlic0 3 &hlic0 7>;
+		};
+
+		mtimer: timer@200bff8 {
+			compatible = "riscv,machine-timer";
+			interrupts-extended = <&hlic0 7>;
+			reg = <0x200bff8 0x8 0x2004000 0x8>;
+			reg-names = "mtime", "mtimecmp";
+		};
+
+		uart0: uart@10000000 {
+			compatible = "ns16550";
+			reg = <0x10000000 0x1000>;
+			reg-shift = <0>;
+			clock-frequency = <100000000>;
+			current-speed = <6250000>;              /* divisor 1, as Linux */
+			interrupt-parent = <&plic>;
+			interrupts = <1 1>;
+			status = "okay";
+		};
+	};
+};

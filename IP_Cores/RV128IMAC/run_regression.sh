@@ -14,6 +14,10 @@
 #   Capa 6   RTOS en modo RV64 (M4): FreeRTOS V11.1.0 autoverificable en el ISS y en
 #            lockstep en core, cpu y soc (FREERTOS_KERNEL=<arbol V11.1.0>, por defecto
 #            ~/FreeRTOS-Kernel; si no esta, la capa se omite)
+#   Capa 6b  Zephyr v4.4.0 (board rv128imac_soc): tests/kernel/common y queue en el ISS y
+#            en lockstep (ZEPHYR_BASE, por defecto /data/adrian/zephyrproject/zephyr, venv activo)
+#   Capa 6c  RTEMS 6.2 (BSP riscv/rv64imac con DTB propio): test autoverificable en el ISS y
+#            en lockstep (RTEMS_PREFIX, por defecto /data/adrian/rtems/6)
 # Uso: ./run_regression.sh [rapida]      Log completo: sim/regression.log
 set -u
 cd "$(dirname "$0")"
@@ -166,6 +170,44 @@ if [ -f $FRK/tasks.c ] && [ -f $R64/compare.py ]; then
   fi
 else
   step "capa 6: OMITIDA (sin FreeRTOS-Kernel en $FRK o sin ../RV64IMAC)"
+fi
+
+ZB=${ZEPHYR_BASE:-/data/adrian/zephyrproject/zephyr}
+if [ -f $ZB/VERSION ] && command -v west > /dev/null && [ -f $R64/compare.py ]; then
+  step "capa 6b: Zephyr $(git -C $ZB describe --tags 2>/dev/null) (modo RV64): kernel/common + kernel/queue"
+  ZEPHYR_BASE=$ZB sw/zephyr/build.sh >> $LOG 2>&1 || { echo "   build de Zephyr fallido (ver $LOG)" | tee -a $LOG; fail=1; }
+  for e in sw/zephyr/out/common.elf sw/zephyr/out/queue.elf; do
+    [ -f $e ] || continue
+    python3 sw/freertos/run_iss.py $e --max 40000000 > /tmp/r128_z.txt 2>&1 || fail=1
+    cat /tmp/r128_z.txt >> $LOG; echo "   ISS $(basename $e): $(tail -1 /tmp/r128_z.txt)"
+  done
+  # queue (1.75 M instrucciones) en los 6 bancos; common (9 M) en uno por banco
+  for c in core:1:1:queue core:7:21:queue cpu:1:1:queue cpu:6:5:queue soc:1:1:queue soc:6:7:queue \
+           core:1:1:common cpu:1:1:common soc:1:1:common; do
+    IFS=: read tb lat seed t <<< "$c"
+    python3 compare64.py --tb $tb --maxlat $lat --seed $seed --timeout 200000000 sw/zephyr/out/$t.elf > /tmp/r128_z.txt 2>&1 || fail=1
+    cat /tmp/r128_z.txt >> $LOG; echo "   $t $tb maxlat=$lat seed=$seed: $(head -1 /tmp/r128_z.txt)"
+  done
+else
+  step "capa 6b: OMITIDA (sin Zephyr en $ZB o sin west en el PATH)"
+fi
+
+RP=${RTEMS_PREFIX:-/data/adrian/rtems/6}
+if [ -x $RP/bin/riscv-rtems6-gcc ] && [ -f $R64/compare.py ]; then
+  step "capa 6c: RTEMS 6.2 (modo RV64) en ISS y lockstep core/cpu/soc"
+  sw/rtems/build.sh >> $LOG 2>&1 || { echo "   build de RTEMS fallido (ver $LOG)" | tee -a $LOG; fail=1; }
+  RT=sw/rtems/rtems_test.exe
+  if [ -f $RT ]; then
+    python3 sw/freertos/run_iss.py $RT --max 40000000 > /tmp/r128_rt.txt 2>&1 || fail=1
+    cat /tmp/r128_rt.txt >> $LOG; echo "   ISS: $(tail -1 /tmp/r128_rt.txt)"
+    for c in core:1:1 core:7:21 cpu:1:1 cpu:6:5 soc:1:1 soc:6:7; do
+      IFS=: read tb lat seed <<< "$c"
+      python3 compare64.py --tb $tb --maxlat $lat --seed $seed --timeout 200000000 $RT > /tmp/r128_rt.txt 2>&1 || fail=1
+      cat /tmp/r128_rt.txt >> $LOG; echo "   $tb maxlat=$lat seed=$seed: $(head -1 /tmp/r128_rt.txt)"
+    done
+  fi
+else
+  step "capa 6c: OMITIDA (sin toolchain de RTEMS en $RP)"
 fi
 
 echo

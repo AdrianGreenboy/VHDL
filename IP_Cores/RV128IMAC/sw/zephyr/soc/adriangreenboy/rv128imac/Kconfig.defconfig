@@ -1,0 +1,30 @@
+if SOC_RV128IMAC
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	default 1000000          # mtime: 1 MHz (board DTS); in simulation clk/TIME_DIV
+
+config RISCV_SOC_INTERRUPT_INIT
+	default y
+
+config 2ND_LVL_ISR_TBL_OFFSET
+	default 12
+
+config 2ND_LVL_INTR_00_OFFSET
+	default 11
+
+config 2ND_LEVEL_INTERRUPT_BITS
+	default 11
+
+config MAX_IRQ_PER_AGGREGATOR
+	default 32
+
+config NUM_IRQS
+	default 44               # 12 local + 32 PLIC
+
+config RISCV_PMP
+	default n
+
+config XIP
+	default n
+
+endif

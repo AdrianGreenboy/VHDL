@@ -1,0 +1,2 @@
+config BOARD_RV128IMAC_SOC
+	select SOC_RV128IMAC

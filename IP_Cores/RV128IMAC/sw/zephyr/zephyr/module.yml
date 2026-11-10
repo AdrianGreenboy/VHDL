@@ -1,0 +1,10 @@
+# Out-of-tree Zephyr module: board rv128imac_soc + SoC rv128imac (RV128IMAC SoC, RV64 mode).
+# Use: west build ... -- -DZEPHYR_EXTRA_MODULES=<path to sw/zephyr>
+name: rv128imac
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    board_root: .
+    soc_root: .
+    dts_root: .
