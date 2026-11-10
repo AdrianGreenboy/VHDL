@@ -1,0 +1,32 @@
+{
+   "ActiveEmotionalView":"Default View",
+   "Default View_ScaleFactor":"0.947151",
+   "Default View_TopLeft":"-222,-356",
+   "ExpandedHierarchyInLayout":"",
+   "guistr":"# # String gsaved with Nlview 7.8.0 2024-04-26 e1825d835c VDI=44 GEI=38 GUI=JA:21.0 TLS
+#  -string -flagsOSRD
+preplace port ddr4_bank0 -pg 1 -lvl 3 -x 860 -y -120 -defaultsOSRD
+preplace port ddr4_bank0_sys_clk -pg 1 -lvl 0 -x -40 -y 100 -defaultsOSRD
+preplace inst versal_cips_0 -pg 1 -lvl 1 -x 210 -y -100 -defaultsOSRD
+preplace inst axi_noc_0 -pg 1 -lvl 2 -x 670 -y -120 -defaultsOSRD
+preplace netloc versal_cips_0_fpd_cci_noc_axi0_clk 1 1 1 440 -100n
+preplace netloc versal_cips_0_fpd_cci_noc_axi1_clk 1 1 1 450 -80n
+preplace netloc versal_cips_0_fpd_cci_noc_axi2_clk 1 1 1 460 -60n
+preplace netloc versal_cips_0_fpd_cci_noc_axi3_clk 1 1 1 480 -40n
+preplace netloc versal_cips_0_lpd_axi_noc_clk 1 1 1 490 -20n
+preplace netloc versal_cips_0_pmc_axi_noc_axi0_clk 1 1 1 500 0n
+preplace netloc versal_cips_0_FPD_CCI_NOC_0 1 1 1 440 -240n
+preplace netloc versal_cips_0_FPD_CCI_NOC_1 1 1 1 440 -220n
+preplace netloc versal_cips_0_FPD_CCI_NOC_2 1 1 1 440 -200n
+preplace netloc versal_cips_0_FPD_CCI_NOC_3 1 1 1 440 -180n
+preplace netloc versal_cips_0_LPD_AXI_NOC_0 1 1 1 440 -160n
+preplace netloc versal_cips_0_PMC_NOC_AXI_0 1 1 1 440 -140n
+preplace netloc axi_noc_0_CH0_DDR4_0 1 2 1 N -120
+preplace netloc ddr4_bank0_sys_clk_1 1 0 2 -20J 110 470J
+levelinfo -pg 1 -40 210 670 860
+pagesize -pg 1 -db -bbox -sgen -230 -310 990 200
+"
+}
+{
+   "da_cips_cnt":"1"
+}

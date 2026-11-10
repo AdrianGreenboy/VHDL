@@ -1,0 +1,77 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date         : Tue Nov 10 08:31:32 2026
+| Host         : adrian running 64-bit Ubuntu 24.04.5 LTS
+| Command      : report_drc -file route_report_drc_0.rpt -pb route_report_drc_0.pb -rpx route_report_drc_0.rpx
+| Design       : design_1_wrapper
+| Device       : xcve2302-sfva784-1LP-e-S
+| Speed File   : -1LP
+| Design State : Fully Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Report DRC
+
+Table of Contents
+-----------------
+1. REPORT SUMMARY
+2. REPORT DETAILS
+
+1. REPORT SUMMARY
+-----------------
+            Netlist: netlist
+          Floorplan: design_1
+      Design limits: <entire design considered>
+           Ruledeck: default
+             Max checks: <unlimited>
+             Checks found: 5
++-----------+----------+------------------------+--------+
+| Rule      | Severity | Description            | Checks |
++-----------+----------+------------------------+--------+
+| PDCNXA-2  | Warning  | RAMB36_X9_DINPA_RAMB36 | 4      |
+| RTSTAT-10 | Warning  | No routable loads      | 1      |
++-----------+----------+------------------------+--------+
+
+2. REPORT DETAILS
+-----------------
+PDCNXA-2#1 Warning
+RAMB36_X9_DINPA_RAMB36  
+Site RAMB36_X1Y30: For cell attribute RAMB36.WRITE_WIDTH_A=9, the DINPA[0] pin of the upper and lower BRAM sections must be connected together.
+Related violations: <none>
+
+PDCNXA-2#2 Warning
+RAMB36_X9_DINPA_RAMB36  
+Site RAMB36_X1Y31: For cell attribute RAMB36.WRITE_WIDTH_A=9, the DINPA[0] pin of the upper and lower BRAM sections must be connected together.
+Related violations: <none>
+
+PDCNXA-2#3 Warning
+RAMB36_X9_DINPA_RAMB36  
+Site RAMB36_X1Y34: For cell attribute RAMB36.WRITE_WIDTH_A=9, the DINPA[0] pin of the upper and lower BRAM sections must be connected together.
+Related violations: <none>
+
+PDCNXA-2#4 Warning
+RAMB36_X9_DINPA_RAMB36  
+Site RAMB36_X1Y35: For cell attribute RAMB36.WRITE_WIDTH_A=9, the DINPA[0] pin of the upper and lower BRAM sections must be connected together.
+Related violations: <none>
+
+RTSTAT-10#1 Warning
+No routable loads  
+4508 net(s) have no routable loads. The problem bus(es) and/or net(s) are design_1_i/axi_noc_0/inst/S06_AXI_nmu/bd_8be5_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_BID[3:0],
+design_1_i/axi_noc_0/inst/S06_AXI_nmu/bd_8be5_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_BRESP[0],
+design_1_i/axi_noc_0/inst/S06_AXI_nmu/bd_8be5_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_RID[3:0],
+design_1_i/axi_noc_0/inst/S06_AXI_nmu/bd_8be5_S06_AXI_nmu_0_top_INST/IF_NOC_AXI_RRESP[0],
+design_1_i/versal_cips_0/U0/pspmc_0/U0/apu_event_o,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/apu_event_standby_wfe[1:0],
+design_1_i/versal_cips_0/U0/pspmc_0/U0/apu_event_standby_wfi[1:0],
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_capture,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_drck,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_reset,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_runtest,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_sel,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_shift,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_tck,
+design_1_i/versal_cips_0/U0/pspmc_0/U0/bscan_user1_usr_tdi
+ (the first 15 of 891 listed nets/buses).
+Related violations: <none>
+
+

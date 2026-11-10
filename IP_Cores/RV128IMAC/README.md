@@ -154,3 +154,11 @@ sw/rtems/build_toolchain.sh        # once: RSB 6/rtems-riscv into /data/adrian/r
 sw/rtems/build.sh                  # BSP (when its config changes) + rtems_test.exe
 python3 sw/freertos/run_iss.py sw/rtems/rtems_test.exe
 ```
+
+## M5: SoC on the TE0950
+
+`fpga/soc/`: `rv128_soc_top` (SoC + DDR remap + control bank with mode select and a
+`tohost` watcher on the retirement trace), Verilog wrapper, `create_project.tcl`,
+`bd_insert.tcl` (NoC input at 128 bit), `rv128_soc_load.c` (A72 loader), `board_pack.sh`
+and `run_all.sh`. Same flow as the RV64IMAC SoC that boots Linux on the board; see
+`fpga/soc/BOARD_GUIDE.md`.

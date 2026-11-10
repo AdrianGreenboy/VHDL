@@ -1,0 +1,37 @@
+#!/bin/bash
+# board_pack.sh - prepara en <dir> todo lo que corre en la TE0950 con el SoC (M5, PC):
+#   * modo RV128: las pruebas bare-metal de sw/tests (las de las capas 2-4b)
+#   * modo RV64:  riscv-tests -p- del RV64IMAC, FreeRTOS, Zephyr (queue, common), RTEMS
+# Cada programa: <name>.bin (imagen plana desde 0x8000_0000) y una linea en list.txt:
+#   <name> <rv64|rv128> <divisor UART> <tohost>
+# Copia tambien rv128_soc_load.c y run_all.sh. Uso: fpga/soc/board_pack.sh <dir>
+set -e
+H=$(cd $(dirname $0) && pwd)
+ROOT=$(cd $H/../.. && pwd)
+R64=$ROOT/../RV64IMAC
+OUT=${1:?uso: board_pack.sh <dir>}
+mkdir -p $OUT
+: > $OUT/list.txt
+OBJCOPY=$(command -v llvm-objcopy || command -v riscv64-unknown-elf-objcopy)
+NM=$(command -v llvm-nm || command -v riscv64-unknown-elf-nm)
+elf() {  # elf <name> <file.elf>: modo RV64, divisor 1
+  local th
+  th=$($NM $2 | awk '$3 == "tohost" {print $1}')
+  [ -n "$th" ] || { echo "sin tohost: $2" >&2; return; }
+  $OBJCOPY -O binary $2 $OUT/$1.bin
+  echo "$1 rv64 1 0x$th" >> $OUT/list.txt
+}
+# --- modo RV128: sw/tests/<name>.bin + .sym (rv128asm)
+for b in $ROOT/sw/tests/*.bin; do
+  n=$(basename $b .bin)
+  th=$(awk '$2 == "tohost" {print $1}' ${b%.bin}.sym)
+  cp $b $OUT/$n.bin
+  echo "$n rv128 1 0x$th" >> $OUT/list.txt
+done
+# --- modo RV64
+for e in $(ls $R64/sw/tests/*-p-* 2>/dev/null | grep -v '\.'); do elf $(basename $e) $e; done
+[ -f $ROOT/sw/freertos/freertos_test ] && elf freertos_test $ROOT/sw/freertos/freertos_test
+for z in queue common; do [ -f $ROOT/sw/zephyr/out/$z.elf ] && elf zephyr_$z $ROOT/sw/zephyr/out/$z.elf; done
+[ -f $ROOT/sw/rtems/rtems_test.exe ] && elf rtems_test $ROOT/sw/rtems/rtems_test.exe
+cp $H/rv128_soc_load.c $H/run_all.sh $OUT/
+echo "$(wc -l < $OUT/list.txt) programas en $OUT ($(grep -c ' rv128 ' $OUT/list.txt) RV128, $(grep -c ' rv64 ' $OUT/list.txt) RV64)"
