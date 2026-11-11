@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
-| Date         : Tue Nov 10 08:29:08 2026
+| Date         : Wed Nov 11 17:04:01 2026
 | Host         : adrian running 64-bit Ubuntu 24.04.5 LTS
 | Command      : report_utilization -file design_1_rv128_0_utilization_synth.rpt -pb design_1_rv128_0_utilization_synth.pb
 | Design       : design_1_rv128_0
@@ -32,18 +32,18 @@ Table of Contents
 +----------------------------+-------+-------+------------+-----------+-------+
 |          Site Type         |  Used | Fixed | Prohibited | Available | Util% |
 +----------------------------+-------+-------+------------+-----------+-------+
-| Registers                  | 11449 |     0 |          0 |    300544 |  3.81 |
-|   Register as Flip Flop    | 11449 |     0 |          0 |    300544 |  3.81 |
+| Registers                  | 20176 |     0 |          0 |    300544 |  6.71 |
+|   Register as Flip Flop    | 20176 |     0 |          0 |    300544 |  6.71 |
 |   Register as Latch        |     0 |     0 |          0 |    300544 |  0.00 |
-| CLB LUTs*                  | 25995 |     0 |          0 |    150272 | 17.30 |
-|   LUT as Logic             | 25667 |     0 |          0 |    150272 | 17.08 |
+| CLB LUTs*                  | 41519 |     0 |          0 |    150272 | 27.63 |
+|   LUT as Logic             | 41191 |     0 |          0 |    150272 | 27.41 |
 |   LUT as Memory            |   328 |     0 |          0 |     75136 |  0.44 |
 |     LUT as Distributed RAM |   328 |     0 |            |           |       |
 |     LUT as Shift Register  |     0 |     0 |            |           |       |
 |       Variable Length SRL  |     0 |     0 |            |           |       |
 |       Fixed Length SRL     |     0 |     0 |            |           |       |
-| LOOKAHEAD8                 |   788 |     0 |          0 |     18784 |  4.20 |
-| Unique Control Sets        |   211 |       |          0 |     37568 |  0.56 |
+| LOOKAHEAD8                 |   919 |     0 |          0 |     18784 |  4.89 |
+| Unique Control Sets        |   294 |       |          0 |     37568 |  0.78 |
 +----------------------------+-------+-------+------------+-----------+-------+
 * Warning! The Final LUT count, after physical optimizations and full implementation, is typically lower. Run opt_design after synthesis, if not already completed, for a more realistic count.
 Warning! LUT value is adjusted to account for LUT combining.
@@ -76,8 +76,8 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +--------------------+------+-------+------------+-----------+-------+
 |      Site Type     | Used | Fixed | Prohibited | Available | Util% |
 +--------------------+------+-------+------------+-----------+-------+
-| DSP Slices         |    0 |     0 |          0 |       464 |  0.00 |
-|   DSP58            |    0 |     0 |            |           |       |
+| DSP Slices         |    9 |     0 |          0 |       464 |  1.94 |
+|   DSP58            |    9 |     0 |            |           |       |
 |   DSPCPLX          |    0 |     0 |            |           |       |
 |   DSPFP32          |    0 |     0 |            |           |       |
 |   DSP48E5          |    0 |     0 |            |           |       |
@@ -174,20 +174,21 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +--------------+-------+---------------------+
 |   Ref Name   |  Used | Functional Category |
 +--------------+-------+---------------------+
-| LUT6         | 11364 |                 CLB |
-| FDRE         | 11332 |            Register |
-| LUTCY2       |  6158 |                 CLB |
-| LUTCY1       |  6158 |                 CLB |
-| LUT5         |  5221 |                 CLB |
-| LUT3         |  3470 |                 CLB |
-| LUT4         |  2956 |                 CLB |
-| LUT2         |  1347 |                 CLB |
-| LOOKAHEAD8   |   788 |                 CLB |
+| LUT6         | 22190 |                 CLB |
+| FDRE         | 19964 |            Register |
+| LUT5         |  7408 |                 CLB |
+| LUTCY2       |  7199 |                 CLB |
+| LUTCY1       |  7199 |                 CLB |
+| LUT3         |  4978 |                 CLB |
+| LUT4         |  4501 |                 CLB |
+| LUT2         |  1770 |                 CLB |
+| LOOKAHEAD8   |   919 |                 CLB |
 | RAMD32       |   316 |                 CLB |
+| FDSE         |   212 |            Register |
 | RAMS64E5     |   144 |                 CLB |
-| FDSE         |   117 |            Register |
+| LUT1         |    58 |                 CLB |
 | RAMS32       |    44 |                 CLB |
-| LUT1         |    26 |                 CLB |
+| DSP58        |     9 |          Arithmetic |
 | RAMB36E5_INT |     8 |            BLOCKRAM |
 +--------------+-------+---------------------+
 

@@ -2,7 +2,7 @@
 --Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 ----------------------------------------------------------------------------------
 --Tool Version: Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
---Date        : Tue Nov 10 08:27:37 2026
+--Date        : Wed Nov 11 17:02:22 2026
 --Host        : adrian running 64-bit Ubuntu 24.04.5 LTS
 --Command     : generate_target design_1_wrapper.bd
 --Design      : design_1_wrapper

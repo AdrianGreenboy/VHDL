@@ -1,4 +1,4 @@
--- tb_muldiv (RV128IMAC): Capa 1, unidad M iterativa contra el ISS (esquinas + aleatorios).
+-- tb_muldiv (RV128IMAC): Capa 1, unidad M (FAST o iterativa) contra el ISS (esquinas + aleatorios).
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -7,7 +7,7 @@ use ieee.std_logic_textio.all;
 use work.rv128_pkg.all;
 
 entity tb_muldiv is
-  generic (VECTORS : string := "muldiv_vectors.txt");
+  generic (VECTORS : string := "muldiv_vectors.txt"; FAST : boolean := true; DIV_STEPS : positive := 2);
 end entity;
 
 architecture sim of tb_muldiv is
@@ -16,10 +16,11 @@ architecture sim of tb_muldiv is
   signal f3 : std_logic_vector(2 downto 0);
   signal wsel : std_logic_vector(1 downto 0);
   signal a, b, result : xword;
+  signal clm : std_logic := '0';
   signal fin : boolean := false;
 begin
   clk <= not clk after 5 ns when not fin;
-  dut : entity work.rv128_muldiv port map (clk, rst, start, kill, ack, f3, wsel, a, b, busy, done, result);
+  dut : entity work.rv128_muldiv generic map (FAST => FAST, DIV_STEPS => DIV_STEPS) port map (clk, rst, start, kill, ack, f3, wsel, a, b, busy, done, result, clm);
 
   process
     file f : text open read_mode is VECTORS;
@@ -33,7 +34,9 @@ begin
       readline(f, l);
       read(l, vf3); read(l, vw); hread(l, va); hread(l, vb); hread(l, exp);
       f3 <= std_logic_vector(to_unsigned(vf3, 3));
-      wsel <= std_logic_vector(to_unsigned(vw, 2));
+      -- w = 3: Zbc (clmul/clmulr/clmulh con f3 = 1/2/3), operandos de 128 bit
+      if vw = 3 then wsel <= W_Q; clm <= '1';
+      else wsel <= std_logic_vector(to_unsigned(vw, 2)); clm <= '0'; end if;
       a <= va; b <= vb; start <= '1';
       wait until rising_edge(clk);
       start <= '0';

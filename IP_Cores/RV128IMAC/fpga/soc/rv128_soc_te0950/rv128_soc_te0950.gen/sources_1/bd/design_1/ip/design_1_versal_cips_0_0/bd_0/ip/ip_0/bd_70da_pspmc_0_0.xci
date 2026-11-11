@@ -2366,7 +2366,7 @@
           "abstraction_type": "xilinx.com:interface:apb_rtl:1.0",
           "mode": "master",
           "parameters": {
-            "ADDR_WIDTH": [ { "value": "32", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ]
+            "ADDR_WIDTH": [ { "value": "32", "value_permission": "bd", "resolve_type": "generated", "is_ips_inferred": true, "is_static_object": false } ]
           },
           "port_maps": {
             "PRDATA": [ { "physical_name": "ps_ocm2_apb_prdata" } ],
@@ -2505,5 +2505,5 @@
       }
     }
   },
-  "checksum": "a4d77ea4"
+  "checksum": "2aef9468"
 }

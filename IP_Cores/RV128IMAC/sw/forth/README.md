@@ -6,8 +6,11 @@ a small Forth kernel in rv128asm source. It runs bare metal in RV128 mode, with 
 ## Kernel
 
 - **Threading.** Code is subroutine-threaded: every colon definition is real RV128 machine
-  code. A literal is `jal lit_rt` followed by an inline 16-byte cell. Control flow compiles
-  `bnez`/`jal` directly.
+  code. Control flow compiles `bnez`/`jal` directly.
+- **Literals are inline, with no call:** `addi s1, x0, imm` for 12-bit values, otherwise
+  `auipc` + `lq` + a jump over an aligned 16-byte cell. CREATE/VARIABLE/CONSTANT words have
+  the same shape. Every compiled call is therefore a real `jal`/`ret` pair that the core's
+  BTB and return-address stack predict.
 - **Cache coherence.** `;` executes `fence.i`, so every definition exercises the D$→I$
   coherence path.
 - **Registers and stacks.**
@@ -41,6 +44,10 @@ a small Forth kernel in rv128asm source. It runs bare metal in RV128 mode, with 
 | Poly1305 | `POLY1305 ( msg len key out -- )` | 130-bit accumulator in one 128-bit register + 2 bits |
 | Lock-free stack | `LPUSH LPOP` | 128-bit head = pointer + version tag, a double-width CAS with `LR.Q/SC.Q` |
 | Atomics / IRQ | `ATOM+ CAS ISR! TIMER TICKS` | `AMOADD.Q`, timer interrupt |
+| Bit manipulation | `CLZ CTZ CPOP ROL ROR REV8 ANDN CLMUL CLMULH MIN MAX UMIN UMAX` | Zbb + Zbc (this core's RV128 extension) |
+
+SHA-512 uses `rorid` (64-bit rotate in one instruction), `rev8` + `srai 64` (big-endian
+load) and `andn` (Ch). That cuts its instruction count by 33 % compared with v1.3.
 
 - **Forth libraries** (`lib/`):
   - `core.fs`: `.N .0 .HEX`.
@@ -60,6 +67,7 @@ Poly1305 reference, high-precision Decimal sin/cos) and embeds it as ASSERTs.
 | tests/t_fixed | F*, F/ (fast and slow path), exact FSQRT (= isqrt), sin/cos to 2^-56, quaternion rotation |
 | tests/t_crypto | SHA-512 at lengths 0, 3, 111, 112, 128, 239, 1000; Poly1305 RFC 8439 vector + 7 lengths |
 | tests/t_conc | 64 nodes moved between two lock-free stacks by the main loop and the timer ISR; conserves nodes, version tags = number of operations |
+| tests/t_zb | CLZ/CTZ/CPOP/REV8/ROL/ROR on corner and random values, CLMUL/CLMULH, MIN/UMAX, ABS |
 | demos/pi1000 | 1007 digits of pi (29 limbs) |
 | demos/fact1000 | 1000! (2568 digits) |
 | demos/bench | cycles of SHA512, POLY1305, BN*, F/, FSIN, ATOM+ |

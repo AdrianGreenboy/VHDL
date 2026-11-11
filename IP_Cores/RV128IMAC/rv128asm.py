@@ -124,6 +124,23 @@ R_OPS = {  # name: (opcode, f3, f7)
     "muld": (OP_OP64, 0, 1), "divd": (OP_OP64, 4, 1), "divud": (OP_OP64, 5, 1),
     "remd": (OP_OP64, 6, 1), "remud": (OP_OP64, 7, 1),
 }
+# Zbb + Zbc (RV128: XLEN = 128; las variantes W y D operan sobre 32 y 64 bit)
+R_OPS.update({
+    "andn": (OP_OP, 7, 0x20), "orn": (OP_OP, 6, 0x20), "xnor": (OP_OP, 4, 0x20),
+    "min": (OP_OP, 4, 0x05), "minu": (OP_OP, 5, 0x05), "max": (OP_OP, 6, 0x05), "maxu": (OP_OP, 7, 0x05),
+    "clmul": (OP_OP, 1, 0x05), "clmulr": (OP_OP, 2, 0x05), "clmulh": (OP_OP, 3, 0x05),
+    "rol": (OP_OP, 1, 0x30), "ror": (OP_OP, 5, 0x30),
+    "rolw": (OP_OP32, 1, 0x30), "rorw": (OP_OP32, 5, 0x30),
+    "rold": (OP_OP64, 1, 0x30), "rord": (OP_OP64, 5, 0x30),
+})
+UNARY = {  # name: (opcode, f3, imm12)  rd, rs1
+    "clz": (OP_IMM, 1, 0x600), "ctz": (OP_IMM, 1, 0x601), "cpop": (OP_IMM, 1, 0x602),
+    "clzw": (OP_IMM32, 1, 0x600), "ctzw": (OP_IMM32, 1, 0x601), "cpopw": (OP_IMM32, 1, 0x602),
+    "clzd": (OP_IMM64, 1, 0x600), "ctzd": (OP_IMM64, 1, 0x601), "cpopd": (OP_IMM64, 1, 0x602),
+    "sext.b": (OP_IMM, 1, 0x604), "sext.h": (OP_IMM, 1, 0x605),
+    "rev8": (OP_IMM, 5, 0x6F8), "orc.b": (OP_IMM, 5, 0x287),
+    "zext.h": (OP_OP64, 4, 0x080),
+}
 I_OPS = {
     "addi": (OP_IMM, 0), "slti": (OP_IMM, 2), "sltiu": (OP_IMM, 3), "xori": (OP_IMM, 4),
     "ori": (OP_IMM, 6), "andi": (OP_IMM, 7), "addiw": (OP_IMM32, 0), "addid": (OP_IMM64, 0),
@@ -132,6 +149,7 @@ SHIFT_I = {  # name: (opcode, f3, high-bits value, shamt bits)
     "slli": (OP_IMM, 1, 0x00, 7), "srli": (OP_IMM, 5, 0x00, 7), "srai": (OP_IMM, 5, 0x08, 7),
     "slliw": (OP_IMM32, 1, 0x00, 5), "srliw": (OP_IMM32, 5, 0x00, 5), "sraiw": (OP_IMM32, 5, 0x20, 5),
     "sllid": (OP_IMM64, 1, 0x00, 6), "srlid": (OP_IMM64, 5, 0x00, 6), "sraid": (OP_IMM64, 5, 0x10, 6),
+    "rori": (OP_IMM, 5, 0x0C, 7), "roriw": (OP_IMM32, 5, 0x30, 5), "rorid": (OP_IMM64, 5, 0x18, 6),
 }
 LOADS = {"lb": (OP_LOAD, 0), "lh": (OP_LOAD, 1), "lw": (OP_LOAD, 2), "ld": (OP_LOAD, 3),
          "lbu": (OP_LOAD, 4), "lhu": (OP_LOAD, 5), "lwu": (OP_LOAD, 6), "ldu": (OP_LOAD, 7),
@@ -232,6 +250,9 @@ class Assembler:
         if mn in R_OPS:
             op, f3, f7 = R_OPS[mn]
             return w32(enc_r(op, f3, f7, R(ops[0]), R(ops[1]), R(ops[2])))
+        if mn in UNARY:
+            op, f3, i12 = UNARY[mn]
+            return w32((i12 << 20) | (R(ops[1]) << 15) | (f3 << 12) | (R(ops[0]) << 7) | op)
         if mn in I_OPS:
             op, f3 = I_OPS[mn]
             return w32(enc_i(op, f3, R(ops[0]), R(ops[1]), V(ops[2])))

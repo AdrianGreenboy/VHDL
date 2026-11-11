@@ -9,7 +9,8 @@ que la salida del ISS y la de QEMU x-rv128 se pueden comparar texto a texto.
 No debe producirse ningun trap: cualquiera salta a 'fail'.
 
   --qemu    excluye lo que QEMU no implementa (AMO/LR/SC .Q)
-Uso: gen_random.py <salida.S> --seed S [--n N] [--qemu]
+  --zb      anade Zbb + Zbc (extension RV128 de este core; QEMU no la tiene)
+Uso: gen_random.py <salida.S> --seed S [--n N] [--qemu] [--zb]
 """
 import argparse
 import random
@@ -30,6 +31,11 @@ LD = {'lb': 1, 'lbu': 1, 'lh': 2, 'lhu': 2, 'lw': 4, 'lwu': 4, 'ld': 8, 'ldu': 8
 ST = {'sb': 1, 'sh': 2, 'sw': 4, 'sd': 8, 'sq': 16}
 AMO = ['amoswap', 'amoadd', 'amoxor', 'amoand', 'amoor', 'amomin', 'amomax', 'amominu', 'amomaxu']
 BR = ['beq', 'bne', 'blt', 'bge', 'bltu', 'bgeu']
+ZB_RR = ['andn', 'orn', 'xnor', 'min', 'minu', 'max', 'maxu', 'clmul', 'clmulr', 'clmulh',
+         'rol', 'ror', 'rolw', 'rorw', 'rold', 'rord']
+ZB_UN = ['clz', 'ctz', 'cpop', 'clzw', 'ctzw', 'cpopw', 'clzd', 'ctzd', 'cpopd',
+         'sext.b', 'sext.h', 'zext.h', 'rev8', 'orc.b']
+ZB_SH = {'rori': 127, 'roriw': 31, 'rorid': 63}
 
 
 def rval(r):
@@ -49,9 +55,10 @@ def rval(r):
 
 
 class Gen:
-    def __init__(self, seed, qemu):
+    def __init__(self, seed, qemu, zb=False):
         self.r = random.Random(seed)
         self.qemu = qemu
+        self.zb = zb
         self.out = []
         self.pending = []                 # [restantes, etiqueta] de saltos hacia delante
         self.nl = 0
@@ -79,6 +86,16 @@ class Gen:
 
     def one(self):
         r = self.r
+        if self.zb and r.random() < 0.25:
+            k = r.random()
+            if k < 0.5:
+                self.emit(f'{r.choice(ZB_RR)} {self.rd()}, {self.rs()}, {self.rs()}')
+            elif k < 0.8:
+                self.emit(f'{r.choice(ZB_UN)} {self.rd()}, {self.rs()}')
+            else:
+                op = r.choice(list(ZB_SH))
+                self.emit(f'{op} {self.rd()}, {self.rs()}, {r.randint(0, ZB_SH[op])}')
+            return
         k = r.random()
         if k < 0.30:
             self.emit(f'{r.choice(RR)} {self.rd()}, {self.rs()}, {self.rs()}')
@@ -263,8 +280,9 @@ def main():
     ap.add_argument('--seed', type=int, default=1)
     ap.add_argument('--n', type=int, default=3000)
     ap.add_argument('--qemu', action='store_true')
+    ap.add_argument('--zb', action='store_true')
     a = ap.parse_args()
-    open(a.out, 'w').write(Gen(a.seed, a.qemu).program(a.n))
+    open(a.out, 'w').write(Gen(a.seed, a.qemu, a.zb).program(a.n))
 
 
 if __name__ == '__main__':

@@ -55,7 +55,7 @@ fi
 step "capa 1: decompresor RVC exhaustivo (RV128C y RV64C), mul/div y divisor de la UART"
 python3 tb/gen_rvc_vectors.py sim/rvc_vectors.txt && python3 tb/gen_rvc_vectors.py sim/rvc64_vectors.txt --rv64 \
   && python3 tb/gen_muldiv_vectors.py sim/muldiv_vectors.txt >> $LOG
-(cd sim && ./tb_rvc && ./tb_rvc -gVECTORS=rvc64_vectors.txt -gXLEN64=true && ./tb_muldiv && ./tb_uart) > /tmp/r128_u.txt 2>&1; r=$?
+(cd sim && ./tb_rvc && ./tb_rvc -gVECTORS=rvc64_vectors.txt -gXLEN64=true && ./tb_muldiv && ./tb_muldiv -gFAST=false && ./tb_muldiv -gDIV_STEPS=1 && ./tb_uart) > /tmp/r128_u.txt 2>&1; r=$?
 grep -q "tb_uart PASS" /tmp/r128_u.txt || r=1
 cat /tmp/r128_u.txt >> $LOG
 grep -o 'tb_[a-z]* [A-Z]* [a-z]*=[0-9]*' /tmp/r128_u.txt | sed 's/^/   /'
@@ -210,12 +210,12 @@ else
   step "capa 6c: OMITIDA (sin toolchain de RTEMS en $RP)"
 fi
 
-step "capa 7: RV128 Forth nativo (bignum, Q64.64, SHA-512, Poly1305, lock-free + IRQ) en ISS y lockstep"
+step "capa 7: RV128 Forth nativo (bignum, Q64.64, SHA-512, Poly1305, lock-free + IRQ, Zbb/Zbc) en ISS y lockstep"
 python3 sw/forth/gen_tests.py sw/forth/tests >> $LOG 2>&1
 python3 sw/forth/build.py sw/forth/tests/t_*.fs > /tmp/r128_f.txt 2>&1 || fail=1
 cat /tmp/r128_f.txt >> $LOG; sed 's/^/   ISS: /' /tmp/r128_f.txt | grep -E 'PASS|FAIL|TIMEOUT'
 FO=sw/forth/out
-for c in core:1:1:"t_core t_bignum t_fixed t_crypto t_conc" core:7:21:"t_core t_conc" \
+for c in core:1:1:"t_core t_bignum t_fixed t_crypto t_conc t_zb" core:7:21:"t_core t_conc" \
          cpu:1:1:"t_core t_crypto t_conc" cpu:6:5:"t_core t_conc" soc:1:1:"t_core t_conc" soc:6:7:"t_core"; do
   IFS=: read tb lat seed ts <<< "$c"
   for t in $ts; do

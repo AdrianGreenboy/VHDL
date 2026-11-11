@@ -3,9 +3,14 @@
 -- carriles), rafagas de 4 beats de 16 bytes y AMO de 32/64/128 bit (W/D/Q) por carriles.
 --   * Hit de load: respuesta en el ciclo siguiente a la peticion; acepta otra
 --     peticion en ese mismo ciclo (loads encadenados a 1/ciclo).
---   * Hit de store/SC/AMO: escritura en la SRAM al final del ciclo de lookup
---     (AMO: lectura, operacion y escritura en ese ciclo); no acepta otra peticion
---     en ese ciclo.
+--   * Hit de store/SC: el dato va a un buffer de escritura de una entrada (pw) y se acepta
+--     otra peticion en ese mismo ciclo. pw se escribe en la SRAM en el primer ciclo en que
+--     el puerto de su via esta libre; un load que acierta en la misma via/palabra mezcla
+--     pw en su respuesta. Stores consecutivos a la misma palabra se fusionan en pw. AMO y
+--     CBO pasan por PW_WAIT (vaciado + relectura); fallos y fence.i vacian pw antes de
+--     tocar la SRAM. req_ready no depende del contenido de la peticion (evita bucles
+--     combinacionales con el PTW del core).
+--   * Hit de AMO: lectura, operacion y escritura en el ciclo de lookup.
 --   * Fallo: writeback de la victima sucia (rafaga AXI) + relleno + repeticion.
 --   * No cacheable (fuera de DRAM): transaccion AXI de un beat.
 --   * fence.i: limpieza completa (writeback de todas las lineas sucias). Mientras,
@@ -56,7 +61,7 @@ end entity;
 
 architecture rtl of rv128_dcache is
   type st_t is (IDLE, LOOKUP, WB_RD, WB_REQ, RF_REQ, REPLAY, UNC, RESP,
-                FL_TAG, FL_CHK, FL_NEXT);
+                FL_TAG, FL_CHK, FL_NEXT, PW_WAIT);
   signal st : st_t;
 
   type q128_t is array (0 to 1) of std_logic_vector(127 downto 0);
@@ -93,6 +98,16 @@ architecture rtl of rv128_dcache is
   signal cmo_wb  : std_logic;                           -- writeback en curso por cbo.*
 
   signal hit     : std_logic;
+  -- buffer de escritura de stores con acierto
+  signal pw_v    : std_logic;
+  signal pw_way  : natural range 0 to 1;
+  signal pw_addr : std_logic_vector(8 downto 0);        -- indice & palabra
+  signal pw_wd   : xword;
+  signal pw_wm   : std_logic_vector(15 downto 0);
+  signal pw_drain: std_logic;
+  signal pw_merge: std_logic;                           -- el store en lookup cae sobre pw
+  signal st_hit  : std_logic;                           -- store con acierto en lookup
+  signal nx_st   : st_t;                                -- destino de una peticion aceptada
   signal hway    : natural range 0 to 1;
   signal accept  : std_logic;
 
@@ -162,17 +177,43 @@ begin
     end loop;
   end process;
 
-  -- aceptacion: libre, o lookup de load con acierto (encadenado)
-  accept <= '1' when req_valid = '1' and flush_p = '0' and flush = '0' and
-                     (st = IDLE or (st = LOOKUP and hit = '1' and r_kind = "00")) else '0';
-  req_ready <= '1' when flush_p = '0' and flush = '0' and
-                        (st = IDLE or (st = LOOKUP and hit = '1' and r_kind = "00")) else '0';
+  st_hit   <= '1' when st = LOOKUP and hit = '1' and r_kind = "01" else '0';
+  pw_merge <= '1' when pw_v = '1' and pw_way = hway and pw_addr = idx_of(r_addr) & r_addr(5 downto 4) else '0';
+  -- aceptacion (independiente del contenido): IDLE; lookup de load con acierto
+  -- (encadenado); lookup de store con acierto si pw queda libre o se fusiona (si no, pw se
+  -- vacia en este ciclo y la siguiente peticion espera uno)
+  process (all)
+    variable ok : boolean;
+  begin
+    ok := false;
+    if flush_p = '0' and flush = '0' then
+      if st = IDLE then
+        ok := true;
+      elsif st = LOOKUP and hit = '1' and r_kind = "00" then
+        ok := true;
+      elsif st_hit = '1' then
+        ok := pw_v = '0' or pw_merge = '1';
+      end if;
+    end if;
+    if ok then req_ready <= '1'; else req_ready <= '0'; end if;
+    if ok and req_valid = '1' then accept <= '1'; else accept <= '0'; end if;
+  end process;
+  -- AMO/CBO leen y escriben la SRAM en lookup: con pw ocupado (o creandose) pasan antes
+  -- por PW_WAIT
+  nx_st <= UNC when not pma_dram(req_addr) else
+           PW_WAIT when req_kind(1) = '1' and (pw_v = '1' or st_hit = '1') else
+           LOOKUP;
   flush_busy <= flush_p or flush;
 
   -- respuesta
   process (all)
   begin
-    rsp_valid <= '0'; rsp_rdata <= d_q(hway); rsp_err <= '0';
+    rsp_valid <= '0'; rsp_err <= '0';
+    if pw_merge = '1' then
+      rsp_rdata <= (d_q(hway) and not bytemask(pw_wm)) or (pw_wd and bytemask(pw_wm));
+    else
+      rsp_rdata <= d_q(hway);
+    end if;
     if st = LOOKUP and hit = '1' and r_kind /= "11" then
       rsp_valid <= '1';
     elsif st = RESP then
@@ -184,8 +225,9 @@ begin
   process (all)
     variable a : xword;
     variable i : natural range 0 to 127;
+    variable de, dw : std_logic_vector(1 downto 0);       -- d_en/d_we (variables: se releen)
   begin
-    d_en <= "00"; d_we <= "00"; t_en <= "00"; t_we <= "00";
+    de := "00"; dw := "00"; t_en <= "00"; t_we <= "00";
     for w in 0 to 1 loop
       d_addr(w) <= idx_of(r_addr) & r_addr(5 downto 4);
       d_wd(w) <= r_wdata; d_wm(w) <= bytemask(r_wstrb);
@@ -193,26 +235,25 @@ begin
     t_addr <= idx_of(r_addr); t_wd <= tag_of(r_addr);
     i := to_integer(unsigned(idx_of(r_addr)));
     if accept = '1' and pma_dram(req_addr) then
-      d_en <= "11"; t_en <= "11";
+      if req_kind /= "01" then de := "11"; end if;     -- un store solo necesita etiquetas
+      t_en <= "11";
       for w in 0 to 1 loop d_addr(w) <= idx_of(req_addr) & req_addr(5 downto 4); end loop;
       t_addr <= idx_of(req_addr);
     end if;
     case st is
       when LOOKUP =>
-        if hit = '1' and (r_kind = "01" or r_kind = "10") then
-          d_en(hway) <= '1'; d_we(hway) <= '1';
-          if r_kind = "10" then
-            d_wd(hway) <= amo_calc(r_amo, r_size, d_q(hway), r_wdata, to_integer(unsigned(r_addr(3 downto 0))));
-          end if;
+        if hit = '1' and r_kind = "10" then
+          de(hway) := '1'; dw(hway) := '1';
+          d_wd(hway) <= amo_calc(r_amo, r_size, d_q(hway), r_wdata, to_integer(unsigned(r_addr(3 downto 0))));
         end if;
       when WB_RD =>
         if cnt < 4 then
-          d_en(vic) <= '1';
+          de(vic) := '1';
           d_addr(vic) <= wb_addr(12 downto 6) & std_logic_vector(cnt(1 downto 0));
         end if;
       when RF_REQ =>
         if m_beat = '1' then
-          d_en(vic) <= '1'; d_we(vic) <= '1';
+          de(vic) := '1'; dw(vic) := '1';
           d_addr(vic) <= idx_of(r_addr) & m_idx;
           d_wd(vic) <= m_rdata; d_wm(vic) <= (others => '1');
         end if;
@@ -220,11 +261,20 @@ begin
           t_en(vic) <= '1'; t_we(vic) <= '1';
         end if;
       when REPLAY =>
-        d_en <= "11"; t_en <= "11";
+        de := "11"; t_en <= "11";
       when FL_TAG =>
         t_en <= "11"; t_addr <= std_logic_vector(fset);
       when others => null;
     end case;
+    -- vaciado de pw cuando el puerto de su via esta libre (no si el store en lookup se
+    -- fusiona con el: pw se actualiza en el flanco)
+    pw_drain <= '0';
+    if pw_v = '1' and de(pw_way) = '0' and not (st_hit = '1' and pw_merge = '1') then
+      de(pw_way) := '1'; dw(pw_way) := '1';
+      d_addr(pw_way) <= pw_addr; d_wd(pw_way) <= pw_wd; d_wm(pw_way) <= bytemask(pw_wm);
+      pw_drain <= '1';
+    end if;
+    d_en <= de; d_we <= dw;
   end process;
 
   -- peticiones al maestro AXI
@@ -245,11 +295,23 @@ begin
   begin
     if rising_edge(clk) then
       if rst = '1' then
-        st <= IDLE; flush_p <= '0'; fl_wb <= '0'; cmo_wb <= '0';
+        st <= IDLE; flush_p <= '0'; fl_wb <= '0'; cmo_wb <= '0'; pw_v <= '0';
         valid <= (others => (others => '0')); dirty <= (others => (others => '0'));
         lru <= (others => '0');
       else
         if flush = '1' then flush_p <= '1'; end if;
+        -- buffer de escritura
+        if pw_drain = '1' then pw_v <= '0'; end if;
+        if st_hit = '1' then
+          if pw_merge = '1' then
+            pw_wd <= (pw_wd and not bytemask(r_wstrb)) or (r_wdata and bytemask(r_wstrb));
+            pw_wm <= pw_wm or r_wstrb;
+          else
+            pw_way <= hway; pw_addr <= idx_of(r_addr) & r_addr(5 downto 4);
+            pw_wd <= r_wdata; pw_wm <= r_wstrb;
+          end if;
+          pw_v <= '1';
+        end if;
         i := to_integer(unsigned(idx_of(r_addr)));
         if accept = '1' then
           r_addr <= req_addr; r_kind <= req_kind; r_amo <= req_amo_op; r_size <= req_size;
@@ -258,8 +320,8 @@ begin
         case st is
           when IDLE =>
             if accept = '1' then
-              if pma_dram(req_addr) then st <= LOOKUP; else st <= UNC; end if;
-            elsif flush_p = '1' then
+              st <= nx_st;
+            elsif flush_p = '1' and pw_v = '0' then
               fset <= (others => '0'); fway <= 0; st <= FL_TAG;
             end if;
 
@@ -281,7 +343,7 @@ begin
               if hway = 1 then lru(i) <= '1'; else lru(i) <= '0'; end if;
               if r_kind /= "00" then dirty(hway)(i) <= '1'; end if;
               if accept = '1' then
-                if pma_dram(req_addr) then st <= LOOKUP; else st <= UNC; end if;
+                st <= nx_st;
               else
                 st <= IDLE;
               end if;
@@ -337,6 +399,9 @@ begin
 
           when REPLAY =>
             st <= LOOKUP;
+
+          when PW_WAIT =>                               -- el puerto esta libre: pw se vacia
+            if pw_v = '0' then st <= REPLAY; end if;
 
           when UNC =>
             if m_beat = '1' then resp_d <= m_rdata; end if;

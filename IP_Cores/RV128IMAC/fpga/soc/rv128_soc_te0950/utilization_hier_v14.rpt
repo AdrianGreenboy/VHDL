@@ -1,0 +1,37 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
+| Date         : Wed Nov 11 17:09:24 2026
+| Host         : adrian running 64-bit Ubuntu 24.04.5 LTS
+| Command      : report_utilization -hierarchical -hierarchical_depth 4 -file /home/adrian/Xilinx/2025.2.1/Vivado/scripts/xguifrmwork/utilization_hier_v14.rpt
+| Design       : design_1_wrapper
+| Device       : xcve2302-sfva784-1LP-e-S
+| Speed File   : -1LP
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++----------------------------+--------------------------------------------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+|          Instance          |                      Module                      | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs  | RAMB36 | RAMB18 | URAM | DSP Blocks |
++----------------------------+--------------------------------------------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+| design_1_wrapper           |                                            (top) |      42075 |      41749 |     324 |    2 | 21312 |      8 |      0 |    0 |          9 |
+|   design_1_i               |                                         design_1 |      42075 |      41749 |     324 |    2 | 21312 |      8 |      0 |    0 |          9 |
+|     sc_ctrl                |                               design_1_sc_ctrl_0 |        712 |        711 |       0 |    1 |   891 |      0 |      0 |    0 |          0 |
+|       inst                 |                       design_1_sc_ctrl_0_bd_9886 |        712 |        711 |       0 |    1 |   891 |      0 |      0 |    0 |          0 |
+|         s00_entry_pipeline | design_1_sc_ctrl_0_s00_entry_pipeline_imp_D4FLXF |        660 |        660 |       0 |    0 |   706 |      0 |      0 |    0 |          0 |
+|         s00_nodes          |          design_1_sc_ctrl_0_s00_nodes_imp_GCTEC9 |         34 |         34 |       0 |    0 |   146 |      0 |      0 |    0 |          0 |
+|     rv128                  |                                 design_1_rv128_0 |      41348 |      41024 |     324 |    0 | 20386 |      8 |      0 |    0 |          9 |
+|       U0                   |                  design_1_rv128_0_rv128_soc_wrap |      41348 |      41024 |     324 |    0 | 20386 |      8 |      0 |    0 |          9 |
+|         u                  |                   design_1_rv128_0_rv128_soc_top |      41348 |      41024 |     324 |    0 | 20386 |      8 |      0 |    0 |          9 |
++----------------------------+--------------------------------------------------+------------+------------+---------+------+-------+--------+--------+------+------------+
+* Note: The sum of lower-level cells may be larger than their parent cells total, due to cross-hierarchy LUT combining
+
+

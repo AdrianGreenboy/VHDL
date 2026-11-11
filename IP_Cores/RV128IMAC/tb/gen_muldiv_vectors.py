@@ -37,4 +37,14 @@ with open(sys.argv[1], 'w') as f:
                     r = muldiv(f3, a, b, WIDTH[w]) & MX
                 f.write(f'{f3} {w} {a:032x} {b:032x} {r:032x}\n')
                 n += 1
+    # w = 3: Zbc (f3 1 clmul, 2 clmulr, 3 clmulh) sobre 128 bit
+    from iss128 import clmul
+    for f3 in (1, 2, 3):
+        pairs = [(a, b) for a in corner for b in corner]
+        pairs += [(random.getrandbits(128), random.getrandbits(128)) for _ in range(300)]
+        for a, b in pairs:
+            pr = clmul(a, b)
+            r = {1: pr, 2: pr >> 127, 3: pr >> 128}[f3] & MX
+            f.write(f'{f3} 3 {a:032x} {b:032x} {r:032x}\n')
+            n += 1
 print(n, 'vectores')

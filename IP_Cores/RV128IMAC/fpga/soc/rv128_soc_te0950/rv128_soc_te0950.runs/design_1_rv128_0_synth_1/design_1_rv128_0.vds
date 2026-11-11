@@ -3,8 +3,8 @@
 # SW Build 6403652 on Thu Mar 19 13:47:00 MDT 2026
 # IP Build 6403511 on Thu Mar 19 12:41:45 MDT 2026
 # SharedData Build 6403650 on Thu Mar 19 14:02:13 MDT 2026
-# Start of session at: Tue Nov 10 08:27:50 2026
-# Process ID         : 1467717
+# Start of session at: Wed Nov 11 17:02:32 2026
+# Process ID         : 1925984
 # Current directory  : /home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.runs/design_1_rv128_0_synth_1
 # Command line       : vivado -log design_1_rv128_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source design_1_rv128_0.tcl
 # Log file           : /home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.runs/design_1_rv128_0_synth_1/design_1_rv128_0.vds
@@ -13,13 +13,13 @@
 # Platform           : Ubuntu
 # Operating System   : Ubuntu 24.04.5 LTS
 # Processor Detail   : 13th Gen Intel(R) Core(TM) i9-13900K
-# CPU Frequency      : 5500.000 MHz
+# CPU Frequency      : 5130.578 MHz
 # CPU Physical cores : 24
 # CPU Logical cores  : 32
 # Host memory        : 67103 MB
-# Swap memory        : 8589 MB
-# Total Virtual      : 75693 MB
-# Available Virtual  : 56783 MB
+# Swap memory        : 77309 MB
+# Total Virtual      : 144412 MB
+# Available Virtual  : 113810 MB
 #-----------------------------------------------------------
 Sourcing tcl script '/home/adrian/.Xilinx/Vivado/Vivado_init.tcl'
 source design_1_rv128_0.tcl -notrace
@@ -33,9 +33,9 @@ INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xcve230
 INFO: [Device 21-403] Loading part xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 7 processes.
 INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
-INFO: [Synth 8-7075] Helper process launched with PID 1468103
+INFO: [Synth 8-7075] Helper process launched with PID 1926029
 ---------------------------------------------------------------------------------
-Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2664.199 ; gain = 404.688 ; free physical = 17507 ; free virtual = 47237
+Starting RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2664.031 ; gain = 391.688 ; free physical = 21861 ; free virtual = 107772
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-638] synthesizing module 'design_1_rv128_0' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.gen/sources_1/bd/design_1/ip/design_1_rv128_0/synth/design_1_rv128_0.vhd:121]
 	Parameter TICK_DIV bound to: 50 - type: integer 
@@ -46,26 +46,27 @@ INFO: [Synth 8-6157] synthesizing module 'rv128_soc_wrap' [/home/adrian/vhdl_rep
 INFO: [Synth 8-638] synthesizing module 'rv128_soc_top' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_top.vhd:105]
 INFO: [Synth 8-638] synthesizing module 'rv128_soc' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_soc.vhd:105]
 INFO: [Synth 8-638] synthesizing module 'rv128_cpu' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_cpu.vhd:67]
-INFO: [Synth 8-638] synthesizing module 'rv128_core' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:75]
+INFO: [Synth 8-638] synthesizing module 'rv128_core' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:76]
 INFO: [Synth 8-638] synthesizing module 'rv128_csr' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_csr.vhd:55]
 INFO: [Synth 8-256] done synthesizing module 'rv128_csr' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_csr.vhd:55]
-INFO: [Synth 8-638] synthesizing module 'rv128_muldiv' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_muldiv.vhd:29]
-INFO: [Synth 8-256] done synthesizing module 'rv128_muldiv' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_muldiv.vhd:29]
+INFO: [Synth 8-638] synthesizing module 'rv128_muldiv' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_muldiv.vhd:44]
+INFO: [Synth 8-256] done synthesizing module 'rv128_muldiv' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_muldiv.vhd:44]
 INFO: [Synth 8-638] synthesizing module 'rv128_tlb' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_tlb.vhd:24]
 INFO: [Synth 8-256] done synthesizing module 'rv128_tlb' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_tlb.vhd:24]
 INFO: [Synth 8-638] synthesizing module 'rv128_ptw' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_ptw.vhd:41]
 INFO: [Synth 8-256] done synthesizing module 'rv128_ptw' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_ptw.vhd:41]
-INFO: [Synth 8-256] done synthesizing module 'rv128_core' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:75]
+INFO: [Synth 8-6054] Found Dynamic range expression with variable size [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_pkg.vhd:204]
+INFO: [Synth 8-256] done synthesizing module 'rv128_core' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:76]
 INFO: [Synth 8-638] synthesizing module 'rv128_icache' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_icache.vhd:41]
 INFO: [Synth 8-638] synthesizing module 'sram_1rw' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
 INFO: [Synth 8-256] done synthesizing module 'sram_1rw' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
 INFO: [Synth 8-638] synthesizing module 'sram_1rw__parameterized0' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
 INFO: [Synth 8-256] done synthesizing module 'sram_1rw__parameterized0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
 INFO: [Synth 8-256] done synthesizing module 'rv128_icache' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_icache.vhd:41]
-INFO: [Synth 8-638] synthesizing module 'rv128_dcache' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_dcache.vhd:57]
+INFO: [Synth 8-638] synthesizing module 'rv128_dcache' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_dcache.vhd:62]
 INFO: [Synth 8-638] synthesizing module 'sram_1rw__parameterized1' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
 INFO: [Synth 8-256] done synthesizing module 'sram_1rw__parameterized1' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/sram_1rw.vhd:30]
-INFO: [Synth 8-256] done synthesizing module 'rv128_dcache' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_dcache.vhd:57]
+INFO: [Synth 8-256] done synthesizing module 'rv128_dcache' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_dcache.vhd:62]
 INFO: [Synth 8-638] synthesizing module 'rv128_axi_master' [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_axi_master.vhd:92]
 INFO: [Synth 8-256] done synthesizing module 'rv128_axi_master' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_axi_master.vhd:92]
 INFO: [Synth 8-256] done synthesizing module 'rv128_cpu' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_cpu.vhd:67]
@@ -83,10 +84,10 @@ INFO: [Synth 8-256] done synthesizing module 'rv128_uart__parameterized0' (0#1) 
 INFO: [Synth 8-256] done synthesizing module 'rv128_soc_top' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_top.vhd:105]
 INFO: [Synth 8-6155] done synthesizing module 'rv128_soc_wrap' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_wrap.v:6]
 INFO: [Synth 8-256] done synthesizing module 'design_1_rv128_0' (0#1) [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.gen/sources_1/bd/design_1/ip/design_1_rv128_0/synth/design_1_rv128_0.vhd:121]
-WARNING: [Synth 8-6014] Unused sequential element idex_reg[d][illegal] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:836]
-WARNING: [Synth 8-6014] Unused sequential element memwb_reg[msize] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:836]
-WARNING: [Synth 8-6014] Unused sequential element memwb_reg[munsign] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:836]
-WARNING: [Synth 8-6014] Unused sequential element memwb_reg[maddr] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:836]
+WARNING: [Synth 8-6014] Unused sequential element idex_reg[d][illegal] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:982]
+WARNING: [Synth 8-6014] Unused sequential element memwb_reg[msize] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:982]
+WARNING: [Synth 8-6014] Unused sequential element memwb_reg[munsign] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:982]
+WARNING: [Synth 8-6014] Unused sequential element memwb_reg[maddr] was removed.  [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_core.vhd:982]
 INFO: [Synth 8-7129] Port addr[1] in module rv128_plic is either unconnected or has no load
 INFO: [Synth 8-7129] Port addr[0] in module rv128_plic is either unconnected or has no load
 INFO: [Synth 8-7129] Port addr[2] in module rv128_clint is either unconnected or has no load
@@ -189,18 +190,18 @@ INFO: [Synth 8-7129] Port c1_addr[98] in module rv128_axi_master is either uncon
 INFO: [Synth 8-7129] Port c1_addr[97] in module rv128_axi_master is either unconnected or has no load
 INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
 ---------------------------------------------------------------------------------
-Finished RTL Elaboration : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2884.137 ; gain = 624.625 ; free physical = 16960 ; free virtual = 46751
+Finished RTL Elaboration : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2944.539 ; gain = 672.195 ; free physical = 21426 ; free virtual = 107343
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2884.137 ; gain = 624.625 ; free physical = 16960 ; free virtual = 46751
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2944.539 ; gain = 672.195 ; free physical = 21441 ; free virtual = 107358
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 2884.137 ; gain = 624.625 ; free physical = 16960 ; free virtual = 46751
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 2944.539 ; gain = 672.195 ; free physical = 21441 ; free virtual = 107358
 ---------------------------------------------------------------------------------
-Netlist sorting complete. Time (s): cpu = 00:00:00.16 ; elapsed = 00:00:00.16 . Memory (MB): peak = 2884.137 ; gain = 0.000 ; free physical = 16943 ; free virtual = 46734
+Netlist sorting complete. Time (s): cpu = 00:00:00.23 ; elapsed = 00:00:00.23 . Memory (MB): peak = 2944.539 ; gain = 0.000 ; free physical = 21467 ; free virtual = 107384
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
 INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
 INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
@@ -211,14 +212,14 @@ Processing XDC Constraints
 Initializing timing engine
 Completed Processing XDC Constraints
 
-Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00 . Memory (MB): peak = 3058.594 ; gain = 0.000 ; free physical = 16783 ; free virtual = 46574
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.01 . Memory (MB): peak = 3175.699 ; gain = 0.000 ; free physical = 21448 ; free virtual = 107416
 INFO: [Project 1-111] Unisim Transformation Summary:
 No Unisim elements were transformed.
 
-Constraint Validation Runtime : Time (s): cpu = 00:00:00.37 ; elapsed = 00:00:00.09 . Memory (MB): peak = 3077.594 ; gain = 18.965 ; free physical = 16721 ; free virtual = 46512
+Constraint Validation Runtime : Time (s): cpu = 00:00:00.45 ; elapsed = 00:00:00.11 . Memory (MB): peak = 3211.621 ; gain = 24.008 ; free physical = 21433 ; free virtual = 107402
 INFO: [Designutils 20-5008] Incremental synthesis strategy off
 ---------------------------------------------------------------------------------
-Finished Constraint Validation : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 3077.594 ; gain = 818.082 ; free physical = 16594 ; free virtual = 46385
+Finished Constraint Validation : Time (s): cpu = 00:00:12 ; elapsed = 00:00:11 . Memory (MB): peak = 3211.621 ; gain = 939.277 ; free physical = 20715 ; free virtual = 106682
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Loading Part and Timing Information
@@ -226,13 +227,13 @@ Start Loading Part and Timing Information
 Loading part: xcve2302-sfva784-1LP-e-S
 INFO: [Synth 8-6742] Reading net delay rules and data
 ---------------------------------------------------------------------------------
-Finished Loading Part and Timing Information : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 3085.598 ; gain = 826.086 ; free physical = 16593 ; free virtual = 46385
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:12 ; elapsed = 00:00:11 . Memory (MB): peak = 3219.625 ; gain = 947.281 ; free physical = 20715 ; free virtual = 106682
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Applying 'set_property' XDC Constraints
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 3085.598 ; gain = 826.086 ; free physical = 16596 ; free virtual = 46388
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:12 ; elapsed = 00:00:11 . Memory (MB): peak = 3219.625 ; gain = 947.281 ; free physical = 20707 ; free virtual = 106675
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'rv128_muldiv'
 INFO: [Synth 8-802] inferred FSM for state register 'st_reg' in module 'rv128_ptw'
@@ -246,10 +247,12 @@ INFO: [Synth 8-802] inferred FSM for state register 'cst_reg' in module 'rv128_s
                    State |                     New Encoding |                Previous Encoding 
 ---------------------------------------------------------------------------------------------------
                     idle |                              000 |                              000
-                     mul |                              001 |                              001
-                     div |                              010 |                              010
-                     fin |                              011 |                              011
-                    hold |                              100 |                              100
+                   clmul |                              001 |                              100
+                     mul |                              010 |                              001
+                   dprep |                              011 |                              011
+                     div |                              100 |                              010
+                     fin |                              101 |                              101
+                    hold |                              110 |                              110
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'sequential' in module 'rv128_muldiv'
 ---------------------------------------------------------------------------------------------------
@@ -277,17 +280,18 @@ INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'on
 ---------------------------------------------------------------------------------------------------
                    State |                     New Encoding |                Previous Encoding 
 ---------------------------------------------------------------------------------------------------
-                    idle |                      00010000000 |                             0000
-                  fl_tag |                      00001000000 |                             1000
-                  fl_chk |                      10000000000 |                             1001
-                   wb_rd |                      00000100000 |                             0010
-                  wb_req |                      00000000001 |                             0011
-                  rf_req |                      00000001000 |                             0100
-                  replay |                      00000010000 |                             0101
-                  lookup |                      00100000000 |                             0001
-                     unc |                      01000000000 |                             0110
-                    resp |                      00000000100 |                             0111
-                 fl_next |                      00000000010 |                             1010
+                    idle |                     000100000000 |                             0000
+                  fl_tag |                     000010000000 |                             1000
+                  fl_chk |                     100000000000 |                             1001
+                   wb_rd |                     000000100000 |                             0010
+                  wb_req |                     000000000001 |                             0011
+                  rf_req |                     000000001000 |                             0100
+                  replay |                     000000010000 |                             0101
+                  lookup |                     001000000000 |                             0001
+                     unc |                     010000000000 |                             0110
+                    resp |                     000000000100 |                             0111
+                 pw_wait |                     000001000000 |                             1011
+                 fl_next |                     000000000010 |                             1010
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'st_reg' using encoding 'one-hot' in module 'rv128_dcache'
 ---------------------------------------------------------------------------------------------------
@@ -330,7 +334,7 @@ INFO: [Synth 8-6904] The RAM "rv128_uart__parameterized0:/txf_reg" of size (dept
 ---------------------------------------------------------------------------------------------------
 INFO: [Synth 8-3354] encoded FSM with state register 'cst_reg' using encoding 'one-hot' in module 'rv128_soc_top'
 ---------------------------------------------------------------------------------
-Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:15 ; elapsed = 00:00:14 . Memory (MB): peak = 3085.598 ; gain = 826.086 ; free physical = 16324 ; free virtual = 46127
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:20 ; elapsed = 00:00:19 . Memory (MB): peak = 3219.625 ; gain = 947.281 ; free physical = 17211 ; free virtual = 103166
 ---------------------------------------------------------------------------------
 No constraint files found.
 ---------------------------------------------------------------------------------
@@ -338,51 +342,58 @@ Start RTL Component Statistics
 ---------------------------------------------------------------------------------
 Detailed RTL Component Info : 
 +---Adders : 
-	   2 Input  256 Bit       Adders := 1     
-	   2 Input  130 Bit       Adders := 2     
-	   3 Input  129 Bit       Adders := 1     
-	   2 Input  128 Bit       Adders := 17    
+	   2 Input  256 Bit       Adders := 2     
+	   2 Input  192 Bit       Adders := 1     
+	   3 Input  129 Bit       Adders := 2     
+	   2 Input  128 Bit       Adders := 19    
 	   3 Input  128 Bit       Adders := 1     
 	   2 Input   64 Bit       Adders := 6     
 	   2 Input   20 Bit       Adders := 4     
-	   2 Input    8 Bit       Adders := 1     
+	   3 Input    9 Bit       Adders := 2     
+	   3 Input    8 Bit       Adders := 2     
+	   2 Input    8 Bit       Adders := 3     
+	 128 Input    8 Bit       Adders := 1     
+	   3 Input    7 Bit       Adders := 1     
 	   2 Input    7 Bit       Adders := 1     
 	   2 Input    6 Bit       Adders := 1     
 	   2 Input    5 Bit       Adders := 13    
 	   3 Input    5 Bit       Adders := 4     
 	   2 Input    4 Bit       Adders := 8     
+	   2 Input    3 Bit       Adders := 4     
+	   3 Input    3 Bit       Adders := 4     
 	   4 Input    3 Bit       Adders := 1     
-	   3 Input    3 Bit       Adders := 3     
-	   2 Input    3 Bit       Adders := 2     
-	   2 Input    2 Bit       Adders := 2     
+	   2 Input    2 Bit       Adders := 4     
 +---XORs : 
+	   2 Input    144 Bit         XORs := 16    
 	   2 Input    128 Bit         XORs := 2     
 	   2 Input      1 Bit         XORs := 2     
 +---Registers : 
 	              512 Bit    Registers := 2     
-	              256 Bit    Registers := 1     
-	              130 Bit    Registers := 1     
 	              129 Bit    Registers := 1     
-	              128 Bit    Registers := 53    
+	              128 Bit    Registers := 73    
 	              122 Bit    Registers := 1     
-	               64 Bit    Registers := 10    
+	               64 Bit    Registers := 75    
 	               44 Bit    Registers := 17    
 	               32 Bit    Registers := 9     
 	               31 Bit    Registers := 4     
 	               27 Bit    Registers := 21    
+	               24 Bit    Registers := 64    
 	               20 Bit    Registers := 2     
 	               18 Bit    Registers := 4     
-	               16 Bit    Registers := 28    
+	               16 Bit    Registers := 29    
 	               12 Bit    Registers := 6     
 	               10 Bit    Registers := 2     
+	                9 Bit    Registers := 1     
 	                8 Bit    Registers := 13    
 	                7 Bit    Registers := 1     
 	                6 Bit    Registers := 1     
-	                5 Bit    Registers := 19    
-	                4 Bit    Registers := 12    
-	                3 Bit    Registers := 50    
-	                2 Bit    Registers := 30    
-	                1 Bit    Registers := 226   
+	                5 Bit    Registers := 20    
+	                4 Bit    Registers := 13    
+	                3 Bit    Registers := 52    
+	                2 Bit    Registers := 159   
+	                1 Bit    Registers := 301   
++---Multipliers : 
+	              64x64  Multipliers := 1     
 +---RAMs : 
 	              64K Bit	(512 X 128 bit)          RAMs := 4     
 	               3K Bit	(31 X 128 bit)          RAMs := 1     
@@ -390,82 +401,90 @@ Detailed RTL Component Info :
 	              128 Bit	(16 X 8 bit)          RAMs := 4     
 +---Muxes : 
 	   2 Input  512 Bit        Muxes := 2     
-	  11 Input  512 Bit        Muxes := 1     
-	   3 Input  256 Bit        Muxes := 1     
-	   2 Input  256 Bit        Muxes := 3     
-	   5 Input  256 Bit        Muxes := 2     
-	   4 Input  130 Bit        Muxes := 1     
-	   2 Input  129 Bit        Muxes := 1     
-	   5 Input  129 Bit        Muxes := 1     
+	  12 Input  512 Bit        Muxes := 1     
+	   2 Input  256 Bit        Muxes := 4     
+	   4 Input  256 Bit        Muxes := 1     
+	   7 Input  256 Bit        Muxes := 2     
+	   2 Input  144 Bit        Muxes := 16    
+	   2 Input  129 Bit        Muxes := 3     
+	   7 Input  129 Bit        Muxes := 1     
 	   4 Input  128 Bit        Muxes := 14    
-	   2 Input  128 Bit        Muxes := 350   
+	   2 Input  128 Bit        Muxes := 450   
+	   3 Input  128 Bit        Muxes := 10    
 	  10 Input  128 Bit        Muxes := 2     
-	   3 Input  128 Bit        Muxes := 8     
 	   6 Input  128 Bit        Muxes := 7     
-	  11 Input  128 Bit        Muxes := 7     
-	   2 Input   64 Bit        Muxes := 11    
+	  12 Input  128 Bit        Muxes := 7     
+	   2 Input   64 Bit        Muxes := 17    
 	   5 Input   64 Bit        Muxes := 1     
+	   4 Input   64 Bit        Muxes := 1     
+	   3 Input   64 Bit        Muxes := 1     
 	   8 Input   64 Bit        Muxes := 1     
 	  11 Input   64 Bit        Muxes := 2     
 	   2 Input   36 Bit        Muxes := 1     
-	   2 Input   32 Bit        Muxes := 21    
+	   2 Input   32 Bit        Muxes := 23    
 	   4 Input   32 Bit        Muxes := 5     
 	   6 Input   32 Bit        Muxes := 1     
 	   2 Input   31 Bit        Muxes := 9     
 	   4 Input   31 Bit        Muxes := 3     
 	   2 Input   27 Bit        Muxes := 1     
+	   2 Input   24 Bit        Muxes := 4     
 	   2 Input   20 Bit        Muxes := 6     
 	   2 Input   18 Bit        Muxes := 2     
-	   2 Input   16 Bit        Muxes := 26    
+	   2 Input   16 Bit        Muxes := 30    
 	   4 Input   16 Bit        Muxes := 1     
 	  27 Input   12 Bit        Muxes := 1     
 	   2 Input   12 Bit        Muxes := 1     
-	  26 Input   11 Bit        Muxes := 1     
+	  29 Input   12 Bit        Muxes := 1     
 	   5 Input   10 Bit        Muxes := 2     
 	   2 Input   10 Bit        Muxes := 4     
 	   3 Input   10 Bit        Muxes := 2     
-	   2 Input    9 Bit        Muxes := 22    
+	   2 Input    9 Bit        Muxes := 26    
 	   6 Input    9 Bit        Muxes := 2     
-	   4 Input    8 Bit        Muxes := 1     
-	   5 Input    8 Bit        Muxes := 1     
-	   2 Input    8 Bit        Muxes := 73    
+	   2 Input    8 Bit        Muxes := 78    
+	   7 Input    8 Bit        Muxes := 1     
+	   3 Input    8 Bit        Muxes := 3     
 	   8 Input    8 Bit        Muxes := 4     
-	   3 Input    7 Bit        Muxes := 2     
-	   2 Input    7 Bit        Muxes := 4     
+	   2 Input    7 Bit        Muxes := 5     
+	   3 Input    7 Bit        Muxes := 1     
 	   6 Input    7 Bit        Muxes := 1     
-	  11 Input    7 Bit        Muxes := 1     
+	  12 Input    7 Bit        Muxes := 1     
 	   6 Input    6 Bit        Muxes := 1     
 	   2 Input    6 Bit        Muxes := 5     
 	  10 Input    6 Bit        Muxes := 1     
+	   2 Input    5 Bit        Muxes := 64    
+	   4 Input    5 Bit        Muxes := 6     
 	   3 Input    5 Bit        Muxes := 2     
-	   2 Input    5 Bit        Muxes := 63    
-	   4 Input    5 Bit        Muxes := 2     
-	   3 Input    4 Bit        Muxes := 2     
-	   2 Input    4 Bit        Muxes := 40    
-	   8 Input    4 Bit        Muxes := 5     
-	   4 Input    4 Bit        Muxes := 1     
-	  11 Input    4 Bit        Muxes := 2     
-	   2 Input    3 Bit        Muxes := 54    
+	   5 Input    5 Bit        Muxes := 1     
+	   6 Input    5 Bit        Muxes := 1     
+	   2 Input    4 Bit        Muxes := 43    
+	   4 Input    4 Bit        Muxes := 2     
+	   3 Input    4 Bit        Muxes := 3     
+	   7 Input    4 Bit        Muxes := 2     
+	   8 Input    4 Bit        Muxes := 3     
+	  12 Input    4 Bit        Muxes := 1     
+	  11 Input    4 Bit        Muxes := 1     
+	   2 Input    3 Bit        Muxes := 57    
+	   7 Input    3 Bit        Muxes := 4     
 	   5 Input    3 Bit        Muxes := 1     
-	   4 Input    3 Bit        Muxes := 3     
-	   7 Input    3 Bit        Muxes := 2     
+	   4 Input    3 Bit        Muxes := 2     
 	   3 Input    3 Bit        Muxes := 7     
-	   2 Input    2 Bit        Muxes := 39    
-	   3 Input    2 Bit        Muxes := 5     
+	   2 Input    2 Bit        Muxes := 56    
+	   3 Input    2 Bit        Muxes := 7     
 	   5 Input    2 Bit        Muxes := 1     
-	   4 Input    2 Bit        Muxes := 1     
+	   4 Input    2 Bit        Muxes := 2     
 	   9 Input    2 Bit        Muxes := 2     
 	   6 Input    2 Bit        Muxes := 5     
 	  11 Input    2 Bit        Muxes := 1     
-	   5 Input    1 Bit        Muxes := 13    
-	   2 Input    1 Bit        Muxes := 402   
+	   5 Input    1 Bit        Muxes := 5     
+	   2 Input    1 Bit        Muxes := 571   
+	   4 Input    1 Bit        Muxes := 19    
 	  10 Input    1 Bit        Muxes := 7     
-	   4 Input    1 Bit        Muxes := 22    
-	   3 Input    1 Bit        Muxes := 20    
+	   3 Input    1 Bit        Muxes := 30    
+	   7 Input    1 Bit        Muxes := 43    
 	   8 Input    1 Bit        Muxes := 3     
-	   7 Input    1 Bit        Muxes := 31    
-	  11 Input    1 Bit        Muxes := 31    
+	  12 Input    1 Bit        Muxes := 17    
 	   6 Input    1 Bit        Muxes := 13    
+	  11 Input    1 Bit        Muxes := 14    
 ---------------------------------------------------------------------------------
 Finished RTL Component Statistics 
 ---------------------------------------------------------------------------------
@@ -482,14 +501,18 @@ No constraint files found.
 ---------------------------------------------------------------------------------
 Start Cross Boundary and Area Optimization
 ---------------------------------------------------------------------------------
-INFO: [Synth 8-6904] The RAM "ui_8/host_uart_u/rxf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
-INFO: [Synth 8-6904] The RAM "ui_8/host_uart_u/txf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-6904] The RAM "ui_13/host_uart_u/rxf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-6904] The RAM "ui_13/host_uart_u/txf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-3917] design design_1_rv128_0 has port s_axi_ctrl_bresp[1] driven by constant 0
 INFO: [Synth 8-3917] design design_1_rv128_0 has port s_axi_ctrl_bresp[0] driven by constant 0
 INFO: [Synth 8-3917] design design_1_rv128_0 has port s_axi_ctrl_rresp[1] driven by constant 0
 INFO: [Synth 8-3917] design design_1_rv128_0 has port s_axi_ctrl_rresp[0] driven by constant 0
+RAM ("dcache_ui_10/\g_way[1].data_u /mem_reg") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
+RAM ("dcache_ui_10/\g_way[1].data_u /mem_reg") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
+RAM ("dcache_ui_10/\g_way[0].data_u /mem_reg") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
+RAM ("dcache_ui_10/\g_way[0].data_u /mem_reg") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
 INFO: [Synth 8-6904] The RAM "design_1_rv128_0/host_uart_u/rxf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
-INFO: [Synth 8-12589] Found 9 bits of RAM  (ui_8/i_29) with no load. RAM width may be reduced from 10 to 1 
+INFO: [Synth 8-12589] Found 9 bits of RAM  (ui_13/i_29) with no load. RAM width may be reduced from 10 to 1 
 INFO: [Synth 8-6904] The RAM "design_1_rv128_0/host_uart_u/txf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-5546] ROM "mcountinhibit" won't be mapped to RAM because it is too sparse
 INFO: [Synth 8-5546] ROM "minstret" won't be mapped to RAM because it is too sparse
@@ -535,127 +558,59 @@ INFO: [Synth 8-5546] ROM "scause" won't be mapped to RAM because it is too spars
 INFO: [Synth 8-5546] ROM "stval" won't be mapped to RAM because it is too sparse
 INFO: [Synth 8-6904] The RAM "rv128_core__GB0/rf_reg" of size (depth=31 x width=128) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-6904] The RAM "rv128_core__GB0/rf_reg" of size (depth=31 x width=128) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[0]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[0]' (FDRE) to 'csr_u/medeleg_reg[14]'
+INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[14]' (FDRE) to 'csr_u/medeleg_reg[11]'
+INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[11]' (FDRE) to 'csr_u/medeleg_reg[10]'
+INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[10]' (FDRE) to 'csr_u/medeleg_reg[0]'
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[10]' (FDRE) to 'csr_u/mideleg_reg[11]'
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[8]' (FDRE) to 'csr_u/mideleg_reg[11]'
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[6]' (FDRE) to 'csr_u/mideleg_reg[11]'
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[4]' (FDRE) to 'csr_u/mideleg_reg[11]'
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[2]' (FDRE) to 'csr_u/mideleg_reg[11]'
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (csr_u/\mtvec_reg[1] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (csr_u/\stvec_reg[1] )
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[2]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[4]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[6]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[8]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[10]' (FDRE) to 'csr_u/medeleg_reg[14]'
-INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[10]' (FDRE) to 'csr_u/mideleg_reg[11]'
-INFO: [Synth 8-3886] merging instance 'csr_u/medeleg_reg[11]' (FDRE) to 'csr_u/medeleg_reg[14]'
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (csr_u/\medeleg_reg[14] )
+INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[0]' (FDRE) to 'csr_u/mideleg_reg[11]'
+INFO: [Synth 8-3333] propagating constant 0 across sequential element (csr_u/\medeleg_reg[0] )
 INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[7]' (FDRE) to 'csr_u/mideleg_reg[11]'
 INFO: [Synth 8-3886] merging instance 'csr_u/mideleg_reg[3]' (FDRE) to 'csr_u/mideleg_reg[11]'
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (csr_u/\mideleg_reg[11] )
-INFO: [Synth 8-5544] ROM "in102" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
-INFO: [Synth 8-5546] ROM "d[asel]" won't be mapped to RAM because it is too sparse
-INFO: [Synth 8-5546] ROM "d[asel]" won't be mapped to RAM because it is too sparse
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][127]' (FDRE) to 'idex_reg[d][imm][31]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][31]' (FDRE) to 'idex_reg[d][imm][32]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][32]' (FDRE) to 'idex_reg[d][imm][33]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][33]' (FDRE) to 'idex_reg[d][imm][34]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][34]' (FDRE) to 'idex_reg[d][imm][35]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][35]' (FDRE) to 'idex_reg[d][imm][36]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][36]' (FDRE) to 'idex_reg[d][imm][37]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][37]' (FDRE) to 'idex_reg[d][imm][38]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][38]' (FDRE) to 'idex_reg[d][imm][39]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][39]' (FDRE) to 'idex_reg[d][imm][40]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][40]' (FDRE) to 'idex_reg[d][imm][41]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][41]' (FDRE) to 'idex_reg[d][imm][42]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][42]' (FDRE) to 'idex_reg[d][imm][43]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][43]' (FDRE) to 'idex_reg[d][imm][44]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][44]' (FDRE) to 'idex_reg[d][imm][45]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][45]' (FDRE) to 'idex_reg[d][imm][46]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][46]' (FDRE) to 'idex_reg[d][imm][47]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][47]' (FDRE) to 'idex_reg[d][imm][48]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][48]' (FDRE) to 'idex_reg[d][imm][49]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][49]' (FDRE) to 'idex_reg[d][imm][50]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][50]' (FDRE) to 'idex_reg[d][imm][51]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][51]' (FDRE) to 'idex_reg[d][imm][52]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][52]' (FDRE) to 'idex_reg[d][imm][53]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][53]' (FDRE) to 'idex_reg[d][imm][54]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][54]' (FDRE) to 'idex_reg[d][imm][55]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][55]' (FDRE) to 'idex_reg[d][imm][56]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][56]' (FDRE) to 'idex_reg[d][imm][57]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][57]' (FDRE) to 'idex_reg[d][imm][58]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][58]' (FDRE) to 'idex_reg[d][imm][59]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][59]' (FDRE) to 'idex_reg[d][imm][60]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][60]' (FDRE) to 'idex_reg[d][imm][61]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][61]' (FDRE) to 'idex_reg[d][imm][62]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][62]' (FDRE) to 'idex_reg[d][imm][63]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][63]' (FDRE) to 'idex_reg[d][imm][64]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][64]' (FDRE) to 'idex_reg[d][imm][65]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][65]' (FDRE) to 'idex_reg[d][imm][66]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][66]' (FDRE) to 'idex_reg[d][imm][67]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][67]' (FDRE) to 'idex_reg[d][imm][68]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][68]' (FDRE) to 'idex_reg[d][imm][69]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][69]' (FDRE) to 'idex_reg[d][imm][70]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][70]' (FDRE) to 'idex_reg[d][imm][71]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][71]' (FDRE) to 'idex_reg[d][imm][72]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][72]' (FDRE) to 'idex_reg[d][imm][73]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][73]' (FDRE) to 'idex_reg[d][imm][74]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][74]' (FDRE) to 'idex_reg[d][imm][75]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][75]' (FDRE) to 'idex_reg[d][imm][76]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][76]' (FDRE) to 'idex_reg[d][imm][77]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][77]' (FDRE) to 'idex_reg[d][imm][78]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][78]' (FDRE) to 'idex_reg[d][imm][79]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][79]' (FDRE) to 'idex_reg[d][imm][80]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][80]' (FDRE) to 'idex_reg[d][imm][81]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][81]' (FDRE) to 'idex_reg[d][imm][82]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][82]' (FDRE) to 'idex_reg[d][imm][83]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][83]' (FDRE) to 'idex_reg[d][imm][84]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][84]' (FDRE) to 'idex_reg[d][imm][85]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][85]' (FDRE) to 'idex_reg[d][imm][86]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][86]' (FDRE) to 'idex_reg[d][imm][87]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][87]' (FDRE) to 'idex_reg[d][imm][88]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][88]' (FDRE) to 'idex_reg[d][imm][89]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][89]' (FDRE) to 'idex_reg[d][imm][90]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][90]' (FDRE) to 'idex_reg[d][imm][91]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][91]' (FDRE) to 'idex_reg[d][imm][92]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][92]' (FDRE) to 'idex_reg[d][imm][93]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][93]' (FDRE) to 'idex_reg[d][imm][94]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][94]' (FDRE) to 'idex_reg[d][imm][95]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][95]' (FDRE) to 'idex_reg[d][imm][96]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][96]' (FDRE) to 'idex_reg[d][imm][97]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][97]' (FDRE) to 'idex_reg[d][imm][98]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][98]' (FDRE) to 'idex_reg[d][imm][99]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][99]' (FDRE) to 'idex_reg[d][imm][100]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][100]' (FDRE) to 'idex_reg[d][imm][101]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][101]' (FDRE) to 'idex_reg[d][imm][102]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][102]' (FDRE) to 'idex_reg[d][imm][103]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][103]' (FDRE) to 'idex_reg[d][imm][104]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][104]' (FDRE) to 'idex_reg[d][imm][105]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][105]' (FDRE) to 'idex_reg[d][imm][106]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][106]' (FDRE) to 'idex_reg[d][imm][107]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][107]' (FDRE) to 'idex_reg[d][imm][108]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][108]' (FDRE) to 'idex_reg[d][imm][109]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][109]' (FDRE) to 'idex_reg[d][imm][110]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][110]' (FDRE) to 'idex_reg[d][imm][111]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][111]' (FDRE) to 'idex_reg[d][imm][112]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][112]' (FDRE) to 'idex_reg[d][imm][113]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][113]' (FDRE) to 'idex_reg[d][imm][114]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][114]' (FDRE) to 'idex_reg[d][imm][115]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][115]' (FDRE) to 'idex_reg[d][imm][116]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][116]' (FDRE) to 'idex_reg[d][imm][117]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][117]' (FDRE) to 'idex_reg[d][imm][118]'
-INFO: [Synth 8-3886] merging instance 'idex_reg[d][imm][118]' (FDRE) to 'idex_reg[d][imm][119]'
-INFO: [Common 17-14] Message 'Synth 8-3886' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
-INFO: [Synth 8-5546] ROM "d[bsel]" won't be mapped to RAM because it is too sparse
-INFO: [Synth 8-5546] ROM "d[bsel]" won't be mapped to RAM because it is too sparse
-INFO: [Synth 8-5544] ROM "strb" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
-INFO: [Synth 8-3333] propagating constant 0 across sequential element (ptw_u/\addr_reg[56] )
+INFO: [Synth 8-12192] Not enough pipeline registers after wide multiplier. Pipeline registers present is 0. Recommended levels of pipeline registers is 9. [/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/rtl/rv128_muldiv.vhd:224]
+DSP Report: Generating DSP pp0, operation Mode is: A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: PCIN+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: (PCIN>>23)+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: PCIN+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: PCIN+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: (PCIN>>23)+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: Generating DSP pp0, operation Mode is: PCIN+A*B.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+DSP Report: operator pp0 is absorbed into DSP pp0.
+INFO: [Synth 8-5544] ROM "w1" won't be mapped to Block RAM because address size (2) smaller than threshold (5)
+INFO: [Synth 8-6904] The RAM "rv128_dcache__GB0/g_way[0].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-6904] The RAM "rv128_dcache__GB0/g_way[1].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-6904] The RAM "rv128_dcache__GB0/g_way[0].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
-INFO: [Common 17-14] Message 'Synth 8-7129' appears 100 times and further instances of the messages will be disabled. Use the Tcl command set_msg_config to change the current settings.
-RAM ("\g_way[0].data_u/mem_reg ") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
-RAM ("\g_way[0].data_u/mem_reg ") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
-RAM ("\g_way[1].data_u/mem_reg ") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
-RAM ("\g_way[1].data_u/mem_reg ") is too shallow (depth = 512) to use URAM. Choosing BRAM instead of URAM 
 INFO: [Synth 8-6904] The RAM "rv128_dcache__GB0/g_way[1].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
-INFO: [Synth 8-6904] The RAM "rv128_dcache__GB0/g_way[0].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-3886] merging instance 'wb_addr_reg[0]' (FDE) to 'wb_addr_reg[1]'
+INFO: [Synth 8-3886] merging instance 'wb_addr_reg[1]' (FDE) to 'wb_addr_reg[2]'
+INFO: [Synth 8-3886] merging instance 'wb_addr_reg[2]' (FDE) to 'wb_addr_reg[3]'
+INFO: [Synth 8-3886] merging instance 'wb_addr_reg[3]' (FDE) to 'wb_addr_reg[4]'
+INFO: [Synth 8-3886] merging instance 'wb_addr_reg[4]' (FDE) to 'wb_addr_reg[5]'
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (\wb_addr_reg[5] )
 INFO: [Synth 8-6904] The RAM "icache_u/g_way[1].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-6904] The RAM "icache_u/g_way[0].tag_u/mem_reg" of size (depth=128 x width=18) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
@@ -704,6 +659,16 @@ INFO: [Synth 8-5546] ROM "BOOTROM[0]" won't be mapped to RAM because it is too s
 INFO: [Synth 8-6904] The RAM "periph_u/uart_u/rxf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
 INFO: [Synth 8-12589] Found 9 bits of RAM  (periph_u/uart_u/i_37) with no load. RAM width may be reduced from 10 to 1 
 INFO: [Synth 8-6904] The RAM "periph_u/uart_u/txf_reg" of size (depth=16 x width=8) is automatically implemented using LUTRAM. BRAM implementation would be inefficient 
+INFO: [Synth 8-3886] merging instance 'periph_u/uart_u/tx_rp_reg_rep[0]' (FDRE) to 'periph_u/uart_u/tx_rp_reg[0]'
+INFO: [Synth 8-3886] merging instance 'periph_u/uart_u/tx_rp_reg_rep[1]' (FDRE) to 'periph_u/uart_u/tx_rp_reg[1]'
+INFO: [Synth 8-3886] merging instance 'periph_u/uart_u/tx_rp_reg_rep[2]' (FDRE) to 'periph_u/uart_u/tx_rp_reg[2]'
+INFO: [Synth 8-3886] merging instance 'periph_u/uart_u/tx_rp_reg_rep[3]' (FDRE) to 'periph_u/uart_u/tx_rp_reg[3]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rom_q_reg[15]' (FD) to 'periph_u/rom_q_reg[87]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rd128_reg[15]' (FDE) to 'periph_u/rd128_reg[87]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rom_q_reg[79]' (FD) to 'periph_u/rom_q_reg[111]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rd128_reg[79]' (FDE) to 'periph_u/rd128_reg[111]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rom_q_reg[87]' (FD) to 'periph_u/rom_q_reg[119]'
+INFO: [Synth 8-3886] merging instance 'periph_u/rd128_reg[87]' (FDE) to 'periph_u/rd128_reg[119]'
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/\rom_q_reg[111] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/plic_u/\pending_reg[31] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/plic_u/\pending_reg[30] )
@@ -721,21 +686,30 @@ INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/plic_u/\pending_reg[18] )
 INFO: [Synth 8-3333] propagating constant 0 across sequential element (periph_u/\rd128_reg[111] )
 ---------------------------------------------------------------------------------
-Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:31 ; elapsed = 00:00:47 . Memory (MB): peak = 3351.586 ; gain = 1092.074 ; free physical = 12806 ; free virtual = 42705
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:53 ; elapsed = 00:00:56 . Memory (MB): peak = 3281.371 ; gain = 1009.027 ; free physical = 10564 ; free virtual = 96613
 ---------------------------------------------------------------------------------
+ Sort Area is rv128_core__GB2 pp0_0 : 0 0 : 4006 12043 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_0 : 0 1 : 4031 12043 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_0 : 0 2 : 4006 12043 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_4 : 0 0 : 3216 10438 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_4 : 0 1 : 4006 10438 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_4 : 0 2 : 3216 10438 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_7 : 0 0 : 3216 9032 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_7 : 0 1 : 3216 9032 : Used 1 time 0
+ Sort Area is rv128_core__GB2 pp0_7 : 0 2 : 2600 9032 : Used 1 time 0
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP, Shift Register and Retiming Reporting
 ---------------------------------------------------------------------------------
 
 Block RAM: Preliminary Mapping Report (see note below)
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
-|Module Name                | RTL Object | PORT A (Depth x Width) | W | R | PORT B (Depth x Width) | W | R | Ports driving FF | RAMB18 | RAMB36 | Cascade Heights | 
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
-|\g_way[0].data_u           | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|\g_way[1].data_u           | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|icache_u/\g_way[0].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|icache_u/\g_way[1].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
+|Module Name                    | RTL Object | PORT A (Depth x Width) | W | R | PORT B (Depth x Width) | W | R | Ports driving FF | RAMB18 | RAMB36 | Cascade Heights | 
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
+|dcache_ui_10/\g_way[1].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|dcache_ui_10/\g_way[0].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|icache_u/\g_way[0].data_u      | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|icache_u/\g_way[1].data_u      | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
 
 Note: The table above is a preliminary report that shows the Block RAMs at the current stage of the synthesis flow. Some Block RAMs may be reimplemented as non Block RAM primitives later in the synthesis flow. Multiple instantiated Block RAMs are reported only once. 
 
@@ -744,8 +718,8 @@ Distributed RAM: Preliminary Mapping Report (see note below)
 |Module Name       | RTL Object             | Inference | Size (Depth x Width) | Primitives     | 
 +------------------+------------------------+-----------+----------------------+----------------+
 |rv128_core__GB0   | rf_reg                 | Implied   | 32 x 128             | RAM32M16 x 20  | 
-|rv128_dcache__GB0 | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |rv128_dcache__GB0 | g_way[0].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
+|rv128_dcache__GB0 | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |icache_u          | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |icache_u          | g_way[0].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |periph_u/uart_u   | rxf_reg                | Implied   | 16 x 8               | RAM32M16 x 1   | 
@@ -755,6 +729,23 @@ Distributed RAM: Preliminary Mapping Report (see note below)
 +------------------+------------------------+-----------+----------------------+----------------+
 
 Note: The table above is a preliminary report that shows the Distributed RAMs at the current stage of the synthesis flow. Some Distributed RAMs may be reimplemented as non Distributed RAM primitives later in the synthesis flow. Multiple instantiated RAMs are reported only once.
+
+DSP: Preliminary Mapping Report (see note below. The ' indicates corresponding REG is set)
++-------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name  | DSP Mapping    | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++-------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|rv128_muldiv | A*B            | 24     | 19     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B       | 24     | 19     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | (PCIN>>23)+A*B | 19     | 19     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | A*B            | 24     | 19     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B       | 24     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B       | 24     | 19     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | A*B            | 24     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | (PCIN>>23)+A*B | 24     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B       | 24     | 24     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
++-------------+----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
 ---------------------------------------------------------------------------------
 Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
 ---------------------------------------------------------------------------------
@@ -763,21 +754,21 @@ No constraint files found.
 Start Timing Optimization
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Timing Optimization : Time (s): cpu = 00:01:05 ; elapsed = 00:00:56 . Memory (MB): peak = 3351.590 ; gain = 1092.078 ; free physical = 14425 ; free virtual = 44262
+Finished Timing Optimization : Time (s): cpu = 00:01:52 ; elapsed = 00:01:03 . Memory (MB): peak = 3289.367 ; gain = 1017.023 ; free physical = 14525 ; free virtual = 99375
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start ROM, RAM, DSP, Shift Register and Retiming Reporting
 ---------------------------------------------------------------------------------
 
 Block RAM: Final Mapping Report
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
-|Module Name                | RTL Object | PORT A (Depth x Width) | W | R | PORT B (Depth x Width) | W | R | Ports driving FF | RAMB18 | RAMB36 | Cascade Heights | 
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
-|\g_way[0].data_u           | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|\g_way[1].data_u           | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|icache_u/\g_way[0].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-|icache_u/\g_way[1].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
-+---------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
+|Module Name                    | RTL Object | PORT A (Depth x Width) | W | R | PORT B (Depth x Width) | W | R | Ports driving FF | RAMB18 | RAMB36 | Cascade Heights | 
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
+|dcache_ui_10/\g_way[1].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|dcache_ui_10/\g_way[0].data_u  | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|icache_u/\g_way[0].data_u      | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
+|icache_u/\g_way[1].data_u      | mem_reg    | 512 x 128(READ_FIRST)  | W |   | 512 x 128(WRITE_FIRST) |   | R | Port A and B     | 0      | 2      | 1,1             | 
++-------------------------------+------------+------------------------+---+---+------------------------+---+---+------------------+--------+--------+-----------------+
 
 
 Distributed RAM: Final Mapping Report
@@ -785,8 +776,8 @@ Distributed RAM: Final Mapping Report
 |Module Name       | RTL Object             | Inference | Size (Depth x Width) | Primitives     | 
 +------------------+------------------------+-----------+----------------------+----------------+
 |rv128_core__GB0   | rf_reg                 | Implied   | 32 x 128             | RAM32M16 x 20  | 
-|rv128_dcache__GB0 | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |rv128_dcache__GB0 | g_way[0].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
+|rv128_dcache__GB0 | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |icache_u          | g_way[1].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |icache_u          | g_way[0].tag_u/mem_reg | Implied   | 128 x 18             | RAM64X1S x 36  | 
 |periph_u/uart_u   | rxf_reg                | Implied   | 16 x 8               | RAM32M16 x 1   | 
@@ -802,22 +793,26 @@ Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
 Start Technology Mapping
 ---------------------------------------------------------------------------------
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
-INFO: [Synth 8-7052] The timing for the instance cpu_ui_6/icache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance cpu_ui_6/icache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance cpu_ui_6/icache_u/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance cpu_ui_6/icache_u/g_way[1].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance dcache_ui_10/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance dcache_ui_10/g_way[1].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance dcache_ui_10/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance dcache_ui_10/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance cpu_ui_11/icache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance cpu_ui_11/icache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance cpu_ui_11/icache_u/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance cpu_ui_11/icache_u/g_way[1].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
-INFO: [Synth 8-7052] The timing for the instance dcache_ui_4/U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance dcache_ui_4/U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance dcache_ui_4/U0/u/soc_u/cpu_u/dcache_u/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance dcache_ui_4/U0/u/soc_u/cpu_u/dcache_u/g_way[1].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
+INFO: [Synth 8-3886] merging instance 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg_rep[0]' (FDRE) to 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg[0]'
+INFO: [Synth 8-3886] merging instance 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg_rep[1]' (FDRE) to 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg[1]'
+INFO: [Synth 8-3886] merging instance 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg_rep[2]' (FDRE) to 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg[2]'
+INFO: [Synth 8-3886] merging instance 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg_rep[3]' (FDRE) to 'soc_ui_12/U0/u/soc_u/periph_u/uart_u/rx_rp_reg[3]'
 ---------------------------------------------------------------------------------
-Finished Technology Mapping : Time (s): cpu = 00:01:07 ; elapsed = 00:00:57 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 13987 ; free virtual = 43815
+Finished Technology Mapping : Time (s): cpu = 00:01:54 ; elapsed = 00:01:05 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13880 ; free virtual = 98735
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start IO Insertion
@@ -832,10 +827,10 @@ INFO: [Synth 8-11322] No global retiming is needed without any clock constraint
 ---------------------------------------------------------------------------------
 Start Final Netlist Cleanup
 ---------------------------------------------------------------------------------
-INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
-INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[1].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
+INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/dcache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/icache_u/g_way[0].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/icache_u/g_way[0].data_u/mem_reg_bram_1 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
 INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/icache_u/g_way[1].data_u/mem_reg_bram_0 (implemented as a Block RAM) might be sub-optimal as no optional output register could be merged into the ram block. Providing additional output register may help in improving timing.
@@ -844,41 +839,57 @@ INFO: [Synth 8-7052] The timing for the instance U0/u/soc_u/cpu_u/icache_u/g_way
 Finished Final Netlist Cleanup
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished IO Insertion : Time (s): cpu = 00:01:10 ; elapsed = 00:01:00 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14007 ; free virtual = 43826
+Finished IO Insertion : Time (s): cpu = 00:01:58 ; elapsed = 00:01:10 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13736 ; free virtual = 98661
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Instances
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Instances : Time (s): cpu = 00:01:10 ; elapsed = 00:01:00 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14007 ; free virtual = 43826
+Finished Renaming Generated Instances : Time (s): cpu = 00:01:58 ; elapsed = 00:01:10 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13735 ; free virtual = 98660
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Rebuilding User Hierarchy
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Rebuilding User Hierarchy : Time (s): cpu = 00:01:11 ; elapsed = 00:01:01 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14020 ; free virtual = 43831
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:02:00 ; elapsed = 00:01:12 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13659 ; free virtual = 98604
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Ports
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Ports : Time (s): cpu = 00:01:11 ; elapsed = 00:01:02 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14020 ; free virtual = 43831
+Finished Renaming Generated Ports : Time (s): cpu = 00:02:01 ; elapsed = 00:01:12 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13660 ; free virtual = 98604
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Handling Custom Attributes
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Handling Custom Attributes : Time (s): cpu = 00:01:12 ; elapsed = 00:01:03 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14040 ; free virtual = 43851
+Finished Handling Custom Attributes : Time (s): cpu = 00:02:02 ; elapsed = 00:01:14 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13677 ; free virtual = 98604
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Renaming Generated Nets
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
-Finished Renaming Generated Nets : Time (s): cpu = 00:01:12 ; elapsed = 00:01:03 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14040 ; free virtual = 43851
+Finished Renaming Generated Nets : Time (s): cpu = 00:02:02 ; elapsed = 00:01:14 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13677 ; free virtual = 98604
 ---------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------
 Start Writing Synthesis Report
 ---------------------------------------------------------------------------------
+
+DSP Final Report (the ' indicates corresponding REG is set)
++-------------+--------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name  | DSP Mapping  | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++-------------+--------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|rv128_muldiv | A*B          | 23     | 18     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B     | 23     | 18     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN>>23+A*B | 18     | 18     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | A*B          | 23     | 18     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B     | 23     | 23     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B     | 23     | 18     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | A*B          | 23     | 23     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN>>23+A*B | 23     | 23     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
+|rv128_muldiv | PCIN+A*B     | 23     | 23     | -      | -      | 58     | 0    | 0    | -    | -    | -     | 0    | 0    | 
++-------------+--------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
 
 Report BlackBoxes: 
 +-+--------------+----------+
@@ -890,31 +901,32 @@ Report Cell Usage:
 +------+-----------+------+
 |      |Cell       |Count |
 +------+-----------+------+
-|1     |LOOKAHEAD8 |   788|
-|2     |LUT1       |    26|
-|3     |LUT2       |  1347|
-|4     |LUT3       |  3470|
-|5     |LUT4       |  2956|
-|6     |LUT5       |  4769|
-|7     |LUT6       | 10912|
-|8     |LUT6CY     |  6158|
-|9     |LUT6       |   452|
-|10    |RAM32M16   |    22|
-|11    |RAM32X1D   |     4|
-|12    |RAM64X1S   |   144|
-|13    |RAMB36E5   |     8|
-|14    |FDRE       | 11332|
-|15    |FDSE       |   117|
+|1     |DSP58      |     9|
+|2     |LOOKAHEAD8 |   919|
+|3     |LUT1       |    58|
+|4     |LUT2       |  1770|
+|5     |LUT3       |  4978|
+|6     |LUT4       |  4501|
+|7     |LUT5       |  7101|
+|8     |LUT6       | 21883|
+|9     |LUT6CY     |  7199|
+|10    |LUT6       |   307|
+|11    |RAM32M16   |    22|
+|12    |RAM32X1D   |     4|
+|13    |RAM64X1S   |   144|
+|14    |RAMB36E5   |     8|
+|15    |FDRE       | 19964|
+|16    |FDSE       |   212|
 +------+-----------+------+
 ---------------------------------------------------------------------------------
-Finished Writing Synthesis Report : Time (s): cpu = 00:01:12 ; elapsed = 00:01:03 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 14040 ; free virtual = 43851
+Finished Writing Synthesis Report : Time (s): cpu = 00:02:02 ; elapsed = 00:01:14 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 13677 ; free virtual = 98604
 ---------------------------------------------------------------------------------
-Synthesis finished with 0 errors, 0 critical warnings and 306 warnings.
-Synthesis Optimization Runtime : Time (s): cpu = 00:01:08 ; elapsed = 00:01:04 . Memory (MB): peak = 3359.598 ; gain = 906.629 ; free physical = 22599 ; free virtual = 52393
-Synthesis Optimization Complete : Time (s): cpu = 00:01:12 ; elapsed = 00:01:07 . Memory (MB): peak = 3359.598 ; gain = 1100.086 ; free physical = 22608 ; free virtual = 52395
+Synthesis finished with 0 errors, 0 critical warnings and 138 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:01:58 ; elapsed = 00:01:12 . Memory (MB): peak = 3297.375 ; gain = 757.949 ; free physical = 22329 ; free virtual = 107237
+Synthesis Optimization Complete : Time (s): cpu = 00:02:02 ; elapsed = 00:01:15 . Memory (MB): peak = 3297.375 ; gain = 1025.031 ; free physical = 22343 ; free virtual = 107243
 INFO: [Project 1-571] Translating synthesized netlist
-Netlist sorting complete. Time (s): cpu = 00:00:00.14 ; elapsed = 00:00:00.14 . Memory (MB): peak = 3359.598 ; gain = 0.000 ; free physical = 22629 ; free virtual = 52416
-INFO: [Netlist 29-17] Analyzing 6788 Unisim elements for replacement
+Netlist sorting complete. Time (s): cpu = 00:00:00.24 ; elapsed = 00:00:00.24 . Memory (MB): peak = 3297.375 ; gain = 0.000 ; free physical = 22335 ; free virtual = 107249
+INFO: [Netlist 29-17] Analyzing 7693 Unisim elements for replacement
 INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
 INFO: [Constraints 18-6358] GCLK_DESKEW_DEFAULT not specified in Clock Expansion Window constraints config file for device xcve2302.  GCLK Deskew mode will be Off and cannot be enabled via GCLK_DESKEW override.
 INFO: [Constraints 18-5720] The default GCLK Deskew mode is Off.
@@ -922,25 +934,26 @@ INFO: [Device 21-9335] Optimized delay calculation is enabled for this device.
 INFO: [Constraints 18-13227] Created floorplan with Advanced Flow Feature Set
 INFO: [Project 1-570] Preparing netlist for logic optimization
 INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
-Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 3446.762 ; gain = 0.000 ; free physical = 22630 ; free virtual = 52417
+Netlist sorting complete. Time (s): cpu = 00:00:00.01 ; elapsed = 00:00:00.02 . Memory (MB): peak = 3534.609 ; gain = 0.000 ; free physical = 22199 ; free virtual = 107099
 INFO: [Project 1-111] Unisim Transformation Summary:
-  A total of 6788 instances were transformed.
-  LUT6CY => LUT6CY (LUTCY1, LUTCY2): 6158 instances
-  LUT6_2 => LUT6_2 (LUT5, LUT6): 452 instances
+  A total of 7693 instances were transformed.
+  DSP58 => DSP58 (DSP_ALUADD, DSP_ALUMUX, DSP_ALUREG, DSP_A_B_DATA58, DSP_C_DATA58, DSP_MULTIPLIER58, DSP_M_DATA58, DSP_OUTPUT58, DSP_PATDET, DSP_PREADD58, DSP_PREADD_DATA58, DSP_SRCMX_OPTINV, VCC): 9 instances
+  LUT6CY => LUT6CY (LUTCY1, LUTCY2): 7199 instances
+  LUT6_2 => LUT6_2 (LUT5, LUT6): 307 instances
   RAM32M16 => RAM32M16 (RAMD32(x14), RAMS32(x2)): 22 instances
   RAM32X1D => RAM32X1D (RAMD32(x2)): 4 instances
   RAM64X1S => RAM64X1S (RAMS64E5, VCC): 144 instances
   RAMB36E5 => RAMB36E5_INT: 8 instances
 
-Synth Design complete | Checksum: 1ac1a524
+Synth Design complete | Checksum: bf35a4a0
 INFO: [Common 17-83] Releasing license: Synthesis
-413 Infos, 37 Warnings, 0 Critical Warnings and 0 Errors encountered.
+337 Infos, 37 Warnings, 0 Critical Warnings and 0 Errors encountered.
 synth_design completed successfully
-synth_design: Time (s): cpu = 00:01:21 ; elapsed = 00:01:15 . Memory (MB): peak = 3446.797 ; gain = 1695.996 ; free physical = 22637 ; free virtual = 52424
-INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 12416.977; main = 2501.273; forked = 10161.809
-INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 21652.855; main = 3446.766; forked = 18305.176
+synth_design: Time (s): cpu = 00:02:13 ; elapsed = 00:01:24 . Memory (MB): peak = 3534.645 ; gain = 1783.176 ; free physical = 22202 ; free virtual = 107102
+INFO: [Common 17-2834] synth_design peak Physical Memory [PSS] (MB): overall = 13014.148; main = 2589.746; forked = 10828.189
+INFO: [Common 17-2834] synth_design peak Virtual Memory [VSS] (MB): overall = 22267.555; main = 3534.613; forked = 18990.098
 INFO: [Coretcl 2-1174] Renamed 26 cell refs.
-Write ShapeDB Complete: Time (s): cpu = 00:00:00.12 ; elapsed = 00:00:00.05 . Memory (MB): peak = 3470.773 ; gain = 0.000 ; free physical = 22629 ; free virtual = 52423
+Write ShapeDB Complete: Time (s): cpu = 00:00:00.13 ; elapsed = 00:00:00.05 . Memory (MB): peak = 3558.621 ; gain = 0.000 ; free physical = 22202 ; free virtual = 107110
 INFO: [Common 17-1381] The checkpoint '/home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.runs/design_1_rv128_0_synth_1/design_1_rv128_0.dcp' has been generated.
 INFO: [Vivado 12-24828] Executing command : report_utilization -file design_1_rv128_0_utilization_synth.rpt -pb design_1_rv128_0_utilization_synth.pb
-INFO: [Common 17-206] Exiting Vivado at Tue Nov 10 08:29:10 2026...
+INFO: [Common 17-206] Exiting Vivado at Wed Nov 11 17:04:03 2026...

@@ -171,6 +171,9 @@ def t_crypto():
         L.append(f"MB {ln} DG SHA512 DG E{ln} 64 MEM= {n} ASSERT")
         n += 1
     L.append("MB 3 DG SHA512 DG 64 .HEX CR")
+    # unaligned message (byte path of the block loader)
+    L += cbytes("EU", hashlib.sha512(msg(301)[1:]).digest())
+    L.append(f"MB 1+ 300 DG SHA512 DG EU 64 MEM= 17 ASSERT")
     # RFC 8439 2.5.2 test vector
     key = bytes.fromhex("85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b")
     m = b"Cryptographic Forum Research Group"
@@ -200,13 +203,16 @@ def t_conc():
          ": MOVER HA LPOP ?DUP IF HB LPUSH 1 M1 ATOM+ DROP THEN 1 CNT ATOM+ DROP ;",
          ": BACK HB LPOP ?DUP IF HA LPUSH 1 M2 ATOM+ DROP THEN ;",
          ": RUN 0 DO BACK 1 CNT ATOM+ DROP LOOP ;",
+         "VARIABLE IT",
+         "\\ run until 30 interrupts were taken: independent of core speed and timer rate",
+         ": SPIN BEGIN 200 RUN 200 IT +! TICKS @ 30 > UNTIL ;",
          "INIT HA LCOUNT NN = 10 ASSERT",
-         "' MOVER ISR!  400 TIMER  3000 RUN  0 TIMER",
-         "TICKS @ 20 > 11 ASSERT",
+         "' MOVER ISR!  400 TIMER  SPIN  0 TIMER",
+         "TICKS @ 30 > 11 ASSERT",
          "HA LCOUNT HB LCOUNT + NN = 12 ASSERT",
          "HA LTAG NN M1 @ + M2 @ + = 13 ASSERT",
          "HB LTAG M1 @ M2 @ + = 14 ASSERT",
-         "CNT @ 3000 TICKS @ + = 15 ASSERT",
+         "CNT @ IT @ TICKS @ + = 15 ASSERT",
          "M1 @ 0 > 16 ASSERT",
          ": REPORT .\" ticks=\" TICKS @ . .\" moves=\" M1 @ . M2 @ . CR ; REPORT",
          "BYE"]
@@ -256,10 +262,48 @@ def d_bench():
     return L, ["sha512"]
 
 
+def t_zb():
+    import random
+    rnd = random.Random(7)
+    L = ["\\ t_zb - Zbb/Zbc words (RV128 extension of this core)"]
+    n = 10
+
+    def chk(expr, val):
+        nonlocal n
+        L.append(f"{expr} {h(val)} = {n} ASSERT")
+        n += 1
+    vals = [0, 1, M128, 1 << 127, 0xFF, 0x8000_0000_0000_0000] + [rnd.getrandbits(128) for _ in range(6)]
+    for v in vals:
+        chk(f"{h(v)} CLZ", 128 - v.bit_length())
+        chk(f"{h(v)} CTZ", (v & -v).bit_length() - 1 if v else 128)
+        chk(f"{h(v)} CPOP", bin(v).count("1"))
+        chk(f"{h(v)} REV8", int.from_bytes(v.to_bytes(16, "little"), "big"))
+        k = rnd.randrange(128)
+        chk(f"{h(v)} {k} ROL", ((v << k) | (v >> (128 - k))) & M128)
+        chk(f"{h(v)} {k} ROR", ((v >> k) | (v << (128 - k))) & M128)
+    for _ in range(6):
+        a, b = rnd.getrandbits(128), rnd.getrandbits(128)
+        r = 0
+        for i in range(128):
+            if b >> i & 1:
+                r ^= a << i
+        chk(f"{h(a)} {h(b)} CLMUL", r & M128)
+        chk(f"{h(a)} {h(b)} CLMULH", r >> 128)
+        sa = a - (1 << 128) if a >> 127 else a
+        sb = b - (1 << 128) if b >> 127 else b
+        chk(f"{h(a)} {h(b)} MIN", min(sa, sb) & M128)
+        chk(f"{h(a)} {h(b)} UMAX", max(a, b))
+    chk(f"{h(1 << 127)} ABS", 1 << 127)
+    chk("-5 ABS", 5)
+    L.append("BYE")
+    return L, []
+
+
 def main():
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
-    for name, fn in (("t_bignum", t_bignum), ("t_fixed", t_fixed), ("t_crypto", t_crypto), ("t_conc", t_conc)):
+    for name, fn in (("t_bignum", t_bignum), ("t_fixed", t_fixed), ("t_crypto", t_crypto), ("t_conc", t_conc),
+                     ("t_zb", t_zb)):
         L, exp = fn()
         open(os.path.join(out, name + ".fs"), "w").write("\n".join(L) + "\n")
         open(os.path.join(out, name + ".expect"), "w").write("\n".join(exp) + "\n")

@@ -218,3 +218,54 @@ All scripts check themselves through tohost. Every expected value comes from Pyt
 Results (2026-11-10, ISS): 5/5 tests and 3/3 demos PASS (1007 digits of pi, 1000!).
 Lockstep and board runs are pending: they are layer 7 of `run_regression.sh` and the
 `forth_*` entries of `board_pack.sh`. Details are in `sw/forth/README.md`.
+
+## v1.4: faster core and Zbb/Zbc
+
+The ISA visible to RV64 mode does not change: it stays binary-identical to RV64IMAC.
+Every change is checked in lockstep against the ISS.
+
+- **M unit (`rv128_muldiv`, generic `FAST`, default true).** Multiplication uses a
+  registered 64×64 multiplier (DSP58 on Versal) that is reused for the partial products.
+  Partial products that are zero or not needed are skipped, so `start` to `done` takes 3 to
+  6 cycles. The iterative version took 18 to 66.
+
+  Division is normalised: it skips leading zeros, preloads the remainder and produces
+  `DIV_STEPS` (2) quotient bits per cycle. A 128/64-bit division takes ~35 cycles instead
+  of 130, and short quotients take a few cycles.
+
+  `FAST => false` keeps the original iterative unit, which needs no DSP and is portable to
+  an ASIC. Layer 1 tests both.
+- **Branch prediction (`rv128_core`, generic `BPRED`).** In F there is a direct-mapped BTB
+  of 64 entries with 2-bit counters, plus a speculative 8-entry return-address stack. The
+  RAS is restored from the one kept in X on every redirect.
+
+  X checks the real next pc of every predicted instruction, so a stale or aliased entry
+  only costs cycles. That includes code the Forth compiler rewrites. A prediction mark that
+  lands in the middle of an instruction becomes a re-fetch, and that instruction does not
+  retire. The BTB entry that produced the mark is invalidated, so the re-fetch cannot repeat
+  forever. The tag covers bits 31:8, so the boot ROM at 0x1000 does not alias DRAM at
+  0x8000_1000.
+- **D$ write buffer.** A store hit no longer blocks the next access. Its data goes to a
+  one-entry buffer, which is written into the SRAM when the port is free. A load that hits
+  the same word merges it, and stores to the same word coalesce. AMO and CBO, misses and
+  fence.i drain the buffer first.
+- **Zbb + Zbc in RV128 mode.** XLEN is 128; the W and D variants work on 32 and 64 bits.
+  There is no official RV128 encoding, so the scheme follows the RV32 → RV64 progression
+  (RV128 adds the D opcodes):
+
+| Instructions | Encoding (RV128) |
+|---|---|
+| andn orn xnor | OP, funct7 0100000, f3 111/110/100 |
+| min minu max maxu | OP, funct7 0000101, f3 100/101/110/111 |
+| clmul clmulr clmulh | OP, funct7 0000101, f3 001/010/011 (M unit, 8 iterations) |
+| rol ror / rolw rorw / rold rord | OP / OP-32 / OP-64, funct7 0110000, f3 001/101 |
+| rori / roriw / rorid | OP-IMM imm[11:7]=01100 / OP-IMM-32 imm[11:5]=0110000 / OP-IMM-64 imm[11:6]=011000 |
+| clz ctz cpop (+w on OP-IMM-32, +d on OP-IMM-64) | imm12 0x600 / 0x601 / 0x602, f3 001 |
+| sext.b sext.h | OP-IMM imm12 0x604 / 0x605 |
+| rev8 | OP-IMM f3 101, imm12 0x6F8 (shamt 120, as 0x698/0x6B8 for RV32/RV64) |
+| orc.b | OP-IMM f3 101, imm12 0x287 |
+| zext.h | OP-64 funct7 0000100 f3 100 rs2 0 (packd, as packw in RV64) |
+
+These encodings are supported by `iss128.py`, `rv128asm.py` and the RTL, and in random
+tests (`sw/tests/rndb_*`, `gen_random.py --zb`). QEMU does not have them, so they are not in
+layer 0b.

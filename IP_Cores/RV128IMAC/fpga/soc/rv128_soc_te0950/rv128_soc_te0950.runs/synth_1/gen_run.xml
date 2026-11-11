@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GenRun Id="synth_1" LaunchPart="xcve2302-sfva784-1LP-e-S" LaunchTime="1794295668">
-  <File Type="VDS-TIMING-PB" Name="design_1_wrapper_timing_summary_synth.pb"/>
-  <File Type="VDS-TIMINGSUMMARY" Name="design_1_wrapper_timing_summary_synth.rpt"/>
-  <File Type="PA-TCL" Name="design_1_wrapper.tcl"/>
   <File Type="RDS-DCP" Name="design_1_wrapper.dcp"/>
-  <File Type="REPORTS-TCL" Name="design_1_wrapper_reports.tcl"/>
   <File Type="RDS-RDS" Name="design_1_wrapper.vds"/>
-  <File Type="RDS-PROPCONSTRS" Name="design_1_wrapper_drc_synth.rpt"/>
   <File Type="RDS-UTIL" Name="design_1_wrapper_utilization_synth.rpt"/>
   <File Type="RDS-UTIL-PB" Name="design_1_wrapper_utilization_synth.pb"/>
+  <File Type="PA-TCL" Name="design_1_wrapper.tcl"/>
+  <File Type="REPORTS-TCL" Name="design_1_wrapper_reports.tcl"/>
   <FileSet Name="sources" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1" RelGenDir="$PGENDIR/sources_1">
     <Filter Type="Srcs"/>
     <File Path="$PPRDIR/../../../rtl/rv128_pkg.vhd">
@@ -168,8 +165,8 @@
     <StratHandle Name="Vivado Synthesis Defaults" Flow="Vivado Synthesis 2025"/>
     <Step Id="synth_design"/>
   </Strategy>
-  <BlockFileSet Type="BlockSrcs" Name="design_1_rst_pl0_0"/>
-  <BlockFileSet Type="BlockSrcs" Name="design_1_axi_noc_0_0"/>
   <BlockFileSet Type="BlockSrcs" Name="design_1_sc_ctrl_0"/>
   <BlockFileSet Type="BlockSrcs" Name="design_1_rv128_0"/>
+  <BlockFileSet Type="BlockSrcs" Name="design_1_rst_pl0_0"/>
+  <BlockFileSet Type="BlockSrcs" Name="design_1_axi_noc_0_0"/>
 </GenRun>

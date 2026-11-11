@@ -25,7 +25,8 @@ use work.rv128_mmu_pkg.all;
 
 entity rv128_core is
   generic (
-    RESET_PC : xword := (31 => '1', others => '0')       -- 0x8000_0000
+    RESET_PC : xword := (31 => '1', others => '0');      -- 0x8000_0000
+    BPRED    : boolean := true                           -- BTB + RAS en F (false: sin prediccion)
   );
   port (
     clk, rst      : in  std_logic;
@@ -86,6 +87,10 @@ architecture rtl of rv128_core is
     irq     : std_logic;
     code    : std_logic_vector(4 downto 0);
     tval    : xword;
+    pred    : std_logic;                               -- F predijo salto tomado a ptgt
+    bpfix   : std_logic;                               -- marca de prediccion en mitad de una
+                                                       -- instruccion: re-fetch desde pc (no retira)
+    ptgt    : xword;
   end record;
 
   type exmem_t is record
@@ -114,7 +119,8 @@ architecture rtl of rv128_core is
     tval    : xword;
   end record;
 
-  constant IDEX_NOP : idex_t := ('0', XZERO, x"00000000", '0', DEC_NOP, XZERO, XZERO, '0', '0', "00000", XZERO);
+  constant IDEX_NOP : idex_t := ('0', XZERO, x"00000000", '0', DEC_NOP, XZERO, XZERO, '0', '0', "00000", XZERO,
+                                  '0', '0', XZERO);
   constant EXMEM_NOP : exmem_t := ('0', XZERO, x"00000000", '0', '0', "00000", XZERO, M_NONE, "000", '0',
                                    XZERO, XZERO, XZERO, x"0000", '0', S_NONE, "000", x"000", '0', '0', '0', "00000", XZERO);
 
@@ -134,7 +140,46 @@ architecture rtl of rv128_core is
   signal f_self  : std_logic;                          -- fallo local (PMA/MMU) en vuelo
   signal f_self_pf : std_logic;
   signal f_drop  : std_logic;
-  signal f_skip  : std_logic;
+  signal f_skip  : std_logic;                          -- respuesta en vuelo: descartar hw0
+  signal f_nskip : std_logic;                          -- idem para la proxima peticion
+  signal f_trunc : std_logic;                          -- respuesta en vuelo: solo hw0 (salto en hw0)
+  signal f_mark  : std_logic;                          -- respuesta en vuelo: marcar el ultimo hw
+  signal fq_bp   : std_logic_vector(3 downto 0);       -- hw que termina un salto predicho
+
+  -- ------------------------------------------------------------ prediccion de saltos
+  -- BTB de correspondencia directa indexada por la palabra que contiene el ultimo hw del
+  -- salto; una prediccion pendiente como maximo (hasta que D consume el hw marcado). X
+  -- comprueba el siguiente pc real de toda instruccion predicha, asi que un BTB obsoleto o
+  -- con alias solo cuesta ciclos. RAS especulativo en F, restaurado desde el de X en cada
+  -- redireccion.
+  constant BTB_IB : natural := 6;                      -- 64 entradas
+  constant BTB_TB : natural := 24;                     -- etiqueta = bits 31:8
+  type btb_t is record
+    tag  : std_logic_vector(BTB_TB - 1 downto 0);
+    hw   : std_logic;
+    kind : std_logic_vector(1 downto 0);               -- 00 salto, 01 llamada, 10 retorno
+    ctr  : std_logic_vector(1 downto 0);               -- contador saturado (>= 2: tomado)
+    tgt  : std_logic_vector(63 downto 0);
+  end record;
+  type btb_arr is array (0 to 2 ** BTB_IB - 1) of btb_t;
+  signal btb     : btb_arr;
+  signal btb_v   : std_logic_vector(2 ** BTB_IB - 1 downto 0);
+  type ras_arr is array (0 to 7) of xword;
+  signal sras, aras : ras_arr;
+  signal sptr, aptr : unsigned(2 downto 0);
+  signal bp_pend : std_logic;
+  signal bp_tgt  : xword;
+  signal bp_hit  : std_logic;
+  signal bp_next : xword;
+  signal bp_e    : btb_t;
+  signal bp_ret  : xword;                              -- direccion de retorno de una llamada
+  -- actualizacion desde X
+  signal xb_we   : std_logic;
+  signal xb_idx  : natural range 0 to 2 ** BTB_IB - 1;
+  signal xb_e    : btb_t;
+  signal xb_inv  : std_logic;
+  signal xr_push, xr_pop : std_logic;
+  signal xr_val  : xword;
 
   -- ------------------------------------------------------------ banco de registros
   type rf_t is array (1 to 31) of xword;
@@ -246,7 +291,7 @@ begin
   md_u : entity work.rv128_muldiv port map (
     clk => clk, rst => rst, start => md_start, kill => wb_flush, ack => md_ack,
     f3 => idex.d.md_f3, wsel => idex.d.wsel, a => ex_fa, b => ex_fb,
-    busy => md_busy, done => md_done, result => md_res);
+    busy => md_busy, done => md_done, result => md_res, clm => idex.d.clm);
 
   -- ============================================================ MMU
   tlb_flush <= sfence_int;
@@ -289,7 +334,7 @@ begin
   begin
     fill := (others => '0');
     if (i_rsp_valid = '1' and f_drop = '0') or f_self = '1' then
-      if f_skip = '1' then fill := "001"; else fill := "010"; end if;
+      if f_skip = '1' or f_trunc = '1' then fill := "001"; else fill := "010"; end if;
     end if;
     f_fill_n <= fill;
     cnt_next := fq_cnt - f_consume_n + fill;
@@ -329,6 +374,29 @@ begin
     ptw_i_req   <= '1' when want and walk and ptw_busy = '0' else '0';
   end process;
 
+  -- ============================================================ F: prediccion
+  process (all)
+    variable i   : natural range 0 to 2 ** BTB_IB - 1;
+    variable e   : btb_t;
+    variable hit : boolean;
+    variable ra  : xword;
+  begin
+    i := to_integer(unsigned(f_addr(BTB_IB + 1 downto 2)));
+    e := btb(i);
+    hit := BPRED and btb_v(i) = '1' and e.tag = f_addr(BTB_IB + BTB_TB + 1 downto BTB_IB + 2)
+           and e.ctr(1) = '1' and bp_pend = '0' and not (f_nskip = '1' and e.hw = '0');
+    ra := f_addr(127 downto 2) & e.hw & '0';
+    ra := xf(std_logic_vector(unsigned(ra) + 2), m64);
+    bp_ret <= ra;
+    bp_e   <= e;
+    if e.kind = "10" then
+      bp_next <= sras(to_integer(sptr - 1));
+    else
+      bp_next <= xf(sext(e.tgt, 64), m64);
+    end if;
+    if hit then bp_hit <= '1'; else bp_hit <= '0'; end if;
+  end process;
+
   -- ============================================================ D: decodificacion
   process (all)
     variable hw0, hw1 : std_logic_vector(15 downto 0);
@@ -365,14 +433,22 @@ begin
     elsif fq_cnt >= 1 and not is32 then
       avail := true;
       r.len4 := '0';
+      r.pred := fq_bp(0);
       raw := x"0000" & hw0;
       exp := expand_c(hw0, m64);
       d := decode(exp(31 downto 0), m64);
       if exp(32) = '1' then d := DEC_NOP; d.illegal := '1'; end if;
       r.insn := raw; r.d := d;
+    elsif fq_cnt >= 2 and fq_bp(0) = '1' then
+      -- la marca cae en el primer hw de una instruccion de 32 bit: el segundo hw es del
+      -- camino predicho, no de esta instruccion. X re-busca desde pc sin retirarla.
+      avail := true;
+      r.len4 := '1';
+      r.bpfix := '1';
     elsif fq_cnt >= 2 then
       avail := true;
       r.len4 := '1';
+      r.pred := fq_bp(1);
       if fq_err(1) = '1' then
         r.exc := '1';
         if fq_pf(1) = '1' then r.code := std_logic_vector(to_unsigned(C_IPAGE, 5));
@@ -384,12 +460,16 @@ begin
         r.d := decode(raw, m64);
       end if;
     end if;
-    if r.exc = '0' and r.d.illegal = '1' then
+    r.ptgt := bp_tgt;
+    if r.exc = '0' and r.d.illegal = '1' and r.bpfix = '0' then
       r.exc := '1'; r.code := std_logic_vector(to_unsigned(C_ILLEGAL, 5)); r.tval := tval_insn(r.insn);
     end if;
     -- interrupcion: sustituye a la instruccion (sin efectos laterales)
     if avail and irq_pending = '1' then
       r.exc := '1'; r.irq := '1'; r.code := irq_code; r.tval := XZERO;
+    end if;
+    if r.exc = '1' then
+      r.pred := '0'; r.bpfix := '0';
     end if;
     if r.exc = '1' then
       r.d := DEC_NOP;
@@ -442,6 +522,10 @@ begin
     variable pa       : xword;
     variable walk     : boolean;
     variable pf_code, af_code : natural range 0 to 31;
+    variable btbi     : xword;
+    variable be, oe   : btb_t;
+    variable ohit     : boolean;
+    variable kind     : std_logic_vector(1 downto 0);
   begin
     -- forwarding: M antes que W
     fa := idex.a; fb := idex.b;
@@ -504,8 +588,66 @@ begin
       tgt := std_logic_vector(unsigned(idex.pc) + unsigned(idex.d.imm));
     end if;
     tgt := xf(tgt, m64);
-    ex_target <= tgt;
-    if taken then ex_taken <= '1'; else ex_taken <= '0'; end if;
+    -- prediccion: redirigir solo si el siguiente pc real difiere del predicho
+    if idex.bpfix = '1' then
+      ex_target <= idex.pc; ex_taken <= '1';
+      o.v := '0';                                        -- no retira: se re-busca
+    elsif idex.pred = '1' then
+      if taken then ex_target <= tgt; else ex_target <= link; end if;
+      if taken and tgt = idex.ptgt then ex_taken <= '0'; else ex_taken <= '1'; end if;
+    else
+      ex_target <= tgt;
+      if taken then ex_taken <= '1'; else ex_taken <= '0'; end if;
+    end if;
+
+    -- actualizacion de BTB y RAS (se aplica en el flanco si ex_adv = '1')
+    xb_we <= '0'; xb_inv <= '0'; xr_push <= '0'; xr_pop <= '0';
+    xr_val <= link;
+    btbi := idex.pc;
+    if idex.len4 = '1' and idex.bpfix = '0' then
+      btbi := std_logic_vector(unsigned(idex.pc) + 2);   -- ultimo hw
+    end if;
+    xb_idx <= to_integer(unsigned(btbi(BTB_IB + 1 downto 2)));
+    be.tag := btbi(BTB_IB + BTB_TB + 1 downto BTB_IB + 2);
+    be.hw  := btbi(1);
+    be.tgt := tgt(63 downto 0);
+    be.kind := "00";
+    if (idex.d.br = BR_JAL or idex.d.br = BR_JALR) and idex.d.rd_we = '1'
+       and (idex.d.rd = "00001" or idex.d.rd = "00101") then
+      be.kind := "01";
+    elsif idex.d.br = BR_JALR and idex.d.rd = "00000" and (idex.d.rs1 = "00001" or idex.d.rs1 = "00101") then
+      be.kind := "10";
+    end if;
+    kind := be.kind;
+    oe := btb(to_integer(unsigned(btbi(BTB_IB + 1 downto 2))));
+    ohit := btb_v(to_integer(unsigned(btbi(BTB_IB + 1 downto 2)))) = '1'
+            and oe.tag = be.tag and oe.hw = be.hw;
+    be.ctr := "11";
+    if idex.v = '1' and idex.exc = '0' and idex.bpfix = '0' then
+      if idex.d.br /= BR_NONE then
+        if taken then
+          if idex.d.br = BR_JAL or idex.d.br = BR_JALR then be.ctr := "11";
+          elsif ohit and oe.ctr /= "11" then be.ctr := std_logic_vector(unsigned(oe.ctr) + 1);
+          elsif ohit then be.ctr := "11";
+          else be.ctr := "10"; end if;
+          xb_we <= '1';
+        elsif ohit then
+          be := oe;
+          if oe.ctr /= "00" then be.ctr := std_logic_vector(unsigned(oe.ctr) - 1); end if;
+          xb_we <= '1';
+        end if;
+        if kind = "01" then xr_push <= '1'; elsif kind = "10" then xr_pop <= '1'; end if;
+      elsif idex.pred = '1' then
+        xb_inv <= '1';                                   -- alias: la entrada no es un salto
+      end if;
+    end if;
+    -- marca en el primer hw de una instruccion de 32 bit: la entrada que la produjo (la de
+    -- la palabra de pc) se invalida; si no, el re-fetch volveria a predecir lo mismo y la
+    -- instruccion no avanzaria nunca
+    if idex.v = '1' and idex.bpfix = '1' then
+      xb_inv <= '1';
+    end if;
+    xb_e <= be;
 
     -- memoria: direccion, alineacion, traduccion, PMA (orden del ISS)
     addr := xf(std_logic_vector(unsigned(fa) + unsigned(idex.d.imm)), m64);
@@ -824,6 +966,10 @@ begin
     variable buf  : hw_arr;
     variable berr : std_logic_vector(3 downto 0);
     variable bpf  : std_logic_vector(3 downto 0);
+    variable bbp  : std_logic_vector(3 downto 0);
+    variable markc : boolean;
+    variable vras : ras_arr;
+    variable vptr : unsigned(2 downto 0);
     variable pfv  : std_logic;
     variable cnt  : integer range 0 to 7;
     variable n    : integer range 0 to 2;
@@ -835,7 +981,9 @@ begin
       if rst = '1' then
         idex <= IDEX_NOP; exmem <= EXMEM_NOP; memwb <= EXMEM_NOP;
         fq_cnt <= "000"; fq_pc <= RESET_PC; f_addr <= RESET_PC(127 downto 2) & "00";
-        f_out <= '0'; f_self <= '0'; f_drop <= '0'; f_skip <= RESET_PC(1);
+        f_out <= '0'; f_self <= '0'; f_drop <= '0'; f_skip <= '0'; f_nskip <= RESET_PC(1);
+        f_trunc <= '0'; f_mark <= '0'; fq_bp <= "0000"; bp_pend <= '0';
+        btb_v <= (others => '0'); sptr <= "000"; aptr <= "000";
         d_out <= '0'; d_drop <= '0'; resv_v <= '0'; d_owner_ptw <= '0';
         i_pfr_v <= '0'; d_pfr_v <= '0';
       else
@@ -844,41 +992,51 @@ begin
           fq_cnt <= "000";
           fq_pc  <= redirect_pc;
           f_addr <= redirect_pc(127 downto 2) & "00";
-          f_skip <= redirect_pc(1);
+          f_nskip <= redirect_pc(1);
           f_self <= '0';
+          fq_bp  <= "0000";
+          bp_pend <= '0';
           if f_out = '1' and i_rsp_valid = '0' then f_drop <= '1'; f_out <= '1';
           elsif f_drop = '1' and i_rsp_valid = '0' then f_drop <= '1';
           else f_drop <= '0'; f_out <= '0'; end if;
         else
-          buf := fq_hw; berr := fq_err; bpf := fq_pf;
+          buf := fq_hw; berr := fq_err; bpf := fq_pf; bbp := fq_bp;
           cnt := to_integer(fq_cnt);
           n := to_integer(f_consume_n);
+          markc := (n >= 1 and fq_bp(0) = '1') or (n = 2 and fq_bp(1) = '1');
           -- consumir
           for k in 1 to 2 loop
             if k <= n then
               buf(0) := buf(1); buf(1) := buf(2); buf(2) := buf(3);
               berr := '0' & berr(3 downto 1);
               bpf  := '0' & bpf(3 downto 1);
+              bbp  := '0' & bbp(3 downto 1);
             end if;
           end loop;
           cnt := cnt - n;
-          if n = 2 then fq_pc <= xf(std_logic_vector(unsigned(fq_pc) + 4), m64);
+          if markc then fq_pc <= bp_tgt;                    -- salto predicho: sigue el camino predicho
+          elsif n = 2 then fq_pc <= xf(std_logic_vector(unsigned(fq_pc) + 4), m64);
           elsif n = 1 then fq_pc <= xf(std_logic_vector(unsigned(fq_pc) + 2), m64); end if;
+          if markc then bp_pend <= '0'; end if;
           -- llenar
           rsp := (i_rsp_valid = '1' and f_drop = '0') or f_self = '1';
           if f_self = '1' then data := x"00000000"; err := '1'; pfv := f_self_pf;
           else data := i_rsp_data; err := i_rsp_err; pfv := '0'; end if;
           if rsp then
             if f_skip = '1' then
-              buf(cnt) := data(31 downto 16); berr(cnt) := err; bpf(cnt) := pfv; cnt := cnt + 1;
-              f_skip <= '0';
+              buf(cnt) := data(31 downto 16); berr(cnt) := err; bpf(cnt) := pfv; bbp(cnt) := f_mark;
+              cnt := cnt + 1;
+            elsif f_trunc = '1' then
+              buf(cnt) := data(15 downto 0); berr(cnt) := err; bpf(cnt) := pfv; bbp(cnt) := f_mark;
+              cnt := cnt + 1;
             else
-              buf(cnt) := data(15 downto 0); berr(cnt) := err; bpf(cnt) := pfv;
+              buf(cnt) := data(15 downto 0); berr(cnt) := err; bpf(cnt) := pfv; bbp(cnt) := '0';
               buf(cnt + 1) := data(31 downto 16); berr(cnt + 1) := err; bpf(cnt + 1) := pfv;
+              bbp(cnt + 1) := f_mark;
               cnt := cnt + 2;
             end if;
           end if;
-          fq_hw <= buf; fq_err <= berr; fq_pf <= bpf;
+          fq_hw <= buf; fq_err <= berr; fq_pf <= bpf; fq_bp <= bbp;
           fq_cnt <= to_unsigned(cnt, 3);
           -- estado de peticiones
           if i_rsp_valid = '1' then
@@ -888,11 +1046,41 @@ begin
           f_self <= '0';
           if i_req_valid = '1' and i_req_ready = '1' then
             f_out <= '1';
-            f_addr <= xf(std_logic_vector(unsigned(f_addr) + 4), m64);
+            f_skip <= f_nskip;
+            if bp_hit = '1' then
+              f_addr  <= bp_next(127 downto 2) & "00";
+              f_nskip <= bp_next(1);
+              f_mark  <= '1';
+              f_trunc <= not bp_e.hw;
+              bp_pend <= '1';
+              bp_tgt  <= bp_next;
+            else
+              f_addr  <= xf(std_logic_vector(unsigned(f_addr) + 4), m64);
+              f_nskip <= '0'; f_mark <= '0'; f_trunc <= '0';
+            end if;
           elsif f_fault = '1' then
             f_self <= '1'; f_self_pf <= f_fault_pf;
+            f_skip <= f_nskip; f_nskip <= '0'; f_mark <= '0'; f_trunc <= '0';
             f_addr <= xf(std_logic_vector(unsigned(f_addr) + 4), m64);
           end if;
+        end if;
+
+        -- ---------------------------------------------- BTB y RAS
+        if ex_adv = '1' and xb_we = '1' then
+          btb(xb_idx) <= xb_e; btb_v(xb_idx) <= '1';
+        elsif ex_adv = '1' and xb_inv = '1' then
+          btb_v(xb_idx) <= '0';
+        end if;
+        if fencei_o = '1' then btb_v <= (others => '0'); end if;
+        vras := aras; vptr := aptr;
+        if ex_adv = '1' and xr_pop = '1' then vptr := vptr - 1; end if;
+        if ex_adv = '1' and xr_push = '1' then vras(to_integer(vptr)) := xr_val; vptr := vptr + 1; end if;
+        aras <= vras; aptr <= vptr;
+        if redirect = '1' then
+          sras <= vras; sptr <= vptr;                    -- el camino especulativo se descarta
+        elsif i_req_valid = '1' and i_req_ready = '1' and bp_hit = '1' then
+          if bp_e.kind = "01" then sras(to_integer(sptr)) <= bp_ret; sptr <= sptr + 1;
+          elsif bp_e.kind = "10" then sptr <= sptr - 1; end if;
         end if;
 
         -- ---------------------------------------------- fallos de caminata

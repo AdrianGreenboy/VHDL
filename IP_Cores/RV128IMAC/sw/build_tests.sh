@@ -11,6 +11,9 @@ for s in $(seq 1 ${RND:-8}); do
   python3 gen_random.py $OUT/rnd_$s.S --seed $s --n ${RNDN:-3000}            # con AMO.Q (lockstep)
   python3 gen_random.py $OUT/rndq_$s.S --seed $((1000 + s)) --n ${RNDN:-3000} --qemu
 done
+for s in $(seq 1 ${RNDB:-4}); do                                             # Zbb + Zbc
+  python3 gen_random.py $OUT/rndb_$s.S --seed $((2000 + s)) --n ${RNDN:-3000} --zb
+done
 n=0
 for f in $OUT/*.S; do
   b=${f%.S}

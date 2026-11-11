@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Tue Nov 10 08:27:48 2026" VIVADOVERSION="2025.2.1">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Wed Nov 11 17:02:29 2026" VIVADOVERSION="2025.2.1">
 
   <SYSTEMINFO ARCH="versal" BOARD="trenz.biz:te0950_23_1lse:part0:1.2" DEVICE="xcve2302" NAME="design_1" PACKAGE="sfva784" SPEEDGRADE="-1LP"/>
 
@@ -3218,8 +3218,8 @@
         <PORT DIR="O" NAME="mb_reset" POLARITY="ACTIVE_HIGH" SIGIS="rst"/>
         <PORT DIR="O" LEFT="0" NAME="peripheral_aresetn" POLARITY="ACTIVE_LOW" RIGHT="0" SIGIS="rst" SIGNAME="rst_pl0_peripheral_aresetn">
           <CONNECTIONS>
-            <CONNECTION INSTANCE="rv128" PORT="aresetn"/>
             <CONNECTION INSTANCE="sc_ctrl" PORT="aresetn"/>
+            <CONNECTION INSTANCE="rv128" PORT="aresetn"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" LEFT="0" NAME="peripheral_reset" POLARITY="ACTIVE_HIGH" RIGHT="0" SIGIS="rst"/>
@@ -5560,10 +5560,10 @@
         <PORT CLKFREQUENCY="50000000" DIR="O" NAME="pl0_ref_clk" SIGIS="clk" SIGNAME="versal_cips_0_pl0_ref_clk">
           <CONNECTIONS>
             <CONNECTION INSTANCE="rst_pl0" PORT="slowest_sync_clk"/>
-            <CONNECTION INSTANCE="rv128" PORT="clk"/>
             <CONNECTION INSTANCE="axi_noc_0" PORT="aclk6"/>
             <CONNECTION INSTANCE="sc_ctrl" PORT="aclk"/>
             <CONNECTION INSTANCE="versal_cips_0" PORT="m_axi_fpd_aclk"/>
+            <CONNECTION INSTANCE="rv128" PORT="clk"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" NAME="pl0_resetn" POLARITY="ACTIVE_LOW" SIGIS="rst" SIGNAME="versal_cips_0_pl0_resetn">

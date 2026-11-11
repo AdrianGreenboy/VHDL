@@ -2,10 +2,10 @@
 -- Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2025.2.1 (lin64) Build 6403652 Thu Mar 19 13:47:00 MDT 2026
--- Date        : Tue Nov 10 08:28:24 2026
+-- Date        : Tue Nov 10 08:28:23 2026
 -- Host        : adrian running 64-bit Ubuntu 24.04.5 LTS
--- Command     : write_vhdl -force -mode funcsim
---               /home/adrian/vhdl_repo/IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/rv128_soc_te0950.gen/sources_1/bd/design_1/ip/design_1_axi_noc_0_0/design_1_axi_noc_0_0_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top design_1_axi_noc_0_0 -prefix
+--               design_1_axi_noc_0_0_ design_1_axi_noc_0_0_sim_netlist.vhdl
 -- Design      : design_1_axi_noc_0_0
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -41,8 +41,6 @@ entity design_1_axi_noc_0_0_advanced_io_wizard_phy_v1_0_bank_wrapper is
     D : in STD_LOGIC_VECTOR ( 215 downto 0 );
     RIU_ADDR : in STD_LOGIC_VECTOR ( 71 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_advanced_io_wizard_phy_v1_0_bank_wrapper : entity is "advanced_io_wizard_phy_v1_0_bank_wrapper";
 end design_1_axi_noc_0_0_advanced_io_wizard_phy_v1_0_bank_wrapper;
 
 architecture STRUCTURE of design_1_axi_noc_0_0_advanced_io_wizard_phy_v1_0_bank_wrapper is
@@ -8077,8 +8075,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0_top : entity is "bd_8be5_S00_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -8812,8 +8808,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0_top : entity is "bd_8be5_S01_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -9547,8 +9541,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0_top : entity is "bd_8be5_S02_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -10282,8 +10274,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0_top : entity is "bd_8be5_S03_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -11017,8 +11007,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0_top : entity is "bd_8be5_S04_AXI_rpu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -11753,8 +11741,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0_top : entity is "bd_8be5_S05_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -12482,8 +12468,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0_top is
     NMU_WR_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 );
     NMU_RD_USR_DST : in STD_LOGIC_VECTOR ( 11 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0_top : entity is "bd_8be5_S06_AXI_nmu_0_top";
   attribute REG_ADDR_DST0 : string;
   attribute REG_ADDR_DST0 of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0_top : entity is "16'b0000000000000000";
   attribute REG_ADDR_DST1 : string;
@@ -13177,8 +13161,6 @@ entity design_1_axi_noc_0_0_bd_8be5_const_0_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_const_0_0 : entity is "bd_8be5_const_0_0,xlconstant_v1_1_10_xlconstant,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_const_0_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_const_0_0 : entity is "bd_8be5_const_0_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_const_0_0 : entity is "xlconstant_v1_1_10_xlconstant,Vivado 2025.2.1";
 end design_1_axi_noc_0_0_bd_8be5_const_0_0;
@@ -13251,8 +13233,6 @@ entity design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy_wrapper is
     noc2dmc_valid_in_2 : in STD_LOGIC_VECTOR ( 7 downto 0 );
     noc2dmc_valid_in_3 : in STD_LOGIC_VECTOR ( 7 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy_wrapper : entity is "bd_8be5_MC0_ddrc_0_phy_wrapper";
 end design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy_wrapper;
 
 architecture STRUCTURE of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy_wrapper is
@@ -15349,8 +15329,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0 : entity is "bd_8be5_S00_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S00_AXI_nmu_0;
@@ -15927,8 +15905,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0 : entity is "bd_8be5_S01_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S01_AXI_nmu_0;
@@ -16505,8 +16481,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0 : entity is "bd_8be5_S02_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S02_AXI_nmu_0;
@@ -17083,8 +17057,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0 : entity is "bd_8be5_S03_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S03_AXI_nmu_0;
@@ -17661,8 +17633,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0 : entity is "bd_8be5_S04_AXI_rpu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S04_AXI_rpu_0;
@@ -18240,8 +18210,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0 : entity is "bd_8be5_S05_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S05_AXI_nmu_0;
@@ -18815,8 +18783,6 @@ entity design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0 is
   attribute CHECK_LICENSE_TYPE of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0 : entity is "noc_nmu_0,noc_nmu_v1_0_3_0,{}";
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0 : entity is "bd_8be5_S06_AXI_nmu_0";
   attribute X_CORE_INFO : string;
   attribute X_CORE_INFO of design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0 : entity is "noc_nmu_v1_0_3_0,Vivado 2018.1.0";
 end design_1_axi_noc_0_0_bd_8be5_S06_AXI_nmu_0;
@@ -19376,8 +19342,6 @@ entity design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy is
   );
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy : entity is "bd_8be5_MC0_ddrc_0_phy";
 end design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy;
 
 architecture STRUCTURE of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_phy is
@@ -19586,8 +19550,6 @@ entity design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_wrapper is
   attribute NPI_REG_DDRMC_NSU_3_R_EGR of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_wrapper : entity is 16843008;
   attribute NPI_REG_DDRMC_NSU_3_W_EGR : integer;
   attribute NPI_REG_DDRMC_NSU_3_W_EGR of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_wrapper : entity is 65792;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_wrapper : entity is "bd_8be5_MC0_ddrc_0_wrapper";
   attribute REG_ADEC0 : integer;
   attribute REG_ADEC0 of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0_wrapper : entity is 0;
   attribute REG_ADEC1 : integer;
@@ -21478,8 +21440,6 @@ entity design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0 is
   );
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0 : entity is "bd_8be5_MC0_ddrc_0";
 end design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0;
 
 architecture STRUCTURE of design_1_axi_noc_0_0_bd_8be5_MC0_ddrc_0 is
@@ -23679,8 +23639,6 @@ entity design_1_axi_noc_0_0_bd_8be5 is
   );
   attribute HW_HANDOFF : string;
   attribute HW_HANDOFF of design_1_axi_noc_0_0_bd_8be5 : entity is "design_1_axi_noc_0_0.hwdef";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of design_1_axi_noc_0_0_bd_8be5 : entity is "bd_8be5";
 end design_1_axi_noc_0_0_bd_8be5;
 
 architecture STRUCTURE of design_1_axi_noc_0_0_bd_8be5 is

@@ -57,7 +57,7 @@ if {$::dispatch::connected} {
 
 OPTRACE "design_1_rv128_0_synth_1" START { ROLLUP_AUTO }
 set_param ced.repoPaths /home/adrian/Downloads/TE0950_Designs/04_AMD_Vivado_Custom_Configurable_Example
-set_param bd.open.in_stealth_mode 1
+set_param bd.open.in_stealth_mode 3
 set_param general.usePosixSpawnForFork 1
 set_param chipscope.flow 0
 set_msg_config -id {HDL-1065} -limit 10000

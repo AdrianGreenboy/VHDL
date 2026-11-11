@@ -89,6 +89,11 @@ ENC = {
     "NOP":  0x00000013,
     "BNEZ_T0_8": 0x00029463,   # bne t0, x0, +8
     "BNEZ_T2_8": 0x00039463,   # bne t2, x0, +8
+    "PUSH1": 0xFF040413,       # addi s0, s0, -16
+    "PUSH2": 0x00944023,       # sq s1, 0(s0)
+    "AUIPC_T0": 0x00000297,    # auipc t0, 0
+    "LQ_S1_T0": 0x0002A48F,    # lq s1, 0(t0)  (+ imm << 20)
+    "LI_S1": 0x00000493,       # addi s1, x0, 0 (+ imm << 20)
 }
 
 DSTACK_TOP = 0x80700000
@@ -282,13 +287,23 @@ def kernel(uart_div):
     e("patch_jal:",
       "  mv a6, ra", "  mv t6, a0", "  mv a2, a1", "  mv a1, a0", "  li a0, 0",
       "  call enc_jal", "  sw a0, 0(t6)", "  mv ra, a6", "  ret")
-    # comp_lit(a0 = value): nops to align, jal ra lit_rt, 16-byte cell
+    # comp_lit(a0 = value): inline literal, no call (the branch predictor follows it):
+    #   push; addi s1, x0, imm                       when -2048 <= value < 2048
+    #   push; auipc t0, 0; lq s1, C-A(t0); j C+16; nops; C: 16-byte cell   otherwise
     e("comp_lit:",
       "  mv a6, ra", "  mv a5, a0",
-      "cl_al:", "  la t0, var_here", "  lq t1, 0(t0)", "  addi t1, t1, 4", "  andi t1, t1, 15", "  beqz t1, cl_go",
-      "  li a0, ENC_NOP", "  call comma32", "  j cl_al",
-      "cl_go:", "  li a0, 1", "  la a1, lit_rt", "  call comp_jal",
-      "  la t0, var_here", "  lq t1, 0(t0)", "  sq a5, 0(t1)", "  addi t1, t1, 16", "  sq t1, 0(t0)",
+      "  li a0, ENC_PUSH1", "  call comma32", "  li a0, ENC_PUSH2", "  call comma32",
+      "  li t1, 2048", "  add t0, a5, t1", "  li t1, 4096", "  bltu t0, t1, cl_small",
+      "  la t0, var_here", "  lq a4, 0(t0)",                      # A: auipc
+      "  addi a3, a4, 27", "  andi a3, a3, -16",                  # C: cell (after auipc, lq, j)
+      "  li a0, ENC_AUIPC_T0", "  call comma32",
+      "  sub t1, a3, a4", "  slli t1, t1, 20", "  li t2, ENC_LQ_S1_T0", "  or a0, t1, t2", "  call comma32",
+      "  li a0, 0", "  addi a1, a4, 8", "  addi a2, a3, 16", "  call enc_jal", "  call comma32",
+      "cl_pad:", "  la t0, var_here", "  lq t1, 0(t0)", "  beq t1, a3, cl_cell",
+      "  li a0, ENC_NOP", "  call comma32", "  j cl_pad",
+      "cl_cell:", "  sq a5, 0(t1)", "  addi t1, t1, 16", "  sq t1, 0(t0)",
+      "  mv ra, a6", "  ret",
+      "cl_small:", "  slli a0, a5, 20", "  li t1, ENC_LI_S1", "  or a0, a0, t1", "  call comma32",
       "  mv ra, a6", "  ret")
     e("comp_call:",                         # a0 = target
       "  mv a1, a0", "  li a0, 1", "  j comp_jal")
@@ -414,13 +429,25 @@ def kernel(uart_div):
     prim("M*", "w_mstar", lambda: e("  lq t0, 0(s0)", "  mul t1, t0, s1", "  mulh s1, t0, s1", "  sq t1, 0(s0)"))
     prim("NEGATE", "w_negate", lambda: e("  neg s1, s1"))
     prim("INVERT", "w_invert", lambda: e("  not s1, s1"))
-    prim("ABS", "w_abs", lambda: e("  srai t0, s1, 127", "  xor s1, s1, t0", "  sub s1, s1, t0"))
+    prim("ABS", "w_abs", lambda: e("  neg t0, s1", "  max s1, s1, t0"))
     prim("1+", "w_1p", lambda: e("  addi s1, s1, 1"))
     prim("1-", "w_1m", lambda: e("  addi s1, s1, -1"))
     prim("2*", "w_2s", lambda: e("  slli s1, s1, 1"))
     prim("2/", "w_2d", lambda: e("  srai s1, s1, 1"))
-    prim("MIN", "w_min", lambda: e("  lq t0, 0(s0)", "  addi s0, s0, 16", "  bge t0, s1, mn_r", "  mv s1, t0", "mn_r:"))
-    prim("MAX", "w_max", lambda: e("  lq t0, 0(s0)", "  addi s0, s0, 16", "  bge s1, t0, mx_r", "  mv s1, t0", "mx_r:"))
+    binop("MIN", "w_min", "min")
+    binop("MAX", "w_max", "max")
+    binop("UMIN", "w_umin", "minu")
+    binop("UMAX", "w_umax", "maxu")
+    # Zbb / Zbc (RV128 extension of this core)
+    binop("ROL", "w_rol", "rol")
+    binop("ROR", "w_ror", "ror")
+    binop("ANDN", "w_andn", "andn")
+    binop("CLMUL", "w_clmul", "clmul")
+    binop("CLMULH", "w_clmulh", "clmulh")
+    prim("CLZ", "w_clz", lambda: e("  clz s1, s1"))
+    prim("CTZ", "w_ctz", lambda: e("  ctz s1, s1"))
+    prim("CPOP", "w_cpop", lambda: e("  cpop s1, s1"))
+    prim("REV8", "w_rev8", lambda: e("  rev8 s1, s1"))
     cmp("=", "w_eq", ["  xor t1, t0, s1", "  seqz t1, t1"])
     cmp("<>", "w_ne", ["  xor t1, t0, s1", "  snez t1, t1"])
     cmp("<", "w_lt", ["  slt t1, t0, s1"])
@@ -514,8 +541,10 @@ def kernel(uart_div):
     prim("FAIL", "w_fail", lambda: e("  mv a0, s1", "  j exit_code"))               # ( n -- )
     def w_assert():                       # ( flag n -- ) n FAIL when flag is false
         e("  lq t0, 0(s0)", "  mv a0, s1", "  lq s1, 16(s0)", "  addi s0, s0, 32", "  bnez t0, as_r",
-          "  mv a5, a0", "  mv t6, ra", "  la a0, msg_assert", "  call puts0", "  mv a0, a5", "  li a1, 1",
-          "  call putnum", "  li a0, 10", "  call putc", "  mv a0, a5", "  j exit_code", "as_r:")
+          # the code lives on the return stack: puts0/putnum clobber the a registers
+          "  addi sp, sp, -16", "  sq a0, 0(sp)", "  la a0, msg_assert", "  call puts0",
+          "  lq a0, 0(sp)", "  li a1, 1", "  call putnum", "  li a0, 10", "  call putc",
+          "  lq a0, 0(sp)", "  j exit_code", "as_r:")
     prim("ASSERT", "w_assert", w_assert)
     # interpreter / compiler words
     def w_colon():
@@ -546,21 +575,22 @@ def kernel(uart_div):
     prim("(", "w_paren", lambda: e("  mv t6, ra", "  li a0, 41", "  call parse_to", "  mv ra, t6"), imm=True)
     prim("\\", "w_bslash", lambda: e("  la t0, var_tlen", "  lq t1, 0(t0)", "  la t0, var_in", "  sq t1, 0(t0)"), imm=True)
     def w_create_common(value_from_tos):
-        # header; code = prologue [nops] jal ra, lit_rt; cell; epilogue; data at the next
-        # 16-byte boundary (the prologue keeps ra: the jal to lit_rt overwrites it)
+        # header; code = push; auipc t0, 0; lq s1, C-A(t0); ret; nops; C: cell; data at C+16
+        # (no call, so no prologue and nothing for the branch predictor to miss)
+        v = value_from_tos
         e("  mv t6, ra", "  call parse_word", "  call make_header",
-          "  li a0, ENC_PRO1", "  call comma32", "  li a0, ENC_PRO2", "  call comma32")
-        e("cr_al_%s:" % value_from_tos, "  la t0, var_here", "  lq t1, 0(t0)", "  addi t1, t1, 4", "  andi t1, t1, 15",
-          "  beqz t1, cr_go_%s" % value_from_tos, "  li a0, ENC_NOP", "  call comma32", "  j cr_al_%s" % value_from_tos,
-          "cr_go_%s:" % value_from_tos, "  li a0, 1", "  la a1, lit_rt", "  call comp_jal",
-          "  la t0, var_here", "  lq a4, 0(t0)", "  addi t1, a4, 16", "  sq t1, 0(t0)",
-          "  li a0, ENC_EPI1", "  call comma32", "  li a0, ENC_EPI2", "  call comma32",
+          "  li a0, ENC_PUSH1", "  call comma32", "  li a0, ENC_PUSH2", "  call comma32",
+          "  la t0, var_here", "  lq a4, 0(t0)", "  addi a3, a4, 27", "  andi a3, a3, -16",
+          "  li a0, ENC_AUIPC_T0", "  call comma32",
+          "  sub t1, a3, a4", "  slli t1, t1, 20", "  li t2, ENC_LQ_S1_T0", "  or a0, t1, t2", "  call comma32",
           "  li a0, ENC_RET", "  call comma32",
-          "  la t0, var_here", "  lq t1, 0(t0)", "  addi t1, t1, 15", "  andi t1, t1, -16", "  sq t1, 0(t0)")
-        if value_from_tos == "v":
-            e("  sq s1, 0(a4)", "  lq s1, 0(s0)", "  addi s0, s0, 16")
+          f"cr_pad_{v}:", "  la t0, var_here", "  lq t1, 0(t0)", f"  beq t1, a3, cr_cell_{v}",
+          "  li a0, ENC_NOP", "  call comma32", f"  j cr_pad_{v}",
+          f"cr_cell_{v}:", "  addi t1, a3, 16", "  sq t1, 0(t0)")
+        if v == "v":
+            e("  sq s1, 0(a3)", "  lq s1, 0(s0)", "  addi s0, s0, 16")
         else:
-            e("  sq t1, 0(a4)")                # address of the data field
+            e("  sq t1, 0(a3)")                # address of the data field
         e("  call reveal", "  fence.i", "  mv ra, t6")
     prim("CREATE", "w_create", lambda: w_create_common("c"))
     prim("CONSTANT", "w_constant", lambda: w_create_common("v"))
@@ -693,8 +723,8 @@ SHA512_IV = [0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff
 
 
 def rotr64(dst, src, n, tmp):
-    """64-bit rotate right with the RV128 *D shifts (results stay sign-extended)"""
-    return [f"  srlid {dst}, {src}, {n}", f"  sllid {tmp}, {src}, {64 - n}", f"  or {dst}, {dst}, {tmp}"]
+    """64-bit rotate right: Zbb rorid (one instruction, result sign-extended from bit 63)"""
+    return [f"  rorid {dst}, {src}, {n}"]
 
 
 def low64(r):
@@ -797,11 +827,16 @@ def compute_words():
     # ---------------------------------------------------------------- SHA-512 (*D ops)
     def sha_comp():
         # a0 = 128-byte block (big-endian words); state in sha_h; uses s2..s9, t*, a1..a7
+        # big-endian words: ld + rev8 + srai 64 when the block is 8-byte aligned, else bytes
         e("sha_comp:", "  la a1, sha_w", "  li a2, 16", "  mv a3, a0",
+          "  andi t0, a0, 7", "  bnez t0, shc_w",
+          "shc_f:", "  ld a5, 0(a3)", "  rev8 a5, a5", "  srai a5, a5, 64", "  sd a5, 0(a1)",
+          "  addi a3, a3, 8", "  addi a1, a1, 8", "  addi a2, a2, -1", "  bnez a2, shc_f", "  j shc_sched",
           "shc_w:", "  li a4, 8", "  li a5, 0",
           "shc_b:", "  lbu a6, 0(a3)", "  slli a5, a5, 8", "  or a5, a5, a6", "  addi a3, a3, 1",
           "  addi a4, a4, -1", "  bnez a4, shc_b",
           "  addid a5, a5, 0", "  sd a5, 0(a1)", "  addi a1, a1, 8", "  addi a2, a2, -1", "  bnez a2, shc_w",
+          "shc_sched:",
           "  li a2, 64",
           "shc_s:", "  ld a4, -16(a1)", "  ld a5, -120(a1)")
         e(*rotr64("t0", "a4", 19, "t3"), *rotr64("t1", "a4", 61, "t3"), "  xor t0, t0, t1",
@@ -816,7 +851,7 @@ def compute_words():
           "shc_r:")
         e(*rotr64("t0", "s6", 14, "t2"), *rotr64("t1", "s6", 18, "t2"), "  xor t0, t0, t1",
           *rotr64("t1", "s6", 41, "t2"), "  xor t0, t0, t1",              # Sigma1(e)
-          "  and t1, s6, s7", "  not t2, s6", "  and t2, t2, s8", "  xor t1, t1, t2",   # Ch
+          "  and t1, s6, s7", "  andn t2, s8, s6", "  xor t1, t1, t2",                   # Ch
           "  addd t0, t0, t1", "  addd t0, t0, s9", "  ld t1, 0(a2)", "  addd t0, t0, t1",
           "  ld t1, 0(a1)", "  addd t0, t0, t1")                           # T1
         e(*rotr64("t1", "s2", 28, "t3"), *rotr64("t2", "s2", 34, "t3"), "  xor t1, t1, t2",

@@ -41,7 +41,11 @@ package rv128_pkg is
   constant W_D : std_logic_vector(1 downto 0) := "10";   -- *D: 64 bit, sext 63->127
 
   type alu_op_t is (ALU_ADD, ALU_SUB, ALU_SLL, ALU_SLT, ALU_SLTU, ALU_XOR,
-                    ALU_SRL, ALU_SRA, ALU_OR, ALU_AND);
+                    ALU_SRL, ALU_SRA, ALU_OR, ALU_AND,
+                    -- Zbb (solo modo RV128; las variantes W/D usan wsel)
+                    ALU_ANDN, ALU_ORN, ALU_XNOR, ALU_MIN, ALU_MINU, ALU_MAX, ALU_MAXU,
+                    ALU_ROL, ALU_ROR, ALU_CLZ, ALU_CTZ, ALU_CPOP, ALU_SEXTB, ALU_SEXTH,
+                    ALU_ZEXTH, ALU_REV8, ALU_ORCB);
   type asel_t is (A_RS1, A_PC, A_ZERO);
   type bsel_t is (B_RS2, B_IMM);
   type br_t is (BR_NONE, BR_EQ, BR_NE, BR_LT, BR_GE, BR_LTU, BR_GEU, BR_JAL, BR_JALR);
@@ -68,6 +72,7 @@ package rv128_pkg is
     amo_op   : std_logic_vector(4 downto 0);
     md       : std_logic;                          -- mul/div
     md_f3    : std_logic_vector(2 downto 0);
+    clm      : std_logic;                          -- Zbc: clmul/clmulr/clmulh en la unidad M
     sys      : sys_t;
     csr_f3   : std_logic_vector(2 downto 0);
     csr_addr : std_logic_vector(11 downto 0);
@@ -77,7 +82,7 @@ package rv128_pkg is
     illegal => '0', rd_we => '0', rd => "00000", rs1 => "00000", rs2 => "00000",
     use_rs1 => '0', use_rs2 => '0', alu => ALU_ADD, wsel => W_Q, asel => A_RS1,
     bsel => B_RS2, imm => XZERO, br => BR_NONE, mem => M_NONE, msize => "000",
-    munsign => '0', amo_op => "00000", md => '0', md_f3 => "000", sys => S_NONE,
+    munsign => '0', amo_op => "00000", md => '0', md_f3 => "000", clm => '0', sys => S_NONE,
     csr_f3 => "000", csr_addr => (others => '0'));
 
   function sext(v : std_logic_vector; n : natural) return xword;
@@ -144,6 +149,44 @@ package body rv128_pkg is
         or (u >= x"20000000" and u < x"30000000");    -- ventana AXI4-Lite
   end function;
 
+  -- ------------------------------------------------------------- Zbb: arboles
+  -- ceros a la izquierda de 128 bits (128 si x = 0): busqueda binaria, 7 niveles
+  function clz128(x : unsigned(127 downto 0)) return natural is
+    variable v : unsigned(127 downto 0) := x;
+    variable n : natural range 0 to 128 := 0;
+  begin
+    if v = 0 then return 128; end if;
+    for l in 6 downto 0 loop
+      if v(127 downto 128 - 2 ** l) = 0 then
+        n := n + 2 ** l;
+        v := shift_left(v, 2 ** l);
+      end if;
+    end loop;
+    return n;
+  end function;
+
+  -- poblacion de 128 bits: arbol de sumas por bytes
+  function pop128(x : unsigned(127 downto 0)) return natural is
+    type c_t is array (0 to 15) of unsigned(7 downto 0);
+    variable c : c_t;
+    variable m : natural range 1 to 16;
+  begin
+    for k in 0 to 15 loop
+      c(k) := (others => '0');
+      for j in 0 to 7 loop
+        if x(8 * k + j) = '1' then c(k) := c(k) + 1; end if;
+      end loop;
+    end loop;
+    m := 16;
+    for l in 0 to 3 loop
+      m := m / 2;
+      for k in 0 to 7 loop
+        if k < m then c(k) := c(2 * k) + c(2 * k + 1); end if;
+      end loop;
+    end loop;
+    return to_integer(c(0));
+  end function;
+
   -- ------------------------------------------------------------- ALU
   -- Desplazamientos: 7 bit (Q), 6 bit (D), 5 bit (W) del operando b.
   function alu(op : alu_op_t; a, b : xword; wsel : std_logic_vector(1 downto 0)) return xword is
@@ -151,7 +194,14 @@ package body rv128_pkg is
     variable sh  : natural range 0 to 127;
     variable a64 : std_logic_vector(63 downto 0);
     variable a32 : std_logic_vector(31 downto 0);
+    variable w   : natural range 32 to 128;
+    variable aw  : unsigned(127 downto 0);              -- a con los bits >= w a cero
+    variable n   : natural range 0 to 128;
+    variable rv  : unsigned(127 downto 0);
   begin
+    if wsel = W_W then w := 32; elsif wsel = W_D then w := 64; else w := 128; end if;
+    aw := unsigned(a);
+    if w < 128 then aw(127 downto w) := (others => '0'); end if;
     if wsel = W_W then sh := to_integer(unsigned(b(4 downto 0)));
     elsif wsel = W_D then sh := to_integer(unsigned(b(5 downto 0)));
     else sh := to_integer(unsigned(b(6 downto 0))); end if;
@@ -174,6 +224,46 @@ package body rv128_pkg is
         if wsel = W_W then r := std_logic_vector(resize(shift_right(signed(a32), sh), XLEN));
         elsif wsel = W_D then r := std_logic_vector(resize(shift_right(signed(a64), sh), XLEN));
         else r := std_logic_vector(shift_right(signed(a), sh)); end if;
+      -- Zbb
+      when ALU_ANDN => r := a and not b;
+      when ALU_ORN  => r := a or not b;
+      when ALU_XNOR => r := not (a xor b);
+      when ALU_MIN  => if signed(a) < signed(b) then r := a; else r := b; end if;
+      when ALU_MINU => if unsigned(a) < unsigned(b) then r := a; else r := b; end if;
+      when ALU_MAX  => if signed(a) < signed(b) then r := b; else r := a; end if;
+      when ALU_MAXU => if unsigned(a) < unsigned(b) then r := b; else r := a; end if;
+      when ALU_ROL | ALU_ROR =>
+        -- rotacion de los w bits bajos: (aw >> k) | (aw << (w - k)), k = sh o w - sh
+        if op = ALU_ROL then n := (w - sh) mod w; else n := sh; end if;
+        if wsel = W_W then
+          r := std_logic_vector(resize(rotate_right(unsigned(a32), n), XLEN));
+        elsif wsel = W_D then
+          r := std_logic_vector(resize(rotate_right(unsigned(a64), n), XLEN));
+        else
+          r := std_logic_vector(rotate_right(unsigned(a), n));
+        end if;
+      when ALU_CLZ =>
+        n := clz128(aw) - (128 - w);                     -- aw = 0 -> w
+        r := std_logic_vector(to_unsigned(n, XLEN));
+      when ALU_CTZ =>
+        if aw = 0 then n := w;
+        else
+          for k in 0 to 127 loop rv(k) := aw(127 - k); end loop;
+          n := clz128(rv);
+        end if;
+        r := std_logic_vector(to_unsigned(n, XLEN));
+      when ALU_CPOP =>
+        r := std_logic_vector(to_unsigned(pop128(aw), XLEN));
+      when ALU_SEXTB => r := sext(a(7 downto 0), 8);
+      when ALU_SEXTH => r := sext(a(15 downto 0), 16);
+      when ALU_ZEXTH => r := (others => '0'); r(15 downto 0) := a(15 downto 0);
+      when ALU_REV8  =>
+        for k in 0 to 15 loop r(8 * k + 7 downto 8 * k) := a(8 * (15 - k) + 7 downto 8 * (15 - k)); end loop;
+      when ALU_ORCB  =>
+        for k in 0 to 15 loop
+          if a(8 * k + 7 downto 8 * k) = x"00" then r(8 * k + 7 downto 8 * k) := x"00";
+          else r(8 * k + 7 downto 8 * k) := x"FF"; end if;
+        end loop;
     end case;
     return wfix(r, wsel);
   end function;
@@ -249,7 +339,12 @@ package body rv128_pkg is
           when "111" => d.alu := ALU_AND;  if nar then d.illegal := '1'; end if;
           when "001" =>
             d.alu := ALU_SLL;
-            if ws = W_Q then
+            if m64 = '0' and i(31 downto 20) = x"600" then d.alu := ALU_CLZ;       -- Zbb (W, D)
+            elsif m64 = '0' and i(31 downto 20) = x"601" then d.alu := ALU_CTZ;
+            elsif m64 = '0' and i(31 downto 20) = x"602" then d.alu := ALU_CPOP;
+            elsif m64 = '0' and ws = W_Q and i(31 downto 20) = x"604" then d.alu := ALU_SEXTB;
+            elsif m64 = '0' and ws = W_Q and i(31 downto 20) = x"605" then d.alu := ALU_SEXTH;
+            elsif ws = W_Q then
               if i(31 downto 27) /= "00000" then d.illegal := '1'; end if;
             elsif ws = W_D then
               if i(31 downto 26) /= "000000" then d.illegal := '1'; end if;
@@ -257,10 +352,20 @@ package body rv128_pkg is
               if i(31 downto 25) /= "0000000" then d.illegal := '1'; end if;
             end if;
           when others =>                                     -- "101"
-            if i(30) = '1' then d.alu := ALU_SRA; else d.alu := ALU_SRL; end if;
-            if i(31) = '1' or i(29 downto 27) /= "000" then d.illegal := '1'; end if;
-            if ws = W_D and i(26) = '1' then d.illegal := '1'; end if;
-            if ws = W_W and i(26 downto 25) /= "00" then d.illegal := '1'; end if;
+            if m64 = '0' and ((ws = W_Q and i(31 downto 27) = "01100") or
+                              (ws = W_D and i(31 downto 26) = "011000") or
+                              (ws = W_W and i(31 downto 25) = "0110000")) then
+              d.alu := ALU_ROR;                              -- rori / rorid / roriw
+            elsif m64 = '0' and ws = W_Q and i(31 downto 20) = x"6F8" then
+              d.alu := ALU_REV8;
+            elsif m64 = '0' and ws = W_Q and i(31 downto 20) = x"287" then
+              d.alu := ALU_ORCB;
+            else
+              if i(30) = '1' then d.alu := ALU_SRA; else d.alu := ALU_SRL; end if;
+              if i(31) = '1' or i(29 downto 27) /= "000" then d.illegal := '1'; end if;
+              if ws = W_D and i(26) = '1' then d.illegal := '1'; end if;
+              if ws = W_W and i(26 downto 25) /= "00" then d.illegal := '1'; end if;
+            end if;
         end case;
       when "0110011" | "0111011" | "1111011" =>              -- OP / OP-32 / OP-64
         d.rd_we := '1'; d.use_rs1 := '1'; d.use_rs2 := '1'; d.wsel := ws;
@@ -283,6 +388,23 @@ package body rv128_pkg is
           d.alu := ALU_SUB;
         elsif f7 = "0100000" and f3 = "101" then
           d.alu := ALU_SRA;
+        -- Zbb / Zbc (solo modo RV128)
+        elsif m64 = '0' and f7 = "0100000" and not nar and f3 = "111" then d.alu := ALU_ANDN;
+        elsif m64 = '0' and f7 = "0100000" and not nar and f3 = "110" then d.alu := ALU_ORN;
+        elsif m64 = '0' and f7 = "0100000" and not nar and f3 = "100" then d.alu := ALU_XNOR;
+        elsif m64 = '0' and f7 = "0110000" and f3 = "001" then d.alu := ALU_ROL;
+        elsif m64 = '0' and f7 = "0110000" and f3 = "101" then d.alu := ALU_ROR;
+        elsif m64 = '0' and f7 = "0000101" and not nar and f3(2) = '1' then
+          case f3(1 downto 0) is
+            when "00" => d.alu := ALU_MIN;
+            when "01" => d.alu := ALU_MINU;
+            when "10" => d.alu := ALU_MAX;
+            when others => d.alu := ALU_MAXU;
+          end case;
+        elsif m64 = '0' and f7 = "0000101" and not nar and f3 /= "000" then
+          d.md := '1'; d.clm := '1';                         -- clmul / clmulr / clmulh
+        elsif m64 = '0' and f7 = "0000100" and ws = W_D and f3 = "100" and i(24 downto 20) = "00000" then
+          d.alu := ALU_ZEXTH; d.use_rs2 := '0';               -- zext.h (RV128: OP-64)
         else
           d.illegal := '1';
         end if;

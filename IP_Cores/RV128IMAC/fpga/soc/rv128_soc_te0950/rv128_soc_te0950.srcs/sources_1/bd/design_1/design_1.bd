@@ -1970,8 +1970,8 @@
       "rst_pl0_peripheral_aresetn": {
         "ports": [
           "rst_pl0/peripheral_aresetn",
-          "rv128/aresetn",
-          "sc_ctrl/aresetn"
+          "sc_ctrl/aresetn",
+          "rv128/aresetn"
         ]
       },
       "versal_cips_0_fpd_cci_noc_axi0_clk": {
@@ -2008,10 +2008,10 @@
         "ports": [
           "versal_cips_0/pl0_ref_clk",
           "rst_pl0/slowest_sync_clk",
-          "rv128/clk",
           "axi_noc_0/aclk6",
           "sc_ctrl/aclk",
-          "versal_cips_0/m_axi_fpd_aclk"
+          "versal_cips_0/m_axi_fpd_aclk",
+          "rv128/clk"
         ]
       },
       "versal_cips_0_pl0_resetn": {

@@ -322,6 +322,26 @@ def expand_c(c):
 
 
 # ---------------------------------------------------------------- M
+def rotr(a, n, w):
+    """rotacion a la derecha de los w bits bajos de a"""
+    m = (1 << w) - 1
+    a &= m
+    n %= w
+    return ((a >> n) | (a << (w - n))) & m
+
+
+def clmul(a, b):
+    """producto sin acarreo de 128 x 128 -> 256 bits"""
+    r = 0
+    a &= MX
+    b &= MX
+    while b:
+        lo = b & -b
+        r ^= a << (lo.bit_length() - 1)
+        b ^= lo
+    return r
+
+
 def muldiv(f3, a, b, w):
     """Unidad M a anchura w (128, 64, 32). Resultado extendido en signo a 128."""
     m = (1 << w) - 1
@@ -358,6 +378,7 @@ class Hart:
         self.x = [0] * 32
         self.pc = pc
         self.priv = PRV_M
+        self.zb = True                                   # Zbb + Zbc (extension RV128 de este core)
         self.time_div = time_div
         self.steps = 0
         self.mstatus = MS_UXL_SXL
@@ -667,15 +688,29 @@ class Hart:
             shb = {128: 7, 32: 5, 64: 6}[w]
             sh, hi = (i >> 20) & ((1 << shb) - 1), i >> (20 + shb)
             sra_hi = 0x20 >> (shb - 5)                   # bit 30 en el campo alto
+            i12 = i >> 20
+            ror_hi = 0x30 >> (shb - 5)                   # rori/roriw/rorid: 0110000 / 011000 / 01100
             if f3 == 0:
                 res = sx(a + imm, w)
             elif f3 == 1:
-                if hi:
-                    raise ill
-                res = sx(a << sh, w)
+                if hi == 0:
+                    res = sx(a << sh, w)
+                elif self.zb and i12 in (0x600, 0x601, 0x602):          # clz / ctz / cpop (W, D)
+                    v = a & ((1 << w) - 1)
+                    if i12 == 0x600: res = w - v.bit_length()
+                    elif i12 == 0x601: res = (v & -v).bit_length() - 1 if v else w
+                    else: res = bin(v).count('1')
+                elif self.zb and w == 128 and i12 == 0x604: res = sx(a, 8)   # sext.b
+                elif self.zb and w == 128 and i12 == 0x605: res = sx(a, 16)  # sext.h
+                else: raise ill
             elif f3 == 5:
                 if hi == 0: res = sx((a & ((1 << w) - 1)) >> sh, w)
                 elif hi == sra_hi: res = sx(a, w) >> sh
+                elif self.zb and hi == ror_hi: res = sx(rotr(a, sh, w), w)  # rori / roriw / rorid
+                elif self.zb and w == 128 and i12 == 0x6F8:                 # rev8 (16 bytes)
+                    res = int.from_bytes((a & MX).to_bytes(16, 'little'), 'big')
+                elif self.zb and w == 128 and i12 == 0x287:                 # orc.b
+                    res = sum(0xFF << (8 * k) for k in range(16) if (a >> (8 * k)) & 0xFF)
                 else: raise ill
             elif w != 128:
                 raise ill
@@ -699,6 +734,18 @@ class Hart:
             elif f7 == 0x20 and f3 == 5: res = sx(a, w) >> (b & shm)
             elif f7 == 0 and w == 128:
                 res = {2: int(s128(a) < s128(b)), 3: int(a < b), 4: a ^ b, 6: a | b, 7: a & b}[f3]
+            elif self.zb and f7 == 0x20 and w == 128 and f3 in (4, 6, 7):     # xnor / orn / andn
+                res = {4: ~(a ^ b), 6: a | ~b, 7: a & ~b}[f3]
+            elif self.zb and f7 == 0x30 and f3 in (1, 5):                    # rol / ror (W, D)
+                r = (b & shm)
+                res = sx(rotr(a, (w - r) % w, w) if f3 == 1 else rotr(a, r, w), w)
+            elif self.zb and f7 == 0x05 and w == 128 and f3 >= 4:           # min / minu / max / maxu
+                res = {4: min(s128(a), s128(b)), 5: min(a, b), 6: max(s128(a), s128(b)), 7: max(a, b)}[f3]
+            elif self.zb and f7 == 0x05 and w == 128 and f3 in (1, 2, 3):   # clmul / clmulr / clmulh
+                p = clmul(a, b)
+                res = {1: p, 2: p >> 127, 3: p >> 128}[f3]
+            elif self.zb and f7 == 0x04 and w == 64 and f3 == 4 and rs2 == 0:   # zext.h (RV128: OP-64)
+                res = a & 0xFFFF
             else:
                 raise ill
         elif op == 0x2F:                                 # AMO
