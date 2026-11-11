@@ -79,3 +79,16 @@ vivado/*.gen/
 # --- backups ---
 *~
 *.bak
+
+# Vivado project folders are named <proj>.runs, <proj>.gen, ... (the patterns above miss them)
+*.runs/
+*.gen/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.srcs/
+*.xpr
+# generated RV128IMAC projects (regenerate with create_project.tcl + bd_insert.tcl)
+IP_Cores/RV128IMAC/fpga/soc/rv128_soc_te0950/
+IP_Cores/RV128IMAC/fpga/rv128_proto_te0950/
