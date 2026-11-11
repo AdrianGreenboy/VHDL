@@ -269,3 +269,17 @@ Every change is checked in lockstep against the ISS.
 These encodings are supported by `iss128.py`, `rv128asm.py` and the RTL, and in random
 tests (`sw/tests/rndb_*`, `gen_random.py --zb`). QEMU does not have them, so they are not in
 layer 0b.
+
+### v1.4 on silicon (TE0950 / VE2302, 50 MHz, 2026-11-11)
+
+- **Implementation:** WNS +1.02 ns; 42.1k LUT, 21.3k FF, 8 BRAM, 9 DSP58 (the 64×64
+  multiplier).
+- **Validation:** 168/168 programs pass. The first run had 159/160; the failure was
+  `t_conc`, which assumed the old core speed and is now written so the core speed does not
+  matter.
+
+| Workload | v1.3 (cycles) | v1.4 (cycles) | Speed-up |
+|---|---|---|---|
+| π, 1007 digits (Forth) | 33.96 M | 6.86 M (0.14 s) | 4.95× |
+| 1000! (Forth) | 10.28 M | 1.48 M (30 ms) | 6.95× |
+| CoreMark (RV64 mode) | 1.07 CoreMark/MHz | 1.84 CoreMark/MHz | 1.72× |
