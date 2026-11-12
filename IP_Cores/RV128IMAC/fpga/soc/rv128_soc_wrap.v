@@ -4,7 +4,7 @@
 // con la DRAM a 128 bit.
 `timescale 1ns / 1ps
 module rv128_soc_wrap #(
-  parameter integer TICK_DIV  = 50,                    // f_clk / 1 MHz
+  parameter integer TICK_DIV  = 60,                    // f_clk / 1 MHz
   parameter [63:0]  DRAM_PHYS = 64'h0000_0000_7000_0000,
   parameter [63:0]  DRAM_MASK = 64'h0000_0000_07FF_FFFF
 ) (

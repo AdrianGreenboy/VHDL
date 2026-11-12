@@ -40,6 +40,7 @@ entity rv128_axi_master is
     c0_cache  : in  std_logic;
     c0_beat   : out std_logic;                       -- beat de lectura (linea o unico)
     c0_done   : out std_logic;                       -- fin de transaccion (registrado)
+    c0_acc    : out std_logic;                       -- este ciclo se acepta la peticion de c0
     -- cliente 1: I$ (solo lecturas)
     c1_req    : in  std_logic;
     c1_kind   : in  std_logic_vector(1 downto 0);
@@ -103,7 +104,9 @@ architecture rtl of rv128_axi_master is
   signal beat   : unsigned(1 downto 0);
   signal errs   : std_logic;
   signal line_k : boolean;
+  signal c0_done_r, c1_done_r : std_logic;
 begin
+  c0_done <= c0_done_r; c1_done <= c1_done_r;
   line_k <= kind = AX_RD_LINE or kind = AX_WR_LINE;
 
   -- canal AR
@@ -132,6 +135,7 @@ begin
   m_bready  <= '1' when st = B else '0';
 
   -- hacia los clientes
+  c0_acc   <= '1' when st = IDLE and c0_done_r = '0' and c1_done_r = '0' and c0_req = '1' else '0';
   beat_idx <= std_logic_vector(beat);
   rdata    <= m_rdata;
   c0_beat  <= '1' when st = R and m_rvalid = '1' and cli = '0' else '0';
@@ -142,7 +146,7 @@ begin
     variable e   : std_logic;
   begin
     if rising_edge(clk) then
-      c0_done <= '0'; c1_done <= '0';
+      c0_done_r <= '0'; c1_done_r <= '0';
       if rst = '1' then
         st <= IDLE;
       else
@@ -151,7 +155,7 @@ begin
           when IDLE =>
             errs <= '0'; beat <= "00";
             -- no arrancar en el ciclo de 'done': el cliente aun no ha bajado su req
-            if c0_done = '1' or c1_done = '1' then
+            if c0_done_r = '1' or c1_done_r = '1' then
               null;
             elsif c0_req = '1' then
               cli <= '0'; kind <= c0_kind; addr <= c0_addr(63 downto 0); size <= c0_size; cache <= c0_cache;
@@ -185,7 +189,7 @@ begin
         end case;
         if fin then
           err <= e;
-          if cli = '0' then c0_done <= '1'; else c1_done <= '1'; end if;
+          if cli = '0' then c0_done_r <= '1'; else c1_done_r <= '1'; end if;
           st <= IDLE;
         end if;
       end if;

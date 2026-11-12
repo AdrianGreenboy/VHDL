@@ -15,14 +15,14 @@ rv128/m_axi_dram (128 bit) --> NoC (S0x_AXI) --> MC0 DDR_LOW0
 
 ## Pasos (shell limpia, sin venv: lopper falla dentro de un venv)
 
-1. Boot ROM de la placa (DTS a 50 MHz, 128 MiB, ttyS0 115200):
+1. Boot ROM de la placa (DTS a 60 MHz, 128 MiB, ttyS0 115200):
    ```bash
    cd ~/vhdl_repo/IP_Cores/RV128IMAC
    python3 sw/bootrom/build_bootrom.py --dts sw/bootrom/rv128_soc_fpga.dts --out fpga/soc/gen/rv128_bootrom_pkg.vhd
    ```
 2. Proyecto: `vivado -mode batch -source fpga/soc/create_project.tcl -tclargs te0950`
 3. GUI (como en el RV64IMAC): Block Design `design_1` con CIPS (LPDDR4 por el NoC,
-   **M_AXI_FPD**, **pl0_ref_clk a 50 MHz** y `pl0_resetn`) y `axi_noc_0` con el MC.
+   **M_AXI_FPD**, **pl0_ref_clk a 60 MHz** (desde v1.5) y `pl0_resetn`) y `axi_noc_0` con el MC.
 4. Insercion e implementacion hasta PDI:
    ```bash
    vivado -mode batch -source fpga/soc/bd_insert.tcl \
@@ -38,7 +38,7 @@ rv128/m_axi_dram (128 bit) --> NoC (S0x_AXI) --> MC0 DDR_LOW0
    ```
 6. En el PC: `fpga/soc/board_pack.sh /tmp/rv128_board` y copiar la carpeta a la SD.
 7. En la placa: `sh run_all.sh` (todo) o `sh run_all.sh freertos` (filtro).
-   Linux: `./rv128_soc_load -m rv64 fw_jump.bin@0 Image@0x200000` (divisor 27 por defecto).
+   Linux: `./rv128_soc_load -m rv64 fw_jump.bin@0 Image@0x200000` (divisor 33 por defecto = 115200 a 60 MHz).
 
 ## Banco de control (0xA400_0000)
 

@@ -61,7 +61,7 @@ barebones_clock()
 #define TIMER_RES_DIVIDER          1
 #define SAMPLE_TIME_IMPLEMENTATION 1
 #ifndef CLK_HZ
-#define CLK_HZ 50000000                 /* TE0950: 50 MHz */
+#define CLK_HZ 60000000                 /* TE0950: 60 MHz (v1.5) */
 #endif
 #define EE_TICKS_PER_SEC           CLK_HZ
 

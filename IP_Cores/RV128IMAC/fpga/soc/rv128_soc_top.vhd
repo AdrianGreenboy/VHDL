@@ -31,7 +31,7 @@ use work.rv128_axi_pkg.all;
 
 entity rv128_soc_top is
   generic (
-    TICK_DIV  : positive := 50;                        -- 50 MHz / 50 = 1 MHz (DTS)
+    TICK_DIV  : positive := 60;                        -- 60 MHz / 60 = 1 MHz (DTS)
     DRAM_PHYS : aaddr_t := x"0000000070000000";
     DRAM_MASK : aaddr_t := x"0000000007FFFFFF"         -- 128 MiB
   );

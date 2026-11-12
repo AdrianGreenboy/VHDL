@@ -1,7 +1,7 @@
 # create_project.tcl - RV128IMAC SoC (core dual, DDR por el NoC) en la TE0950, M5.
 # Mismo flujo que RV64IMAC/fpga (validado en la TE0950). Vivado 2025.2.1.
 #   1) vivado -mode batch -source fpga/soc/create_project.tcl -tclargs te0950
-#   2) GUI: Block Design design_1 con CIPS + NoC (LPDDR4, M_AXI_FPD, pl0_ref_clk 50 MHz)
+#   2) GUI: Block Design design_1 con CIPS + NoC (LPDDR4, M_AXI_FPD, pl0_ref_clk 60 MHz since v1.5)
 #   3) vivado -mode batch -source fpga/soc/bd_insert.tcl -tclargs <xpr> design_1
 set board [lindex $argv 0]
 if {$board eq ""} { set board te0950 }
@@ -30,7 +30,7 @@ set rtl {
   rv128_clint.vhd rv128_plic.vhd rv128_uart.vhd rv128_periph.vhd rv128_soc.vhd
 }
 foreach f $rtl { add_files -norecurse $root/rtl/$f }
-# boot ROM de la placa (DTS de la placa: 50 MHz, ttyS0 115200), no la de simulacion
+# boot ROM de la placa (DTS de la placa: 60 MHz, ttyS0 115200), no la de simulacion
 if {![file exists $here/gen/rv128_bootrom_pkg.vhd]} {
   error "falta fpga/soc/gen/rv128_bootrom_pkg.vhd: python3 sw/bootrom/build_bootrom.py --dts sw/bootrom/rv128_soc_fpga.dts --out fpga/soc/gen/rv128_bootrom_pkg.vhd"
 }

@@ -249,7 +249,7 @@ def d_fact1000():
 def d_bench():
     L = ["\\ bench - cycle counts of the compute words (CYCLES = mcycle)",
          "CREATE MB 1024 ALLOT CREATE DG 64 ALLOT CREATE KY 32 ALLOT",
-         "CREATE BA 16 CELLS ALLOT CREATE BB 16 CELLS ALLOT CREATE BR 32 CELLS ALLOT",
+         "CREATE BA 16 CELLS ALLOT CREATE BB 16 CELLS ALLOT CREATE BR 64 CELLS ALLOT",
          ": T0 CYCLES ;  : T1 ( t0 -- ) CYCLES SWAP - . CR ;",
          ": B-SHA .\" sha512 1000 B x10: \" T0 10 0 DO MB 1000 DG SHA512 LOOP T1 ;",
          ": B-POLY .\" poly1305 1000 B x10: \" T0 10 0 DO MB 1000 KY DG POLY1305 LOOP T1 ;",
@@ -257,7 +257,9 @@ def d_bench():
          ": B-FDIV .\" F/ x1000: \" T0 1000 0 DO FONE 3 S>F F/ DROP LOOP T1 ;",
          ": B-FSIN .\" FSIN x100: \" T0 100 0 DO FONE FSIN DROP LOOP T1 ;",
          ": B-ATOM .\" ATOM+ x1000: \" T0 1000 0 DO 1 BR ATOM+ DROP LOOP T1 ;",
-         "B-SHA B-POLY B-BNMUL B-FDIV B-FSIN B-ATOM",
+         ": B-GCM .\" aes-128-gcm 1000 B x10: \" KY AES-KEY T0 10 0 DO KY MB 0 MB 1000 BR DG GCM-ENC LOOP T1 ;",
+         ": B-GF .\" GF* x1000: \" T0 1000 0 DO 12345 67890 GF* DROP LOOP T1 ;",
+         "B-SHA B-POLY B-BNMUL B-FDIV B-FSIN B-ATOM B-GCM B-GF",
          "BYE"]
     return L, ["sha512"]
 
@@ -299,11 +301,80 @@ def t_zb():
     return L, []
 
 
+def t_aes():
+    import random
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    rnd = random.Random(11)
+    L = ["\\ t_aes - AES-128 (FIPS-197), GHASH with clmul, AES-128-GCM vs a reference",
+         ": GENMSG ( addr n -- ) 0 DO I 7 * 3 + 255 AND OVER I + C! LOOP DROP ;",
+         "CREATE MB 1024 ALLOT CREATE CT 1024 ALLOT CREATE PT 1024 ALLOT CREATE TG 16 ALLOT",
+         "CREATE AD 64 ALLOT  MB 1000 GENMSG"]
+    n = 10
+    # FIPS-197 appendix C.1
+    k = bytes(range(16))
+    pt = bytes.fromhex("00112233445566778899aabbccddeeff")
+    c = Cipher(algorithms.AES(k), modes.ECB()).encryptor().update(pt)
+    assert c.hex() == "69c4e0d86a7b0430d8cdb78070b4c55a"
+    L += cbytes("K0", k) + cbytes("P0", pt) + cbytes("C0", c)
+    L.append(f"K0 AES-KEY P0 TG AES-BLOCK TG C0 16 MEM= {n} ASSERT"); n += 1
+    L.append("TG 16 .HEX CR")
+    # GF* against the NIST bit-serial multiply
+    def gf_spec(x, y):
+        R = 0xE1 << 120
+        z, v = 0, y
+        for i in range(128):
+            if (x >> (127 - i)) & 1:
+                z ^= v
+            v = (v >> 1) ^ R if v & 1 else v >> 1
+        return z
+    for _ in range(4):
+        a_, b_ = rnd.getrandbits(128), rnd.getrandbits(128)
+        L.append(f"{h(a_)} {h(b_)} GF* {h(gf_spec(a_, b_))} = {n} ASSERT"); n += 1
+    # GCM: McGrew/Viega test case 4 (60-byte message, 20-byte AAD) + other lengths
+    key = bytes.fromhex("feffe9928665731c6d6a8f9467308308")
+    iv = bytes.fromhex("cafebabefacedbaddecaf888")
+    aad = bytes.fromhex("feedfacedeadbeeffeedfacedeadbeefabaddad2")
+    msg = bytes.fromhex("d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72"
+                        "1c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39")
+    out = AESGCM(key).encrypt(iv, msg, aad)
+    assert out[-16:].hex() == "5bc94fbc3221a5db94fae95ae7121a47"
+    L += cbytes("GK", key) + cbytes("GI", iv) + cbytes("GA", aad) + cbytes("GM", msg)
+    L += cbytes("GC", out[:-16]) + cbytes("GT", out[-16:])
+    L.append(f"GK AES-KEY GI GA 20 GM 60 CT TG GCM-ENC")
+    L.append(f"CT GC 60 MEM= {n} ASSERT TG GT 16 MEM= {n + 1} ASSERT"); n += 2
+    L.append(f"GI GA 20 CT 60 PT TG GCM-DEC PT GM 60 MEM= {n} ASSERT TG GT 16 MEM= {n + 1} ASSERT"); n += 2
+    L.append("TG 16 .HEX CR")
+    # random keys, IVs, AAD and message lengths over MB
+    m = msg_b = bytes((i * 7 + 3) & 255 for i in range(1000))
+    for t, (al, pl) in enumerate([(0, 0), (0, 1), (1, 15), (16, 16), (17, 17), (0, 64), (5, 200), (64, 1000)]):
+        k2, iv2 = rnd.randbytes(16), rnd.randbytes(12)
+        ad2 = rnd.randbytes(al)
+        o = AESGCM(k2).encrypt(iv2, m[:pl], ad2 if al else None)
+        L += cbytes(f"RK{t}", k2) + cbytes(f"RI{t}", iv2) + cbytes(f"RT{t}", o[-16:])
+        if al:
+            L += [f"AD {al} 0 FILL"] + [f"{x} AD {i} + C!" for i, x in enumerate(ad2)]
+        L.append(f"RK{t} AES-KEY RI{t} AD {al} MB {pl} CT TG GCM-ENC TG RT{t} 16 MEM= {n} ASSERT"); n += 1
+        if pl:
+            L += cbytes(f"RC{t}", o[:min(pl, 64)])
+            L.append(f"CT RC{t} {min(pl, 64)} MEM= {n} ASSERT"); n += 1
+            L.append(f"RI{t} AD {al} CT {pl} PT TG GCM-DEC PT MB {pl} MEM= {n} ASSERT"); n += 1
+    L.append("BYE")
+    return L, ["69c4e0d86a7b0430d8cdb78070b4c55a", "5bc94fbc3221a5db94fae95ae7121a47"]
+
+
 def main():
     out = sys.argv[1]
     os.makedirs(out, exist_ok=True)
-    for name, fn in (("t_bignum", t_bignum), ("t_fixed", t_fixed), ("t_crypto", t_crypto), ("t_conc", t_conc),
-                     ("t_zb", t_zb)):
+    gens = [("t_bignum", t_bignum), ("t_fixed", t_fixed), ("t_crypto", t_crypto), ("t_conc", t_conc),
+            ("t_zb", t_zb)]
+    try:
+        import cryptography                      # noqa: F401  (reference for t_aes)
+        gens.append(("t_aes", t_aes))
+    except ImportError:
+        if not os.path.exists(os.path.join(out, "t_aes.fs")):
+            print("aviso: sin el modulo 'cryptography' no se genera t_aes (pip install cryptography)")
+    for name, fn in gens:
         L, exp = fn()
         open(os.path.join(out, name + ".fs"), "w").write("\n".join(L) + "\n")
         open(os.path.join(out, name + ".expect"), "w").write("\n".join(exp) + "\n")

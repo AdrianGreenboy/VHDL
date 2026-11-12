@@ -6,7 +6,7 @@
  *
  *   ./rv128_soc_load [options] file@offset [file@offset ...]
  *     -m rv64|rv128   core mode (default rv64)
- *     -d N            divisor of the host-side UART (default 27 = 115200 baud at 50 MHz,
+ *     -d N            divisor of the host-side UART (default 33 = 115200 baud at 60 MHz, -1.4 %,
  *                     as the board DTS; use 1 for the RTOS tests and bare-metal programs,
  *                     which run their UART at divisor 1)
  *     -t ADDR         address of tohost as the core sees it (0x8...); enables the verdict:
@@ -110,7 +110,7 @@ static int drain(void)
 int main(int argc, char **argv)
 {
     int m64 = 1, opt;
-    unsigned div = 27, zero_mib = 8, timeout = 60;
+    unsigned div = 33, zero_mib = 8, timeout = 60;
     unsigned long tohost = 0;
     while ((opt = getopt(argc, argv, "m:d:t:T:z:")) != -1) {
         switch (opt) {
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
-    /* Test mode busy-polls: the SoC UART runs at divisor 1 (3.125 Mbaud at 50 MHz) and the
+    /* Test mode busy-polls: the SoC UART runs at divisor 1 (3.75 Mbaud at 60 MHz) and the
      * 16-byte RX FIFO of the host UART fills in ~50 us, less than one usleep() wake-up on
      * PetaLinux, so any sleep loses console bytes. Interactive mode (115200) may sleep. */
     unsigned idle = 0;

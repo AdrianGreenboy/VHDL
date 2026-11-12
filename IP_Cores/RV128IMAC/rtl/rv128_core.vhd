@@ -47,6 +47,11 @@ entity rv128_core is
     d_req_size    : out std_logic_vector(2 downto 0);  -- log2(bytes), 0..4
     d_req_wdata   : out xword;                         -- por carriles
     d_req_wstrb   : out std_logic_vector(15 downto 0);
+    -- timing: indice de la D$ (bits 12:4 de la direccion virtual, sumador de 13 bit) y
+    -- aviso de si la peticion de X necesita leer datos; la D$ lee la SRAM con ellos sin
+    -- esperar a la direccion completa ni a la aceptacion, y repite si no coinciden
+    d_req_ridx    : out std_logic_vector(8 downto 0);
+    d_req_rd      : out std_logic;
     d_rsp_valid   : in  std_logic;
     d_rsp_rdata   : in  xword;                         -- por carriles
     d_rsp_err     : in  std_logic;
@@ -167,6 +172,7 @@ architecture rtl of rv128_core is
   type ras_arr is array (0 to 7) of xword;
   signal sras, aras : ras_arr;
   signal sptr, aptr : unsigned(2 downto 0);
+  signal ras_fix : std_logic;                          -- copiar aras -> sras (ciclo tras redirect)
   signal bp_pend : std_logic;
   signal bp_tgt  : xword;
   signal bp_hit  : std_logic;
@@ -210,6 +216,13 @@ architecture rtl of rv128_core is
   signal wb_target     : xword;
   signal wb_hold       : std_logic;
   signal wb_rf_we      : std_logic;
+  -- timing: versiones de W que solo dependen de registros de memwb. Una instruccion de
+  -- sistema, una excepcion o una interrupcion en W siempre vacia el pipeline (o lo
+  -- retiene, WFI), asi que lo que haya en X no llega a usar su resultado: el forwarding
+  -- desde W y el permiso de peticion a la D$ no necesitan la logica de CSR/trap de W.
+  signal wb_fwd_we     : std_logic;
+  signal core_ridx     : std_logic_vector(8 downto 0);
+  signal w_block       : std_logic;
   signal wb_rf_data    : xword;
   signal redirect      : std_logic;
   signal redirect_pc   : xword;
@@ -316,10 +329,17 @@ begin
   d_req_addr  <= ptw_m_addr when ptw_grant = '1' else core_req_addr;
   d_req_size  <= "011" when ptw_grant = '1' else core_req_size;         -- PTE: 8 bytes
   d_req_kind  <= "00" when ptw_grant = '1' else core_req_kind;
+  -- prediccion barata del cliente: con el PTW activo el core espera la traduccion
+  d_req_ridx  <= ptw_m_addr(12 downto 4) when ptw_busy = '1' and d_out = '0' else core_ridx;
+  d_req_rd    <= '1' when ptw_busy = '1' or (idex.v = '1' and idex.d.mem /= M_NONE and
+                                            idex.d.mem /= M_STORE and idex.d.mem /= M_SC) else '0';
   ptw_m_ready <= d_req_ready and ptw_grant;
   ptw_rsp_valid <= d_rsp_valid and d_owner_ptw;
 
   -- ============================================================ F: peticiones
+  wb_fwd_we <= '1' when memwb.v = '1' and memwb.exc = '0' and memwb.irq = '0' and memwb.sys = S_NONE
+                        and memwb.rd_we = '1' and memwb.rd /= "00000" else '0';
+  w_block   <= '1' when memwb.v = '1' and (memwb.exc = '1' or memwb.irq = '1' or memwb.sys /= S_NONE) else '0';
   redirect    <= wb_flush or ex_redirect;
   redirect_pc <= wb_target when wb_flush = '1' else ex_target;
 
@@ -526,15 +546,16 @@ begin
     variable be, oe   : btb_t;
     variable ohit     : boolean;
     variable kind     : std_logic_vector(1 downto 0);
+    variable ea13     : std_logic_vector(12 downto 0);
   begin
     -- forwarding: M antes que W
     fa := idex.a; fb := idex.b;
     if idex.d.rs1 /= "00000" then
-      if wb_rf_we = '1' and memwb.rd = idex.d.rs1 then fa := wb_rf_data; end if;
+      if wb_fwd_we = '1' and memwb.rd = idex.d.rs1 then fa := memwb.res; end if;
       if exmem.v = '1' and exmem.exc = '0' and exmem.rd_we = '1' and exmem.rd = idex.d.rs1 then fa := exmem.res; end if;
     end if;
     if idex.d.rs2 /= "00000" then
-      if wb_rf_we = '1' and memwb.rd = idex.d.rs2 then fb := wb_rf_data; end if;
+      if wb_fwd_we = '1' and memwb.rd = idex.d.rs2 then fb := memwb.res; end if;
       if exmem.v = '1' and exmem.exc = '0' and exmem.rd_we = '1' and exmem.rd = idex.d.rs2 then fb := exmem.res; end if;
     end if;
     ex_fa <= fa; ex_fb <= fb;
@@ -651,6 +672,8 @@ begin
 
     -- memoria: direccion, alineacion, traduccion, PMA (orden del ISS)
     addr := xf(std_logic_vector(unsigned(fa) + unsigned(idex.d.imm)), m64);
+    ea13 := std_logic_vector(unsigned(fa(12 downto 0)) + unsigned(idex.d.imm(12 downto 0)));
+    core_ridx <= ea13(12 downto 4);
     o.maddr := addr;
     d_vpn <= addr(38 downto 12);
     case idex.d.msize is
@@ -749,12 +772,12 @@ begin
     if memwb.v = '1' and (memwb.exc = '1' or memwb.sys /= S_NONE) then older_ok := false; end if;
     free := d_out = '0' or d_rsp_valid = '1';
 
-    if rst = '0' and need_req and free and (not side or older_ok) and wb_flush = '0' then  -- rst: see 'want'
+    if rst = '0' and need_req and free and (not side or older_ok) and w_block = '0' then  -- rst: see 'want'
       core_req_valid <= '1';
     else
       core_req_valid <= '0';
     end if;
-    if need_req and not (free and (not side or older_ok) and wb_flush = '0' and d_req_ready = '1') then
+    if need_req and not (free and (not side or older_ok) and w_block = '0' and d_req_ready = '1') then
       wait_v := true;
     end if;
     if need_req then o.issued := '1'; else o.issued := '0'; end if;
@@ -983,7 +1006,7 @@ begin
         fq_cnt <= "000"; fq_pc <= RESET_PC; f_addr <= RESET_PC(127 downto 2) & "00";
         f_out <= '0'; f_self <= '0'; f_drop <= '0'; f_skip <= '0'; f_nskip <= RESET_PC(1);
         f_trunc <= '0'; f_mark <= '0'; fq_bp <= "0000"; bp_pend <= '0';
-        btb_v <= (others => '0'); sptr <= "000"; aptr <= "000";
+        btb_v <= (others => '0'); sptr <= "000"; aptr <= "000"; ras_fix <= '0';
         d_out <= '0'; d_drop <= '0'; resv_v <= '0'; d_owner_ptw <= '0';
         i_pfr_v <= '0'; d_pfr_v <= '0';
       else
@@ -1076,8 +1099,12 @@ begin
         if ex_adv = '1' and xr_pop = '1' then vptr := vptr - 1; end if;
         if ex_adv = '1' and xr_push = '1' then vras(to_integer(vptr)) := xr_val; vptr := vptr + 1; end if;
         aras <= vras; aptr <= vptr;
-        if redirect = '1' then
-          sras <= vras; sptr <= vptr;                    -- el camino especulativo se descarta
+        -- timing: la RAS especulativa se restaura un ciclo despues de la redireccion, desde
+        -- la de X ya registrada (redirect no habilita los 1024 FF de sras); solo cuesta, como
+        -- mucho, una prediccion de retorno en ese ciclo
+        ras_fix <= redirect;
+        if ras_fix = '1' then
+          sras <= aras; sptr <= aptr;                    -- el camino especulativo se descarta
         elsif i_req_valid = '1' and i_req_ready = '1' and bp_hit = '1' then
           if bp_e.kind = "01" then sras(to_integer(sptr)) <= bp_ret; sptr <= sptr + 1;
           elsif bp_e.kind = "10" then sptr <= sptr - 1; end if;

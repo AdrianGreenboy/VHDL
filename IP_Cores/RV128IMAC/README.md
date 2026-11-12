@@ -283,3 +283,35 @@ layer 0b.
 | π, 1007 digits (Forth) | 33.96 M | 6.86 M (0.14 s) | 4.95× |
 | 1000! (Forth) | 10.28 M | 1.48 M (30 ms) | 6.95× |
 | CoreMark (RV64 mode) | 1.07 CoreMark/MHz | 1.84 CoreMark/MHz | 1.72× |
+
+### v1.5: timing (toward a higher clock)
+
+At 50 MHz the worst path ran from the W-stage CSR decode, through W→X forwarding and the
+128-bit address adder, to the D$ data BRAM: 54 levels, WNS +1.02 ns.
+
+- **Forwarding from W and D$ request permission** now depend only on `memwb` registers. A
+  CSR, exception or interrupt in W always flushes, so nothing in X uses its value.
+- **D$ early-index read.** The core sends `req_ridx`, bits 12:4 of the virtual address from
+  a 13-bit adder, plus a hint saying whether the X request reads data. In accepting states
+  the D$ reads its SRAMs with that index every cycle, independent of `accept` and the full
+  address. LOOKUP checks the index and replays on a mismatch: bit 12 can differ under Sv39,
+  or the PTW/core prediction can be wrong. The write buffer drains when the hint says the
+  port is free.
+- **D$ next-line prefetch** (generic `PREFETCH`, default false). After each refill the D$
+  fetches line L+1 into a 64-byte buffer in the background; a miss to that line fills from
+  the buffer in 4 cycles. In lockstep with random latency it speeds up sequential access
+  (`rv128ui_mem` −9 % cycles) but slows down `cache_stress` by +2 %, because it occupies
+  the AXI master. At 60 MHz the slack is only +0.018 ns, so it stays off until it is
+  measured on the board.
+
+### v1.5 on silicon (TE0950, 60 MHz, 2026-11-11)
+
+- **Implementation:** WNS +0.018 ns, WHS +0.011 ns, with strategy
+  `Performance_ExplorePostRoutePhysOpt` and TICK_DIV 60.
+- **Validation:** 162/162 programs pass. The 115200-baud UART divisor is now 33.
+
+| Workload | v1.4 @ 50 MHz | v1.5 @ 60 MHz |
+|---|---|---|
+| CoreMark (RV64 mode, 1200 iterations, 10.8 s) | 1.84 /MHz, 92 it/s | 1.85 /MHz, **111 it/s** |
+| π, 1007 digits | 6.86 M cycles, 0.137 s | 6.85 M cycles, **0.114 s** |
+| 1000! | 1.48 M cycles, 30 ms | 1.49 M cycles, **25 ms** |

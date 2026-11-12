@@ -692,6 +692,13 @@ def kernel(uart_div):
     e("p_clamp:", "  .octa 0x0ffffffc0ffffffc0ffffffc0fffffff",
       "p_key:", "  .zero 32", "p_blk:", "  .zero 32", "p_tmp:", "  .zero 16",
       "sha_buf:", "  .zero 256", "sha_h:", "  .zero 64", "sha_w:", "  .zero 640")
+    sbox, te0 = aes_tables()
+    e("gcm_h:", "  .octa 0", "gcm_mode:", "  .octa 0", "gcm_j0:", "  .zero 16", "gcm_ctr:", "  .zero 16",
+      "gcm_blk:", "  .zero 16", "gcm_tmp:", "  .zero 16", "gcm_arg:", "  .zero 112",
+      "aes_ks:", "  .zero 176",
+      "aes_te0:", *[f"  .word {v:#x}" for v in te0],
+      "aes_sbox:", *[f"  .byte {', '.join(str(v) for v in sbox[i:i + 16])}" for i in range(0, 256, 16)],
+      ".align 4")
     e(".align 3", "sha_iv:", *[f"  .dword {v:#x}" for v in SHA512_IV],
       "sha_k:", *[f"  .dword {v:#x}" for v in SHA512_K], ".align 4")
     e("tib:", "  .zero 256", "numbuf:", "  .zero 140", "numbuf_end:", "  .zero 4")
@@ -960,6 +967,169 @@ def compute_words():
         "tm_r:"))
     sha_comp()
     bcopy()
+    aes_words()
+
+
+# ------------------------------------------------------------------ AES-128-GCM
+def aes_tables():
+    sbox = [0] * 256
+    p = q = 1
+    while True:                       # generator 3 and its inverse walk GF(2^8)
+        p ^= (p << 1) ^ (0x1B if p & 0x80 else 0)
+        p &= 0xFF
+        q ^= q << 1; q ^= q << 2; q ^= q << 4; q &= 0xFF
+        if q & 0x80: q ^= 0x09
+        x = q ^ ((q << 1) | (q >> 7)) ^ ((q << 2) | (q >> 6)) ^ ((q << 3) | (q >> 5)) ^ ((q << 4) | (q >> 4))
+        sbox[p] = (x ^ 0x63) & 0xFF
+        if p == 1:
+            break
+    sbox[0] = 0x63
+    def xt(b):
+        return ((b << 1) ^ (0x1B if b & 0x80 else 0)) & 0xFF
+    # little-endian columns: row r at bits 8r; Te0 = (2S, S, S, 3S)
+    te0 = [xt(v) | (v << 8) | (v << 16) | ((xt(v) ^ v) << 24) for v in sbox]
+    return sbox, te0
+
+
+def aes_words():
+    def rnd_col(j, src, final):
+        # output column j from columns src (ShiftRows: row r from column j + r)
+        out = []
+        for r in range(4):
+            reg = src[(j + r) % 4]
+            out += [f"  srli t1, {reg}, {8 * r}", "  andi t1, t1, 255"]
+            if final:
+                out += ["  add t1, t1, a5", "  lbu t1, 0(t1)"]
+                if r:
+                    out += [f"  slli t1, t1, {8 * r}"]
+            else:
+                out += ["  slli t1, t1, 2", "  add t1, t1, a6", "  lw t1, 0(t1)"]
+                if r:
+                    out += [f"  roriw t1, t1, {32 - 8 * r}"]
+            out += ["  xor t0, t0, t1"] if r else ["  mv t0, t1"]
+        out += [f"  lw t1, {4 * j}(a7)", "  xor t0, t0, t1"]
+        return out
+
+    # aes_blk: a0 = in (4-aligned), a1 = out (4-aligned); key schedule in aes_ks
+    # leaf, t and a registers only (callers keep their state in s registers)
+    cur = ["a0", "a2", "a3", "a4"]
+    new = ["t2", "t3", "t4", "t5"]
+    e("aes_blk:", "  la a7, aes_ks", "  la a6, aes_te0", "  la a5, aes_sbox")
+    for j in (3, 2, 1, 0):                                  # a0 (the input pointer) last
+        e(f"  lw {cur[j]}, {4 * j}(a0)", f"  lw t0, {4 * j}(a7)", f"  xor {cur[j]}, {cur[j]}, t0")
+    e("  addi a7, a7, 16", "  li t6, 9", "aesb_r:")
+    src = cur
+    for j in range(4):
+        e(*rnd_col(j, src, False), f"  mv {new[j]}, t0")
+    e(*[f"  mv {cur[j]}, {new[j]}" for j in range(4)],
+      "  addi a7, a7, 16", "  addi t6, t6, -1", "  bnez t6, aesb_r")
+    for j in range(4):
+        e(*rnd_col(j, src, True), f"  sw t0, {4 * j}(a1)")
+    e("  ret")
+    # aes_kx: a0 = 16-byte key (4-aligned) -> aes_ks (44 words); leaf, t0..t5
+    e("aes_kx:", "  la t5, aes_ks", "  la t4, aes_sbox",
+      *[x for j in range(4) for x in (f"  lw t0, {4 * j}(a0)", f"  sw t0, {4 * j}(t5)")],
+      "  li t3, 1", "  li a2, 10",                       # rcon, rounds
+      "aesk_l:", "  lw t0, 12(t5)", "  roriw t0, t0, 8",    # RotWord (little-endian columns)
+      "  li a3, 0", "  li a4, 0",
+      "aesk_s:", "  srl t1, t0, a4", "  andi t1, t1, 255", "  add t1, t1, t4", "  lbu t1, 0(t1)",
+      "  sll t1, t1, a4", "  or a3, a3, t1", "  addi a4, a4, 8", "  li t1, 32", "  blt a4, t1, aesk_s",
+      "  xor a3, a3, t3",
+      "  lw t0, 0(t5)", "  xor t0, t0, a3", "  sw t0, 16(t5)",
+      "  lw t1, 4(t5)", "  xor t0, t0, t1", "  sw t0, 20(t5)",
+      "  lw t1, 8(t5)", "  xor t0, t0, t1", "  sw t0, 24(t5)",
+      "  lw t1, 12(t5)", "  xor t0, t0, t1", "  sw t0, 28(t5)",
+      "  slli t3, t3, 1", "  andi t1, t3, 256", "  beqz t1, aesk_n", "  xori t3, t3, 0x11B",
+      "aesk_n:", "  addi t5, t5, 16", "  addi a2, a2, -1", "  bnez a2, aesk_l", "  ret")
+    # gf_mul: a0 = a0 * a1 in GF(2^128), GCM bit order with blocks as big-endian integers
+    e("gf_mul:", "  clmul t0, a0, a1", "  clmulh t1, a0, a1",
+      "  slli t1, t1, 1", "  srli t2, t0, 127", "  or t1, t1, t2",      # high half of P << 1
+      "  slli t0, t0, 1",                                              # L = low half of P << 1
+      "  srli t2, t0, 1", "  xor t1, t1, t0", "  xor t1, t1, t2",
+      "  srli t2, t0, 2", "  xor t1, t1, t2", "  srli t2, t0, 7", "  xor t1, t1, t2",
+      "  slli t2, t0, 127", "  slli t3, t0, 126", "  xor t2, t2, t3", "  slli t3, t0, 121", "  xor t2, t2, t3",
+      "  xor t1, t1, t2", "  srli t3, t2, 1", "  xor t1, t1, t3", "  srli t3, t2, 2", "  xor t1, t1, t3",
+      "  srli t3, t2, 7", "  xor t1, t1, t3", "  mv a0, t1", "  ret")
+    # ghash_blk: X ^= block(gcm_blk, big-endian) ; X *= H      (X in s10)
+    e("ghash_blk:", "  la t0, gcm_blk", "  lq t0, 0(t0)", "  rev8 t0, t0", "  xor a0, s10, t0",
+      "  la a1, gcm_h", "  lq a1, 0(a1)", "  mv s11, ra", "  call gf_mul", "  mv ra, s11", "  mv s10, a0", "  ret")
+
+    prim("AES-KEY", "w_aeskey", lambda: e(          # ( key -- ) expand the key, H = E(0)
+        "  mv t6, ra", *SAVE_S,
+        "  la a0, gcm_tmp", "  mv a1, s1", "  li a2, 16", "  call bcopy",
+        "  la a0, gcm_tmp", "  call aes_kx",
+        "  la t0, gcm_blk", "  sq zero, 0(t0)", "  la a0, gcm_blk", "  la a1, gcm_tmp", "  call aes_blk",
+        "  la t0, gcm_tmp", "  lq t0, 0(t0)", "  rev8 t0, t0", "  la t1, gcm_h", "  sq t0, 0(t1)",
+        "  lq s1, 0(s0)", "  addi s0, s0, 16", *REST_S, "  mv ra, t6"))
+    prim("AES-BLOCK", "w_aesblk", lambda: e(        # ( in out -- ) one block, any alignment
+        "  mv t6, ra", *SAVE_S, "  lq s2, 0(s0)", "  mv s3, s1",
+        "  la a0, gcm_blk", "  mv a1, s2", "  li a2, 16", "  call bcopy",
+        "  la a0, gcm_blk", "  la a1, gcm_tmp", "  call aes_blk",
+        "  mv a0, s3", "  la a1, gcm_tmp", "  li a2, 16", "  call bcopy",
+        "  lq s1, 16(s0)", "  addi s0, s0, 32", *REST_S, "  mv ra, t6"))
+    prim("GF*", "w_gfmul", lambda: e(               # ( a b -- a*b ) GCM field, big-endian ints
+        "  mv t6, ra", "  lq a0, 0(s0)", "  addi s0, s0, 16", "  mv a1, s1", "  call gf_mul",
+        "  mv s1, a0", "  mv ra, t6"))
+
+    # gcm(mode in gcm_mode: 0 encrypt, 1 decrypt) ( iv aad alen in len out tag -- )
+    def gcm_core():
+        e("gcm_core:",
+          "  mv a7, ra",                                  # (no call below clobbers a7)
+          "  la t0, gcm_arg", "  sq s1, 96(t0)",         # tag
+          "  lq t1, 0(s0)", "  sq t1, 80(t0)",            # out
+          "  lq t1, 16(s0)", "  sq t1, 64(t0)",           # len
+          "  lq t1, 32(s0)", "  sq t1, 48(t0)",           # in
+          "  lq t1, 48(s0)", "  sq t1, 32(t0)",           # alen
+          "  lq t1, 64(s0)", "  sq t1, 16(t0)",           # aad
+          "  lq t1, 80(s0)", "  sq t1, 0(t0)",            # iv
+          "  lq s1, 96(s0)", "  addi s0, s0, 112",
+          "  addi sp, sp, -16", "  sq a7, 0(sp)",
+          # J0 = IV || 0x00000001
+          "  la t0, gcm_j0", "  sq zero, 0(t0)", "  la a0, gcm_j0", "  la t0, gcm_arg", "  lq a1, 0(t0)",
+          "  li a2, 12", "  call bcopy", "  la t0, gcm_j0", "  li t1, 1", "  sb t1, 15(t0)",
+          "  li s10, 0",
+          # AAD
+          "  la t0, gcm_arg", "  lq s8, 16(t0)", "  lq s9, 32(t0)",
+          "gcm_a:", "  beqz s9, gcm_ad",
+          "  li s7, 16", "  bgeu s9, s7, gcm_af", "  mv s7, s9",
+          "gcm_af:", "  la t0, gcm_blk", "  sq zero, 0(t0)", "  la a0, gcm_blk", "  mv a1, s8", "  mv a2, s7",
+          "  call bcopy", "  call ghash_blk", "  add s8, s8, s7", "  sub s9, s9, s7", "  j gcm_a",
+          "gcm_ad:",
+          # CTR + GHASH over the ciphertext
+          "  la t0, gcm_arg", "  lq s8, 48(t0)", "  lq s9, 64(t0)", "  lq s6, 80(t0)",
+          "  li s5, 1",                                    # counter (J0 = 1)
+          "gcm_c:", "  beqz s9, gcm_cd",
+          "  addi s5, s5, 1", "  la t0, gcm_ctr", "  la t1, gcm_j0", "  lq t1, 0(t1)", "  sq t1, 0(t0)",
+          "  srli t1, s5, 24", "  sb t1, 12(t0)", "  srli t1, s5, 16", "  sb t1, 13(t0)",
+          "  srli t1, s5, 8", "  sb t1, 14(t0)", "  sb s5, 15(t0)",
+          "  la a0, gcm_ctr", "  la a1, gcm_tmp", "  addi sp, sp, -16", "  sq s5, 0(sp)",
+          "  call aes_blk", "  lq s5, 0(sp)", "  addi sp, sp, 16",
+          "  li s7, 16", "  bgeu s9, s7, gcm_cf", "  mv s7, s9",
+          "gcm_cf:", "  la t0, gcm_blk", "  sq zero, 0(t0)",
+          "  li t2, 0", "  la t3, gcm_tmp", "  la t4, gcm_blk", "  la t5, gcm_mode", "  lq t5, 0(t5)",
+          "gcm_x:", "  bge t2, s7, gcm_xd",
+          "  add t0, s8, t2", "  lbu t0, 0(t0)", "  add t1, t3, t2", "  lbu t1, 0(t1)", "  xor t1, t1, t0",
+          "  add a0, s6, t2", "  sb t1, 0(a0)",                     # out byte
+          "  add a0, t4, t2", "  bnez t5, gcm_xc", "  sb t1, 0(a0)", "  j gcm_xn",   # ciphertext -> GHASH
+          "gcm_xc:", "  sb t0, 0(a0)",
+          "gcm_xn:", "  addi t2, t2, 1", "  j gcm_x",
+          "gcm_xd:", "  call ghash_blk",
+          "  add s8, s8, s7", "  add s6, s6, s7", "  sub s9, s9, s7", "  j gcm_c",
+          "gcm_cd:",
+          # lengths block, then tag = E(J0) ^ X
+          "  la t0, gcm_arg", "  lq t1, 32(t0)", "  slli t1, t1, 67", "  lq t2, 64(t0)", "  slli t2, t2, 3",
+          "  or t1, t1, t2", "  rev8 t1, t1", "  la t0, gcm_blk", "  sq t1, 0(t0)", "  call ghash_blk",
+          "  la a0, gcm_j0", "  la a1, gcm_tmp", "  call aes_blk",
+          "  la t0, gcm_tmp", "  lq t1, 0(t0)", "  rev8 t2, s10", "  xor t1, t1, t2", "  sq t1, 0(t0)",
+          "  la t0, gcm_arg", "  lq a0, 96(t0)", "  la a1, gcm_tmp", "  li a2, 16", "  call bcopy",
+          "  lq a7, 0(sp)", "  addi sp, sp, 16", "  mv ra, a7", "  ret")
+    prim("GCM-ENC", "w_gcmenc", lambda: e(          # ( iv aad alen pt len ct tag -- )
+        "  mv t6, ra", *SAVE_S, "  la t0, gcm_mode", "  sq zero, 0(t0)", "  call gcm_core",
+        *REST_S, "  mv ra, t6"))
+    prim("GCM-DEC", "w_gcmdec", lambda: e(          # ( iv aad alen ct len pt tag -- ) tag recomputed
+        "  mv t6, ra", *SAVE_S, "  la t0, gcm_mode", "  li t1, 1", "  sq t1, 0(t0)", "  call gcm_core",
+        *REST_S, "  mv ra, t6"))
+    gcm_core()
 
 
 IRQ_REGS = ["ra"] + [f"t{i}" for i in range(7)] + [f"a{i}" for i in range(8)] + ["s0", "s1"]

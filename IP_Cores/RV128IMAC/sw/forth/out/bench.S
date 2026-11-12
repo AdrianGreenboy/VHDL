@@ -3266,9 +3266,678 @@ bcopy:
   j bcopy
 bcp_e:
   ret
+aes_blk:
+  la a7, aes_ks
+  la a6, aes_te0
+  la a5, aes_sbox
+  lw a4, 12(a0)
+  lw t0, 12(a7)
+  xor a4, a4, t0
+  lw a3, 8(a0)
+  lw t0, 8(a7)
+  xor a3, a3, t0
+  lw a2, 4(a0)
+  lw t0, 4(a7)
+  xor a2, a2, t0
+  lw a0, 0(a0)
+  lw t0, 0(a7)
+  xor a0, a0, t0
+  addi a7, a7, 16
+  li t6, 9
+aesb_r:
+  srli t1, a0, 0
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  mv t0, t1
+  srli t1, a2, 8
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 24
+  xor t0, t0, t1
+  srli t1, a3, 16
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a4, 24
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 8
+  xor t0, t0, t1
+  lw t1, 0(a7)
+  xor t0, t0, t1
+  mv t2, t0
+  srli t1, a2, 0
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  mv t0, t1
+  srli t1, a3, 8
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 24
+  xor t0, t0, t1
+  srli t1, a4, 16
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a0, 24
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 8
+  xor t0, t0, t1
+  lw t1, 4(a7)
+  xor t0, t0, t1
+  mv t3, t0
+  srli t1, a3, 0
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  mv t0, t1
+  srli t1, a4, 8
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 24
+  xor t0, t0, t1
+  srli t1, a0, 16
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a2, 24
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 8
+  xor t0, t0, t1
+  lw t1, 8(a7)
+  xor t0, t0, t1
+  mv t4, t0
+  srli t1, a4, 0
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  mv t0, t1
+  srli t1, a0, 8
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 24
+  xor t0, t0, t1
+  srli t1, a2, 16
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a3, 24
+  andi t1, t1, 255
+  slli t1, t1, 2
+  add t1, t1, a6
+  lw t1, 0(t1)
+  roriw t1, t1, 8
+  xor t0, t0, t1
+  lw t1, 12(a7)
+  xor t0, t0, t1
+  mv t5, t0
+  mv a0, t2
+  mv a2, t3
+  mv a3, t4
+  mv a4, t5
+  addi a7, a7, 16
+  addi t6, t6, -1
+  bnez t6, aesb_r
+  srli t1, a0, 0
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  mv t0, t1
+  srli t1, a2, 8
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 8
+  xor t0, t0, t1
+  srli t1, a3, 16
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a4, 24
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 24
+  xor t0, t0, t1
+  lw t1, 0(a7)
+  xor t0, t0, t1
+  sw t0, 0(a1)
+  srli t1, a2, 0
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  mv t0, t1
+  srli t1, a3, 8
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 8
+  xor t0, t0, t1
+  srli t1, a4, 16
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a0, 24
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 24
+  xor t0, t0, t1
+  lw t1, 4(a7)
+  xor t0, t0, t1
+  sw t0, 4(a1)
+  srli t1, a3, 0
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  mv t0, t1
+  srli t1, a4, 8
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 8
+  xor t0, t0, t1
+  srli t1, a0, 16
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a2, 24
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 24
+  xor t0, t0, t1
+  lw t1, 8(a7)
+  xor t0, t0, t1
+  sw t0, 8(a1)
+  srli t1, a4, 0
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  mv t0, t1
+  srli t1, a0, 8
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 8
+  xor t0, t0, t1
+  srli t1, a2, 16
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 16
+  xor t0, t0, t1
+  srli t1, a3, 24
+  andi t1, t1, 255
+  add t1, t1, a5
+  lbu t1, 0(t1)
+  slli t1, t1, 24
+  xor t0, t0, t1
+  lw t1, 12(a7)
+  xor t0, t0, t1
+  sw t0, 12(a1)
+  ret
+aes_kx:
+  la t5, aes_ks
+  la t4, aes_sbox
+  lw t0, 0(a0)
+  sw t0, 0(t5)
+  lw t0, 4(a0)
+  sw t0, 4(t5)
+  lw t0, 8(a0)
+  sw t0, 8(t5)
+  lw t0, 12(a0)
+  sw t0, 12(t5)
+  li t3, 1
+  li a2, 10
+aesk_l:
+  lw t0, 12(t5)
+  roriw t0, t0, 8
+  li a3, 0
+  li a4, 0
+aesk_s:
+  srl t1, t0, a4
+  andi t1, t1, 255
+  add t1, t1, t4
+  lbu t1, 0(t1)
+  sll t1, t1, a4
+  or a3, a3, t1
+  addi a4, a4, 8
+  li t1, 32
+  blt a4, t1, aesk_s
+  xor a3, a3, t3
+  lw t0, 0(t5)
+  xor t0, t0, a3
+  sw t0, 16(t5)
+  lw t1, 4(t5)
+  xor t0, t0, t1
+  sw t0, 20(t5)
+  lw t1, 8(t5)
+  xor t0, t0, t1
+  sw t0, 24(t5)
+  lw t1, 12(t5)
+  xor t0, t0, t1
+  sw t0, 28(t5)
+  slli t3, t3, 1
+  andi t1, t3, 256
+  beqz t1, aesk_n
+  xori t3, t3, 0x11B
+aesk_n:
+  addi t5, t5, 16
+  addi a2, a2, -1
+  bnez a2, aesk_l
+  ret
+gf_mul:
+  clmul t0, a0, a1
+  clmulh t1, a0, a1
+  slli t1, t1, 1
+  srli t2, t0, 127
+  or t1, t1, t2
+  slli t0, t0, 1
+  srli t2, t0, 1
+  xor t1, t1, t0
+  xor t1, t1, t2
+  srli t2, t0, 2
+  xor t1, t1, t2
+  srli t2, t0, 7
+  xor t1, t1, t2
+  slli t2, t0, 127
+  slli t3, t0, 126
+  xor t2, t2, t3
+  slli t3, t0, 121
+  xor t2, t2, t3
+  xor t1, t1, t2
+  srli t3, t2, 1
+  xor t1, t1, t3
+  srli t3, t2, 2
+  xor t1, t1, t3
+  srli t3, t2, 7
+  xor t1, t1, t3
+  mv a0, t1
+  ret
+ghash_blk:
+  la t0, gcm_blk
+  lq t0, 0(t0)
+  rev8 t0, t0
+  xor a0, s10, t0
+  la a1, gcm_h
+  lq a1, 0(a1)
+  mv s11, ra
+  call gf_mul
+  mv ra, s11
+  mv s10, a0
+  ret
+.align 4
+hdr_145:
+  .octa hdr_144
+  .byte 7, 65, 69, 83, 45, 75, 69, 89
+.align 2
+w_aeskey:
+  addi sp, sp, -16
+  sq ra, 0(sp)
+  addi sp, sp, -160
+  sq s2, 0(sp)
+  sq s3, 16(sp)
+  sq s4, 32(sp)
+  sq s5, 48(sp)
+  sq s6, 64(sp)
+  sq s7, 80(sp)
+  sq s8, 96(sp)
+  sq s9, 112(sp)
+  sq s10, 128(sp)
+  sq s11, 144(sp)
+  la a0, gcm_tmp
+  mv a1, s1
+  li a2, 16
+  call bcopy
+  la a0, gcm_tmp
+  call aes_kx
+  la t0, gcm_blk
+  sq zero, 0(t0)
+  la a0, gcm_blk
+  la a1, gcm_tmp
+  call aes_blk
+  la t0, gcm_tmp
+  lq t0, 0(t0)
+  rev8 t0, t0
+  la t1, gcm_h
+  sq t0, 0(t1)
+  lq s1, 0(s0)
+  addi s0, s0, 16
+  lq s2, 0(sp)
+  lq s3, 16(sp)
+  lq s4, 32(sp)
+  lq s5, 48(sp)
+  lq s6, 64(sp)
+  lq s7, 80(sp)
+  lq s8, 96(sp)
+  lq s9, 112(sp)
+  lq s10, 128(sp)
+  lq s11, 144(sp)
+  addi sp, sp, 160
+  lq ra, 0(sp)
+  addi sp, sp, 16
+  ret
+.align 4
+hdr_146:
+  .octa hdr_145
+  .byte 9, 65, 69, 83, 45, 66, 76, 79, 67, 75
+.align 2
+w_aesblk:
+  addi sp, sp, -16
+  sq ra, 0(sp)
+  addi sp, sp, -160
+  sq s2, 0(sp)
+  sq s3, 16(sp)
+  sq s4, 32(sp)
+  sq s5, 48(sp)
+  sq s6, 64(sp)
+  sq s7, 80(sp)
+  sq s8, 96(sp)
+  sq s9, 112(sp)
+  sq s10, 128(sp)
+  sq s11, 144(sp)
+  lq s2, 0(s0)
+  mv s3, s1
+  la a0, gcm_blk
+  mv a1, s2
+  li a2, 16
+  call bcopy
+  la a0, gcm_blk
+  la a1, gcm_tmp
+  call aes_blk
+  mv a0, s3
+  la a1, gcm_tmp
+  li a2, 16
+  call bcopy
+  lq s1, 16(s0)
+  addi s0, s0, 32
+  lq s2, 0(sp)
+  lq s3, 16(sp)
+  lq s4, 32(sp)
+  lq s5, 48(sp)
+  lq s6, 64(sp)
+  lq s7, 80(sp)
+  lq s8, 96(sp)
+  lq s9, 112(sp)
+  lq s10, 128(sp)
+  lq s11, 144(sp)
+  addi sp, sp, 160
+  lq ra, 0(sp)
+  addi sp, sp, 16
+  ret
+.align 4
+hdr_147:
+  .octa hdr_146
+  .byte 3, 71, 70, 42
+.align 2
+w_gfmul:
+  addi sp, sp, -16
+  sq ra, 0(sp)
+  lq a0, 0(s0)
+  addi s0, s0, 16
+  mv a1, s1
+  call gf_mul
+  mv s1, a0
+  lq ra, 0(sp)
+  addi sp, sp, 16
+  ret
+.align 4
+hdr_148:
+  .octa hdr_147
+  .byte 7, 71, 67, 77, 45, 69, 78, 67
+.align 2
+w_gcmenc:
+  addi sp, sp, -16
+  sq ra, 0(sp)
+  addi sp, sp, -160
+  sq s2, 0(sp)
+  sq s3, 16(sp)
+  sq s4, 32(sp)
+  sq s5, 48(sp)
+  sq s6, 64(sp)
+  sq s7, 80(sp)
+  sq s8, 96(sp)
+  sq s9, 112(sp)
+  sq s10, 128(sp)
+  sq s11, 144(sp)
+  la t0, gcm_mode
+  sq zero, 0(t0)
+  call gcm_core
+  lq s2, 0(sp)
+  lq s3, 16(sp)
+  lq s4, 32(sp)
+  lq s5, 48(sp)
+  lq s6, 64(sp)
+  lq s7, 80(sp)
+  lq s8, 96(sp)
+  lq s9, 112(sp)
+  lq s10, 128(sp)
+  lq s11, 144(sp)
+  addi sp, sp, 160
+  lq ra, 0(sp)
+  addi sp, sp, 16
+  ret
+.align 4
+hdr_149:
+  .octa hdr_148
+  .byte 7, 71, 67, 77, 45, 68, 69, 67
+.align 2
+w_gcmdec:
+  addi sp, sp, -16
+  sq ra, 0(sp)
+  addi sp, sp, -160
+  sq s2, 0(sp)
+  sq s3, 16(sp)
+  sq s4, 32(sp)
+  sq s5, 48(sp)
+  sq s6, 64(sp)
+  sq s7, 80(sp)
+  sq s8, 96(sp)
+  sq s9, 112(sp)
+  sq s10, 128(sp)
+  sq s11, 144(sp)
+  la t0, gcm_mode
+  li t1, 1
+  sq t1, 0(t0)
+  call gcm_core
+  lq s2, 0(sp)
+  lq s3, 16(sp)
+  lq s4, 32(sp)
+  lq s5, 48(sp)
+  lq s6, 64(sp)
+  lq s7, 80(sp)
+  lq s8, 96(sp)
+  lq s9, 112(sp)
+  lq s10, 128(sp)
+  lq s11, 144(sp)
+  addi sp, sp, 160
+  lq ra, 0(sp)
+  addi sp, sp, 16
+  ret
+gcm_core:
+  mv a7, ra
+  la t0, gcm_arg
+  sq s1, 96(t0)
+  lq t1, 0(s0)
+  sq t1, 80(t0)
+  lq t1, 16(s0)
+  sq t1, 64(t0)
+  lq t1, 32(s0)
+  sq t1, 48(t0)
+  lq t1, 48(s0)
+  sq t1, 32(t0)
+  lq t1, 64(s0)
+  sq t1, 16(t0)
+  lq t1, 80(s0)
+  sq t1, 0(t0)
+  lq s1, 96(s0)
+  addi s0, s0, 112
+  addi sp, sp, -16
+  sq a7, 0(sp)
+  la t0, gcm_j0
+  sq zero, 0(t0)
+  la a0, gcm_j0
+  la t0, gcm_arg
+  lq a1, 0(t0)
+  li a2, 12
+  call bcopy
+  la t0, gcm_j0
+  li t1, 1
+  sb t1, 15(t0)
+  li s10, 0
+  la t0, gcm_arg
+  lq s8, 16(t0)
+  lq s9, 32(t0)
+gcm_a:
+  beqz s9, gcm_ad
+  li s7, 16
+  bgeu s9, s7, gcm_af
+  mv s7, s9
+gcm_af:
+  la t0, gcm_blk
+  sq zero, 0(t0)
+  la a0, gcm_blk
+  mv a1, s8
+  mv a2, s7
+  call bcopy
+  call ghash_blk
+  add s8, s8, s7
+  sub s9, s9, s7
+  j gcm_a
+gcm_ad:
+  la t0, gcm_arg
+  lq s8, 48(t0)
+  lq s9, 64(t0)
+  lq s6, 80(t0)
+  li s5, 1
+gcm_c:
+  beqz s9, gcm_cd
+  addi s5, s5, 1
+  la t0, gcm_ctr
+  la t1, gcm_j0
+  lq t1, 0(t1)
+  sq t1, 0(t0)
+  srli t1, s5, 24
+  sb t1, 12(t0)
+  srli t1, s5, 16
+  sb t1, 13(t0)
+  srli t1, s5, 8
+  sb t1, 14(t0)
+  sb s5, 15(t0)
+  la a0, gcm_ctr
+  la a1, gcm_tmp
+  addi sp, sp, -16
+  sq s5, 0(sp)
+  call aes_blk
+  lq s5, 0(sp)
+  addi sp, sp, 16
+  li s7, 16
+  bgeu s9, s7, gcm_cf
+  mv s7, s9
+gcm_cf:
+  la t0, gcm_blk
+  sq zero, 0(t0)
+  li t2, 0
+  la t3, gcm_tmp
+  la t4, gcm_blk
+  la t5, gcm_mode
+  lq t5, 0(t5)
+gcm_x:
+  bge t2, s7, gcm_xd
+  add t0, s8, t2
+  lbu t0, 0(t0)
+  add t1, t3, t2
+  lbu t1, 0(t1)
+  xor t1, t1, t0
+  add a0, s6, t2
+  sb t1, 0(a0)
+  add a0, t4, t2
+  bnez t5, gcm_xc
+  sb t1, 0(a0)
+  j gcm_xn
+gcm_xc:
+  sb t0, 0(a0)
+gcm_xn:
+  addi t2, t2, 1
+  j gcm_x
+gcm_xd:
+  call ghash_blk
+  add s8, s8, s7
+  add s6, s6, s7
+  sub s9, s9, s7
+  j gcm_c
+gcm_cd:
+  la t0, gcm_arg
+  lq t1, 32(t0)
+  slli t1, t1, 67
+  lq t2, 64(t0)
+  slli t2, t2, 3
+  or t1, t1, t2
+  rev8 t1, t1
+  la t0, gcm_blk
+  sq t1, 0(t0)
+  call ghash_blk
+  la a0, gcm_j0
+  la a1, gcm_tmp
+  call aes_blk
+  la t0, gcm_tmp
+  lq t1, 0(t0)
+  rev8 t2, s10
+  xor t1, t1, t2
+  sq t1, 0(t0)
+  la t0, gcm_arg
+  lq a0, 96(t0)
+  la a1, gcm_tmp
+  li a2, 16
+  call bcopy
+  lq a7, 0(sp)
+  addi sp, sp, 16
+  mv ra, a7
+  ret
 .align 4
 last_hdr:
-  .octa hdr_144
+  .octa hdr_149
 banner:
   .byte 10, 82, 86, 49, 50, 56, 32, 70, 111, 114, 116, 104, 32, 40, 49, 50, 56, 45, 98, 105, 116, 32, 99, 101, 108, 108, 115, 44, 32, 110, 97, 116, 105, 118, 101, 32, 82, 86, 49, 50, 56, 73, 77, 65, 67, 41, 10, 0
 msg_ok:
@@ -3336,6 +4005,297 @@ sha_h:
   .zero 64
 sha_w:
   .zero 640
+gcm_h:
+  .octa 0
+gcm_mode:
+  .octa 0
+gcm_j0:
+  .zero 16
+gcm_ctr:
+  .zero 16
+gcm_blk:
+  .zero 16
+gcm_tmp:
+  .zero 16
+gcm_arg:
+  .zero 112
+aes_ks:
+  .zero 176
+aes_te0:
+  .word 0xa56363c6
+  .word 0x847c7cf8
+  .word 0x997777ee
+  .word 0x8d7b7bf6
+  .word 0xdf2f2ff
+  .word 0xbd6b6bd6
+  .word 0xb16f6fde
+  .word 0x54c5c591
+  .word 0x50303060
+  .word 0x3010102
+  .word 0xa96767ce
+  .word 0x7d2b2b56
+  .word 0x19fefee7
+  .word 0x62d7d7b5
+  .word 0xe6abab4d
+  .word 0x9a7676ec
+  .word 0x45caca8f
+  .word 0x9d82821f
+  .word 0x40c9c989
+  .word 0x877d7dfa
+  .word 0x15fafaef
+  .word 0xeb5959b2
+  .word 0xc947478e
+  .word 0xbf0f0fb
+  .word 0xecadad41
+  .word 0x67d4d4b3
+  .word 0xfda2a25f
+  .word 0xeaafaf45
+  .word 0xbf9c9c23
+  .word 0xf7a4a453
+  .word 0x967272e4
+  .word 0x5bc0c09b
+  .word 0xc2b7b775
+  .word 0x1cfdfde1
+  .word 0xae93933d
+  .word 0x6a26264c
+  .word 0x5a36366c
+  .word 0x413f3f7e
+  .word 0x2f7f7f5
+  .word 0x4fcccc83
+  .word 0x5c343468
+  .word 0xf4a5a551
+  .word 0x34e5e5d1
+  .word 0x8f1f1f9
+  .word 0x937171e2
+  .word 0x73d8d8ab
+  .word 0x53313162
+  .word 0x3f15152a
+  .word 0xc040408
+  .word 0x52c7c795
+  .word 0x65232346
+  .word 0x5ec3c39d
+  .word 0x28181830
+  .word 0xa1969637
+  .word 0xf05050a
+  .word 0xb59a9a2f
+  .word 0x907070e
+  .word 0x36121224
+  .word 0x9b80801b
+  .word 0x3de2e2df
+  .word 0x26ebebcd
+  .word 0x6927274e
+  .word 0xcdb2b27f
+  .word 0x9f7575ea
+  .word 0x1b090912
+  .word 0x9e83831d
+  .word 0x742c2c58
+  .word 0x2e1a1a34
+  .word 0x2d1b1b36
+  .word 0xb26e6edc
+  .word 0xee5a5ab4
+  .word 0xfba0a05b
+  .word 0xf65252a4
+  .word 0x4d3b3b76
+  .word 0x61d6d6b7
+  .word 0xceb3b37d
+  .word 0x7b292952
+  .word 0x3ee3e3dd
+  .word 0x712f2f5e
+  .word 0x97848413
+  .word 0xf55353a6
+  .word 0x68d1d1b9
+  .word 0x0
+  .word 0x2cededc1
+  .word 0x60202040
+  .word 0x1ffcfce3
+  .word 0xc8b1b179
+  .word 0xed5b5bb6
+  .word 0xbe6a6ad4
+  .word 0x46cbcb8d
+  .word 0xd9bebe67
+  .word 0x4b393972
+  .word 0xde4a4a94
+  .word 0xd44c4c98
+  .word 0xe85858b0
+  .word 0x4acfcf85
+  .word 0x6bd0d0bb
+  .word 0x2aefefc5
+  .word 0xe5aaaa4f
+  .word 0x16fbfbed
+  .word 0xc5434386
+  .word 0xd74d4d9a
+  .word 0x55333366
+  .word 0x94858511
+  .word 0xcf45458a
+  .word 0x10f9f9e9
+  .word 0x6020204
+  .word 0x817f7ffe
+  .word 0xf05050a0
+  .word 0x443c3c78
+  .word 0xba9f9f25
+  .word 0xe3a8a84b
+  .word 0xf35151a2
+  .word 0xfea3a35d
+  .word 0xc0404080
+  .word 0x8a8f8f05
+  .word 0xad92923f
+  .word 0xbc9d9d21
+  .word 0x48383870
+  .word 0x4f5f5f1
+  .word 0xdfbcbc63
+  .word 0xc1b6b677
+  .word 0x75dadaaf
+  .word 0x63212142
+  .word 0x30101020
+  .word 0x1affffe5
+  .word 0xef3f3fd
+  .word 0x6dd2d2bf
+  .word 0x4ccdcd81
+  .word 0x140c0c18
+  .word 0x35131326
+  .word 0x2fececc3
+  .word 0xe15f5fbe
+  .word 0xa2979735
+  .word 0xcc444488
+  .word 0x3917172e
+  .word 0x57c4c493
+  .word 0xf2a7a755
+  .word 0x827e7efc
+  .word 0x473d3d7a
+  .word 0xac6464c8
+  .word 0xe75d5dba
+  .word 0x2b191932
+  .word 0x957373e6
+  .word 0xa06060c0
+  .word 0x98818119
+  .word 0xd14f4f9e
+  .word 0x7fdcdca3
+  .word 0x66222244
+  .word 0x7e2a2a54
+  .word 0xab90903b
+  .word 0x8388880b
+  .word 0xca46468c
+  .word 0x29eeeec7
+  .word 0xd3b8b86b
+  .word 0x3c141428
+  .word 0x79dedea7
+  .word 0xe25e5ebc
+  .word 0x1d0b0b16
+  .word 0x76dbdbad
+  .word 0x3be0e0db
+  .word 0x56323264
+  .word 0x4e3a3a74
+  .word 0x1e0a0a14
+  .word 0xdb494992
+  .word 0xa06060c
+  .word 0x6c242448
+  .word 0xe45c5cb8
+  .word 0x5dc2c29f
+  .word 0x6ed3d3bd
+  .word 0xefacac43
+  .word 0xa66262c4
+  .word 0xa8919139
+  .word 0xa4959531
+  .word 0x37e4e4d3
+  .word 0x8b7979f2
+  .word 0x32e7e7d5
+  .word 0x43c8c88b
+  .word 0x5937376e
+  .word 0xb76d6dda
+  .word 0x8c8d8d01
+  .word 0x64d5d5b1
+  .word 0xd24e4e9c
+  .word 0xe0a9a949
+  .word 0xb46c6cd8
+  .word 0xfa5656ac
+  .word 0x7f4f4f3
+  .word 0x25eaeacf
+  .word 0xaf6565ca
+  .word 0x8e7a7af4
+  .word 0xe9aeae47
+  .word 0x18080810
+  .word 0xd5baba6f
+  .word 0x887878f0
+  .word 0x6f25254a
+  .word 0x722e2e5c
+  .word 0x241c1c38
+  .word 0xf1a6a657
+  .word 0xc7b4b473
+  .word 0x51c6c697
+  .word 0x23e8e8cb
+  .word 0x7cdddda1
+  .word 0x9c7474e8
+  .word 0x211f1f3e
+  .word 0xdd4b4b96
+  .word 0xdcbdbd61
+  .word 0x868b8b0d
+  .word 0x858a8a0f
+  .word 0x907070e0
+  .word 0x423e3e7c
+  .word 0xc4b5b571
+  .word 0xaa6666cc
+  .word 0xd8484890
+  .word 0x5030306
+  .word 0x1f6f6f7
+  .word 0x120e0e1c
+  .word 0xa36161c2
+  .word 0x5f35356a
+  .word 0xf95757ae
+  .word 0xd0b9b969
+  .word 0x91868617
+  .word 0x58c1c199
+  .word 0x271d1d3a
+  .word 0xb99e9e27
+  .word 0x38e1e1d9
+  .word 0x13f8f8eb
+  .word 0xb398982b
+  .word 0x33111122
+  .word 0xbb6969d2
+  .word 0x70d9d9a9
+  .word 0x898e8e07
+  .word 0xa7949433
+  .word 0xb69b9b2d
+  .word 0x221e1e3c
+  .word 0x92878715
+  .word 0x20e9e9c9
+  .word 0x49cece87
+  .word 0xff5555aa
+  .word 0x78282850
+  .word 0x7adfdfa5
+  .word 0x8f8c8c03
+  .word 0xf8a1a159
+  .word 0x80898909
+  .word 0x170d0d1a
+  .word 0xdabfbf65
+  .word 0x31e6e6d7
+  .word 0xc6424284
+  .word 0xb86868d0
+  .word 0xc3414182
+  .word 0xb0999929
+  .word 0x772d2d5a
+  .word 0x110f0f1e
+  .word 0xcbb0b07b
+  .word 0xfc5454a8
+  .word 0xd6bbbb6d
+  .word 0x3a16162c
+aes_sbox:
+  .byte 99, 124, 119, 123, 242, 107, 111, 197, 48, 1, 103, 43, 254, 215, 171, 118
+  .byte 202, 130, 201, 125, 250, 89, 71, 240, 173, 212, 162, 175, 156, 164, 114, 192
+  .byte 183, 253, 147, 38, 54, 63, 247, 204, 52, 165, 229, 241, 113, 216, 49, 21
+  .byte 4, 199, 35, 195, 24, 150, 5, 154, 7, 18, 128, 226, 235, 39, 178, 117
+  .byte 9, 131, 44, 26, 27, 110, 90, 160, 82, 59, 214, 179, 41, 227, 47, 132
+  .byte 83, 209, 0, 237, 32, 252, 177, 91, 106, 203, 190, 57, 74, 76, 88, 207
+  .byte 208, 239, 170, 251, 67, 77, 51, 133, 69, 249, 2, 127, 80, 60, 159, 168
+  .byte 81, 163, 64, 143, 146, 157, 56, 245, 188, 182, 218, 33, 16, 255, 243, 210
+  .byte 205, 12, 19, 236, 95, 151, 68, 23, 196, 167, 126, 61, 100, 93, 25, 115
+  .byte 96, 129, 79, 220, 34, 42, 144, 136, 70, 238, 184, 20, 222, 94, 11, 219
+  .byte 224, 50, 58, 10, 73, 6, 36, 92, 194, 211, 172, 98, 145, 149, 228, 121
+  .byte 231, 200, 55, 109, 141, 213, 78, 169, 108, 86, 244, 234, 101, 122, 174, 8
+  .byte 186, 120, 37, 46, 28, 166, 180, 198, 232, 221, 116, 31, 75, 189, 139, 138
+  .byte 112, 62, 181, 102, 72, 3, 246, 14, 97, 53, 87, 185, 134, 193, 29, 158
+  .byte 225, 248, 152, 17, 105, 217, 142, 148, 155, 30, 135, 233, 206, 85, 40, 223
+  .byte 140, 161, 137, 13, 191, 230, 66, 104, 65, 153, 45, 15, 176, 84, 187, 22
+.align 4
 .align 3
 sha_iv:
   .dword 0x6a09e667f3bcc908
@@ -3549,7 +4509,7 @@ boot_script:
   .byte 76, 76, 79, 84, 32, 67, 82, 69, 65, 84, 69, 32, 68, 71, 32, 54, 52, 32, 65, 76, 76, 79, 84, 32, 67, 82, 69, 65, 84, 69, 32, 75
   .byte 89, 32, 51, 50, 32, 65, 76, 76, 79, 84, 10, 67, 82, 69, 65, 84, 69, 32, 66, 65, 32, 49, 54, 32, 67, 69, 76, 76, 83, 32, 65, 76
   .byte 76, 79, 84, 32, 67, 82, 69, 65, 84, 69, 32, 66, 66, 32, 49, 54, 32, 67, 69, 76, 76, 83, 32, 65, 76, 76, 79, 84, 32, 67, 82, 69
-  .byte 65, 84, 69, 32, 66, 82, 32, 51, 50, 32, 67, 69, 76, 76, 83, 32, 65, 76, 76, 79, 84, 10, 58, 32, 84, 48, 32, 67, 89, 67, 76, 69
+  .byte 65, 84, 69, 32, 66, 82, 32, 54, 52, 32, 67, 69, 76, 76, 83, 32, 65, 76, 76, 79, 84, 10, 58, 32, 84, 48, 32, 67, 89, 67, 76, 69
   .byte 83, 32, 59, 32, 32, 58, 32, 84, 49, 32, 40, 32, 116, 48, 32, 45, 45, 32, 41, 32, 67, 89, 67, 76, 69, 83, 32, 83, 87, 65, 80, 32
   .byte 45, 32, 46, 32, 67, 82, 32, 59, 10, 58, 32, 66, 45, 83, 72, 65, 32, 46, 34, 32, 115, 104, 97, 53, 49, 50, 32, 49, 48, 48, 48, 32
   .byte 66, 32, 120, 49, 48, 58, 32, 34, 32, 84, 48, 32, 49, 48, 32, 48, 32, 68, 79, 32, 77, 66, 32, 49, 48, 48, 48, 32, 68, 71, 32, 83
@@ -3564,7 +4524,13 @@ boot_script:
   .byte 48, 58, 32, 34, 32, 84, 48, 32, 49, 48, 48, 32, 48, 32, 68, 79, 32, 70, 79, 78, 69, 32, 70, 83, 73, 78, 32, 68, 82, 79, 80, 32
   .byte 76, 79, 79, 80, 32, 84, 49, 32, 59, 10, 58, 32, 66, 45, 65, 84, 79, 77, 32, 46, 34, 32, 65, 84, 79, 77, 43, 32, 120, 49, 48, 48
   .byte 48, 58, 32, 34, 32, 84, 48, 32, 49, 48, 48, 48, 32, 48, 32, 68, 79, 32, 49, 32, 66, 82, 32, 65, 84, 79, 77, 43, 32, 68, 82, 79
-  .byte 80, 32, 76, 79, 79, 80, 32, 84, 49, 32, 59, 10, 66, 45, 83, 72, 65, 32, 66, 45, 80, 79, 76, 89, 32, 66, 45, 66, 78, 77, 85, 76
-  .byte 32, 66, 45, 70, 68, 73, 86, 32, 66, 45, 70, 83, 73, 78, 32, 66, 45, 65, 84, 79, 77, 10, 66, 89, 69, 10, 10, 0
+  .byte 80, 32, 76, 79, 79, 80, 32, 84, 49, 32, 59, 10, 58, 32, 66, 45, 71, 67, 77, 32, 46, 34, 32, 97, 101, 115, 45, 49, 50, 56, 45, 103
+  .byte 99, 109, 32, 49, 48, 48, 48, 32, 66, 32, 120, 49, 48, 58, 32, 34, 32, 75, 89, 32, 65, 69, 83, 45, 75, 69, 89, 32, 84, 48, 32, 49
+  .byte 48, 32, 48, 32, 68, 79, 32, 75, 89, 32, 77, 66, 32, 48, 32, 77, 66, 32, 49, 48, 48, 48, 32, 66, 82, 32, 68, 71, 32, 71, 67, 77
+  .byte 45, 69, 78, 67, 32, 76, 79, 79, 80, 32, 84, 49, 32, 59, 10, 58, 32, 66, 45, 71, 70, 32, 46, 34, 32, 71, 70, 42, 32, 120, 49, 48
+  .byte 48, 48, 58, 32, 34, 32, 84, 48, 32, 49, 48, 48, 48, 32, 48, 32, 68, 79, 32, 49, 50, 51, 52, 53, 32, 54, 55, 56, 57, 48, 32, 71
+  .byte 70, 42, 32, 68, 82, 79, 80, 32, 76, 79, 79, 80, 32, 84, 49, 32, 59, 10, 66, 45, 83, 72, 65, 32, 66, 45, 80, 79, 76, 89, 32, 66
+  .byte 45, 66, 78, 77, 85, 76, 32, 66, 45, 70, 68, 73, 86, 32, 66, 45, 70, 83, 73, 78, 32, 66, 45, 65, 84, 79, 77, 32, 66, 45, 71, 67
+  .byte 77, 32, 66, 45, 71, 70, 10, 66, 89, 69, 10, 10, 0
 .align 6
 dict_start:

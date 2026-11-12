@@ -37,14 +37,15 @@ done
 [ -f $ROOT/sw/freertos/freertos_test ] && elf freertos_test $ROOT/sw/freertos/freertos_test
 for z in queue common; do [ -f $ROOT/sw/zephyr/out/$z.elf ] && elf zephyr_$z $ROOT/sw/zephyr/out/$z.elf; done
 [ -f $ROOT/sw/rtems/rtems_test.exe ] && elf rtems_test $ROOT/sw/rtems/rtems_test.exe
-# --- rendimiento: CoreMark (ITER >= 600 para la regla de 10 s a 50 MHz) y microbenchmarks
+# --- rendimiento: CoreMark (build con CLK_HZ=60000000 ITER=1200: >= 10 s a 60 MHz) y microbenchmarks
 for c in $ROOT/sw/coremark/coremark_*.elf; do [ -f $c ] && elf $(basename $c .elf) $c; done
 if [ -f $ROOT/sw/bench/out/bench128.bin ]; then
   cp $ROOT/sw/bench/out/bench128.bin $OUT/
   echo "bench128 rv128 1 0x$(awk '$2 == "tohost" {print $1}' $ROOT/sw/bench/out/bench128.sym)" >> $OUT/list.txt
 fi
 [ -f $ROOT/sw/bench/out/bench64 ] && elf bench64 $ROOT/sw/bench/out/bench64
-# --- RV128 Forth: self-checking tests and demos (UART divisor 1) + interactive image (27)
+# --- RV128 Forth: self-checking tests and demos (UART divisor 1) + interactive image
+#     (UART_DIV, default 33 = 115200 baud at 60 MHz)
 if python3 $ROOT/sw/forth/gen_tests.py $ROOT/sw/forth/tests > /dev/null &&
    python3 $ROOT/sw/forth/build.py --no-run --out $ROOT/sw/forth/out \
        $ROOT/sw/forth/tests/t_*.fs $ROOT/sw/forth/demos/*.fs > /dev/null; then
@@ -53,7 +54,7 @@ if python3 $ROOT/sw/forth/gen_tests.py $ROOT/sw/forth/tests > /dev/null &&
     cp $ROOT/sw/forth/out/$n.bin $OUT/forth_$n.bin
     echo "forth_$n rv128 1 0x$(awk '$2 == "tohost" {print $1}' $ROOT/sw/forth/out/$n.sym)" >> $OUT/list.txt
   done
-  python3 $ROOT/sw/forth/build.py --uart-div 27 --out $ROOT/sw/forth/out_board > /dev/null &&
+  python3 $ROOT/sw/forth/build.py --uart-div ${UART_DIV:-33} --out $ROOT/sw/forth/out_board > /dev/null &&
     cp $ROOT/sw/forth/out_board/forth.bin $OUT/forth.bin
 fi
 cp $H/rv128_soc_load.c $H/run_all.sh $OUT/

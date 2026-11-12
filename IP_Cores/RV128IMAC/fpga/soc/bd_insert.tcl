@@ -24,7 +24,7 @@ foreach c [list $CIPS $NOC] {
 
 # --- el SoC como module reference
 create_bd_cell -type module -reference rv128_soc_wrap rv128
-set_property -dict [list CONFIG.TICK_DIV {50} CONFIG.DRAM_PHYS {0x0000000070000000} \
+set_property -dict [list CONFIG.TICK_DIV {60} CONFIG.DRAM_PHYS {0x0000000070000000} \
                          CONFIG.DRAM_MASK {0x0000000007FFFFFF}] [get_bd_cells rv128]
 
 # --- reset sincronizado de la plataforma

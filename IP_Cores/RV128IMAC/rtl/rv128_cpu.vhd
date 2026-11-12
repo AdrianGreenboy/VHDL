@@ -74,8 +74,11 @@ architecture rtl of rv128_cpu is
   signal d_req_size : std_logic_vector(2 downto 0);
   signal d_req_amo_op : std_logic_vector(4 downto 0);
   signal d_req_wstrb : std_logic_vector(15 downto 0);
+  signal d_req_ridx : std_logic_vector(8 downto 0);
+  signal d_req_rd : std_logic;
   signal fencei, sfence, flush_busy : std_logic;
   -- clientes AXI
+  signal c0_acc : std_logic;
   signal c0_req, c0_cache, c0_beat, c0_done, c1_req, c1_cache, c1_beat, c1_done, ax_err : std_logic;
   signal c0_kind, c1_kind : std_logic_vector(1 downto 0);
   signal c0_size, c1_size : std_logic_vector(2 downto 0);
@@ -90,7 +93,7 @@ begin
     i_rsp_valid => i_rsp_valid, i_rsp_data => i_rsp_data, i_rsp_err => i_rsp_err,
     d_req_valid => d_req_valid, d_req_ready => d_req_ready, d_req_addr => d_req_addr,
     d_req_kind => d_req_kind, d_req_amo_op => d_req_amo_op, d_req_size => d_req_size,
-    d_req_wdata => d_req_wdata, d_req_wstrb => d_req_wstrb,
+    d_req_wdata => d_req_wdata, d_req_wstrb => d_req_wstrb, d_req_ridx => d_req_ridx, d_req_rd => d_req_rd,
     d_rsp_valid => d_rsp_valid, d_rsp_rdata => d_rsp_rdata, d_rsp_err => d_rsp_err,
     mtip => mtip, msip => msip, meip => meip, seip => seip, time_i => time_i,
     fencei_o => fencei, sfence_o => sfence,
@@ -111,18 +114,19 @@ begin
     clk => clk, rst => rst,
     req_valid => d_req_valid, req_ready => d_req_ready, req_addr => d_req_addr,
     req_kind => d_req_kind, req_amo_op => d_req_amo_op, req_size => d_req_size,
-    req_wdata => d_req_wdata, req_wstrb => d_req_wstrb,
+    req_wdata => d_req_wdata, req_wstrb => d_req_wstrb, req_ridx => d_req_ridx, req_rd => d_req_rd,
     rsp_valid => d_rsp_valid, rsp_rdata => d_rsp_rdata, rsp_err => d_rsp_err,
     flush => fencei, flush_busy => flush_busy,
     m_req => c0_req, m_kind => c0_kind, m_addr => c0_addr, m_size => c0_size, m_wline => c0_wline,
     m_wdata => c0_wdata, m_wstrb => c0_wstrb, m_cache => c0_cache,
-    m_beat => c0_beat, m_done => c0_done, m_idx => ax_idx, m_rdata => ax_rdata, m_err => ax_err);
+    m_beat => c0_beat, m_done => c0_done, m_idx => ax_idx, m_rdata => ax_rdata, m_err => ax_err,
+    m_acc => c0_acc);
 
   axi_u : entity work.rv128_axi_master port map (
     clk => clk, rst => rst,
     c0_req => c0_req, c0_kind => c0_kind, c0_addr => c0_addr, c0_size => c0_size,
     c0_wline => c0_wline, c0_wdata => c0_wdata, c0_wstrb => c0_wstrb, c0_cache => c0_cache,
-    c0_beat => c0_beat, c0_done => c0_done,
+    c0_beat => c0_beat, c0_done => c0_done, c0_acc => c0_acc,
     c1_req => c1_req, c1_kind => c1_kind, c1_addr => c1_addr, c1_size => c1_size, c1_cache => c1_cache,
     c1_beat => c1_beat, c1_done => c1_done,
     beat_idx => ax_idx, rdata => ax_rdata, err => ax_err,

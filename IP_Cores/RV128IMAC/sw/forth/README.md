@@ -45,6 +45,7 @@ a small Forth kernel in rv128asm source. It runs bare metal in RV128 mode, with 
 | Lock-free stack | `LPUSH LPOP` | 128-bit head = pointer + version tag, a double-width CAS with `LR.Q/SC.Q` |
 | Atomics / IRQ | `ATOM+ CAS ISR! TIMER TICKS` | `AMOADD.Q`, timer interrupt |
 | Bit manipulation | `CLZ CTZ CPOP ROL ROR REV8 ANDN CLMUL CLMULH MIN MAX UMIN UMAX` | Zbb + Zbc (this core's RV128 extension) |
+| AES-128-GCM | `AES-KEY AES-BLOCK GCM-ENC GCM-DEC GF*` | GHASH: one `clmul` + one `clmulh` for the full 128×128 product, reduced with shifts on the bit-reflected value; AES uses T-tables rotated with `roriw` |
 
 SHA-512 uses `rorid` (64-bit rotate in one instruction), `rev8` + `srai 64` (big-endian
 load) and `andn` (Ch). That cuts its instruction count by 33 % compared with v1.3.
@@ -67,6 +68,7 @@ Poly1305 reference, high-precision Decimal sin/cos) and embeds it as ASSERTs.
 | tests/t_fixed | F*, F/ (fast and slow path), exact FSQRT (= isqrt), sin/cos to 2^-56, quaternion rotation |
 | tests/t_crypto | SHA-512 at lengths 0, 3, 111, 112, 128, 239, 1000; Poly1305 RFC 8439 vector + 7 lengths |
 | tests/t_conc | 64 nodes moved between two lock-free stacks by the main loop and the timer ISR; conserves nodes, version tags = number of operations |
+| tests/t_aes | FIPS-197 block, GF* vs the NIST bit-serial multiply, GCM test case 4 (encrypt + decrypt), 8 random key/IV/AAD/length combinations vs `cryptography` |
 | tests/t_zb | CLZ/CTZ/CPOP/REV8/ROL/ROR on corner and random values, CLMUL/CLMULH, MIN/UMAX, ABS |
 | demos/pi1000 | 1007 digits of pi (29 limbs) |
 | demos/fact1000 | 1000! (2568 digits) |
