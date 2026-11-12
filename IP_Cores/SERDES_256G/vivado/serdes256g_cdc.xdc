@@ -14,10 +14,11 @@ set_max_delay -datapath_only 4.0 \
   -from [get_cells -hier -filter {NAME =~ *u_fifo/rgray_reg[*]}] \
   -to   [get_cells -hier -filter {NAME =~ *u_fifo/rg_w1_reg[*]}]
 
-# distributed-RAM read data into rx_clk (stable before 'empty' drops)
+# distributed-RAM read data into rx_clk (stable before 'empty' drops): data
+# word into s1_word and the marker flag into the deskew FSM / read pointers
+# (leaf RAM clock pins only: the RAM macro cells are not valid startpoints)
 set_max_delay -datapath_only 4.0 \
-  -from [get_cells -hier -filter {NAME =~ *u_fifo/mem_reg*}] \
-  -to   [get_cells -hier -filter {NAME =~ *u_rx_align/s1_word_reg*}]
+  -from [get_pins -hier -filter {NAME =~ *u_fifo/mem_reg*/CLK && IS_LEAF}]
 
 # single-bit status synchronisers
 set_false_path -to [get_cells -hier -filter {NAME =~ *amlk_m_reg[*]}]
